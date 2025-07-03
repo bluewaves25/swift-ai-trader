@@ -1,7 +1,7 @@
 
 # Waves Quant Engine - Complete Documentation
 
-Welcome to the comprehensive documentation for the Waves Quant Engine, a sophisticated High-Frequency Trading (HFT) system powered by AI that automatically trades cryptocurrency with unique strategies per trading pair.
+Welcome, to the comprehensive documentation for the Waves Quant Engine, a sophisticated High-Frequency Trading (HFT) system powered by AI that automatically trades cryptocurrency with unique strategies per trading pair.
 
 ## 📋 Table of Contents
 
