@@ -1,242 +1,244 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Activity, 
+  DollarSign, 
+  BarChart3, 
+  LogOut,
+  Eye,
+  Wallet,
+  FileText,
+  X
+} from "lucide-react";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import TradingChart from "@/components/trading/TradingChart";
-import { BarChart3, TrendingUp, TrendingDown, DollarSign, Activity, LogOut } from "lucide-react";
-
-interface Portfolio {
-  total_balance: number;
-  available_balance: number;
-  unrealized_pnl: number;
-  realized_pnl: number;
-  total_trades: number;
-  winning_trades: number;
-}
-
-interface Trade {
-  id: string;
-  trade_type: string;
-  amount: number;
-  entry_price: number;
-  exit_price: number | null;
-  profit_loss: number;
-  status: string;
-  created_at: string;
-  trading_pairs: {
-    symbol: string;
-  };
-}
+import LiveSignals from "@/components/trading/LiveSignals";
+import TradeHistory from "@/components/trading/TradeHistory";
+import PerformanceAnalytics from "@/components/trading/PerformanceAnalytics";
+import InvestorPortfolio from "@/components/investor/InvestorPortfolio";
+import InvestorJournal from "@/components/investor/InvestorJournal";
+import { useNavigate } from "react-router-dom";
 
 const InvestorDashboard = () => {
   const { signOut, user } = useAuth();
-  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    totalBalance: 0,
+    dailyPnL: 0,
+    totalTrades: 0,
+    winRate: 0,
+    investmentAmount: 0,
+    profitLoss: 0
+  });
 
   useEffect(() => {
-    fetchPortfolio();
-    fetchTrades();
-  }, [user]);
+    fetchInvestorStats();
+    const interval = setInterval(fetchInvestorStats, 10000); // Update every 10 seconds
+    return () => clearInterval(interval);
+  }, []);
 
-  const fetchPortfolio = async () => {
-    if (!user) return;
-
+  const fetchInvestorStats = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch investor portfolio data
+      const { data: portfolio } = await supabase
         .from('portfolios')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user?.id)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching portfolio:', error);
-        return;
-      }
-
-      if (data) {
-        setPortfolio(data);
-      } else {
-        // Create initial portfolio
-        const { data: newPortfolio, error: createError } = await supabase
-          .from('portfolios')
-          .insert({
-            user_id: user.id,
-            total_balance: 10000,
-            available_balance: 10000
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating portfolio:', createError);
-        } else {
-          setPortfolio(newPortfolio);
-        }
-      }
-    } catch (error) {
-      console.error('Error in fetchPortfolio:', error);
-    }
-  };
-
-  const fetchTrades = async () => {
-    try {
-      const { data, error } = await supabase
+      // Fetch today's performance
+      const today = new Date().toISOString().split('T')[0];
+      const { data: todayTrades } = await supabase
         .from('trades')
-        .select(`
-          *,
-          trading_pairs (symbol)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(20);
+        .select('profit_loss')
+        .gte('created_at', `${today}T00:00:00Z`)
+        .lt('created_at', `${today}T23:59:59Z`);
 
-      if (error) throw error;
-      setTrades(data || []);
+      const dailyPnL = todayTrades?.reduce((sum, trade) => sum + (trade.profit_loss || 0), 0) || 0;
+      const winningTrades = todayTrades?.filter(trade => (trade.profit_loss || 0) > 0).length || 0;
+      const winRate = todayTrades?.length ? (winningTrades / todayTrades.length) * 100 : 0;
+
+      setStats({
+        totalBalance: portfolio?.total_balance || 0,
+        dailyPnL,
+        totalTrades: portfolio?.total_trades || 0,
+        winRate,
+        investmentAmount: portfolio?.available_balance || 0,
+        profitLoss: portfolio?.realized_pnl || 0
+      });
     } catch (error) {
-      console.error('Error fetching trades:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching investor stats:', error);
     }
   };
 
-  const winRate = portfolio?.total_trades ? 
-    (portfolio.winning_trades / portfolio.total_trades * 100) : 0;
+  const handleClose = () => {
+    navigate('/');
+  };
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b">
-        <div className="flex h-16 items-center px-4 justify-between">
-          <div className="flex items-center space-x-4">
-            <Activity className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-xl font-bold">Waves Quant Engine</h1>
-              <p className="text-sm text-muted-foreground">Investor Dashboard</p>
+      {/* Header */}
+      <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="h-8 w-8 text-primary" />
+                <div>
+                  <h1 className="text-2xl font-bold">Waves Quant Engine</h1>
+                  <p className="text-sm text-muted-foreground">Investor Dashboard</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <Badge variant="outline" className="px-3 py-1">
+                <Eye className="h-4 w-4 mr-1" />
+                Read-Only Access
+              </Badge>
+              <ThemeToggle />
+              <Button variant="outline" onClick={signOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleClose}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <ThemeToggle />
-            <Badge variant="secondary">{user?.email}</Badge>
-            <Button variant="outline" size="sm" onClick={signOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="p-6 space-y-6">
-        {/* Portfolio Overview */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Stats Cards */}
+      <div className="container mx-auto px-4 py-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${portfolio?.total_balance?.toFixed(2) || '0.00'}</div>
-              <p className="text-xs text-muted-foreground">
-                Available: ${portfolio?.available_balance?.toFixed(2) || '0.00'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Realized P&L</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${
-                (portfolio?.realized_pnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'
-              }`}>
-                ${portfolio?.realized_pnl?.toFixed(2) || '0.00'}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Unrealized: ${portfolio?.unrealized_pnl?.toFixed(2) || '0.00'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Trades</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{portfolio?.total_trades || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                Winning: {portfolio?.winning_trades || 0}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{winRate.toFixed(1)}%</div>
-              <Progress value={winRate} className="mt-2" />
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="chart" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="chart">Live Chart</TabsTrigger>
-            <TabsTrigger value="trades">Trade History</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="chart" className="space-y-4">
-            <TradingChart />
-          </TabsContent>
-
-          <TabsContent value="trades" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Trades</CardTitle>
-                <CardDescription>Your automated trading history</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {trades.map((trade) => (
-                    <div key={trade.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <Badge variant={trade.trade_type === 'buy' ? 'default' : 'destructive'}>
-                          {trade.trade_type.toUpperCase()}
-                        </Badge>
-                        <div>
-                          <p className="font-medium">{trade.trading_pairs?.symbol}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(trade.created_at).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">${trade.amount.toFixed(4)}</p>
-                        <p className={`text-sm ${
-                          trade.profit_loss >= 0 ? 'text-green-500' : 'text-red-500'
-                        }`}>
-                          {trade.profit_loss >= 0 ? '+' : ''}${trade.profit_loss.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                  {trades.length === 0 && (
-                    <p className="text-center text-muted-foreground py-8">
-                      No trades yet. The AI engine will start trading based on market conditions.
-                    </p>
-                  )}
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Investment</p>
+                  <p className="text-2xl font-bold">${stats.investmentAmount.toFixed(2)}</p>
                 </div>
-              </CardContent>
-            </Card>
+                <Wallet className="h-8 w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total P&L</p>
+                  <p className={`text-2xl font-bold ${stats.profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    ${stats.profitLoss.toFixed(2)}
+                  </p>
+                </div>
+                {stats.profitLoss >= 0 ? 
+                  <TrendingUp className="h-8 w-8 text-green-500" /> :
+                  <TrendingDown className="h-8 w-8 text-red-500" />
+                }
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Daily P&L</p>
+                  <p className={`text-2xl font-bold ${stats.dailyPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    ${stats.dailyPnL.toFixed(2)}
+                  </p>
+                </div>
+                {stats.dailyPnL >= 0 ? 
+                  <TrendingUp className="h-8 w-8 text-green-500" /> :
+                  <TrendingDown className="h-8 w-8 text-red-500" />
+                }
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Trades</p>
+                  <p className="text-2xl font-bold">{stats.totalTrades}</p>
+                </div>
+                <Activity className="h-8 w-8 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Win Rate</p>
+                  <p className="text-2xl font-bold">{stats.winRate.toFixed(1)}%</p>
+                </div>
+                <BarChart3 className="h-8 w-8 text-orange-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Balance</p>
+                  <p className="text-2xl font-bold">${stats.totalBalance.toFixed(2)}</p>
+                </div>
+                <DollarSign className="h-8 w-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content */}
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+            <TabsTrigger value="signals">Live Signals</TabsTrigger>
+            <TabsTrigger value="trades">Trade History</TabsTrigger>
+            <TabsTrigger value="journal">Journal</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="overview" className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <TradingChart />
+              <PerformanceAnalytics />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="portfolio">
+            <InvestorPortfolio />
+          </TabsContent>
+          
+          <TabsContent value="signals">
+            <LiveSignals />
+          </TabsContent>
+          
+          <TabsContent value="trades">
+            <TradeHistory />
+          </TabsContent>
+          
+          <TabsContent value="journal">
+            <InvestorJournal />
           </TabsContent>
         </Tabs>
       </div>

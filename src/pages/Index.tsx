@@ -2,20 +2,31 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Link } from "react-router-dom";
 import { 
   TrendingUp, 
   Brain, 
   Zap, 
   Shield, 
-  BarChart3, 
-  Activity,
-  Users,
-  Target
+  Activity, 
+  Target,
+  ArrowRight,
+  CheckCircle,
+  BarChart3,
+  Cpu,
+  X
 } from "lucide-react";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
+  const navigate = useNavigate();
+
+  const handleClose = () => {
+    // You can customize this behavior - for now it just stays on the same page
+    console.log('Close button clicked');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       {/* Header */}
@@ -24,16 +35,17 @@ const Index = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <TrendingUp className="h-8 w-8 text-primary" />
-              <div>
-                <h1 className="text-2xl font-bold">Waves Quant Engine</h1>
-                <p className="text-sm text-muted-foreground">AI-Powered High Frequency Trading</p>
-              </div>
+              <h1 className="text-2xl font-bold">Waves Quant Engine</h1>
             </div>
-            
             <div className="flex items-center space-x-4">
               <ThemeToggle />
-              <Button asChild>
-                <Link to="/auth">Get Started</Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleClose}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -41,35 +53,30 @@ const Index = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="text-center space-y-6 max-w-4xl mx-auto">
-          <Badge variant="outline" className="px-4 py-2">
-            <Zap className="h-4 w-4 mr-2" />
-            Next-Generation Trading Technology
-          </Badge>
+      <section className="container mx-auto px-4 py-16 text-center">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="space-y-4">
+            <Badge variant="outline" className="px-4 py-2">
+              <Cpu className="h-4 w-4 mr-2" />
+              AI-Powered High Frequency Trading
+            </Badge>
+            <h2 className="text-4xl md:text-6xl font-bold tracking-tight">
+              Professional Trading
+              <span className="text-primary"> Automation</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Advanced AI-driven trading engine with real-time market analysis, 
+              automated execution, and professional risk management for cryptocurrency markets.
+            </p>
+          </div>
           
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-            AI-Powered Trading
-            <span className="block text-primary">Made Simple</span>
-          </h1>
-          
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Experience automated cryptocurrency trading with advanced AI strategies that adapt to market conditions in real-time. Built for speed, precision, and reliability.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" asChild>
-              <Link to="/auth">
-                <TrendingUp className="h-5 w-5 mr-2" />
-                Start Trading Now
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link to="/auth">
-                <Users className="h-5 w-5 mr-2" />
-                View Performance
-              </Link>
-            </Button>
+          <div className="flex items-center justify-center space-x-4">
+            <Link to="/auth">
+              <Button size="lg" className="px-8">
+                Start Investing
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -77,127 +84,171 @@ const Index = () => {
       {/* Features Grid */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Why Choose Waves Quant Engine?</h2>
-          <p className="text-muted-foreground">Advanced features designed for professional traders</p>
+          <h3 className="text-3xl font-bold mb-4">Advanced Trading Features</h3>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Built with institutional-grade technology and AI-powered decision making
+          </p>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card>
+          <Card className="border-2 hover:border-primary/20 transition-colors">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Brain className="h-5 w-5 text-blue-500" />
-                <span>AI-Driven Strategies</span>
-              </CardTitle>
+              <Brain className="h-12 w-12 text-primary mb-4" />
+              <CardTitle>AI Trading Signals</CardTitle>
               <CardDescription>
-                Unique AI strategies for each trading pair based on market conditions
+                Advanced machine learning algorithms analyze market patterns and generate 
+                high-probability trading signals in real-time.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm">
-                <li>• Breakout strategy for trending markets</li>
-                <li>• Mean reversion for ranging conditions</li>
-                <li>• Scalping for high volatility</li>
-                <li>• Dynamic strategy switching</li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Pattern Recognition
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Market Sentiment Analysis
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Risk-Adjusted Signals
+                </li>
               </ul>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-2 hover:border-primary/20 transition-colors">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Zap className="h-5 w-5 text-yellow-500" />
-                <span>Lightning Fast Execution</span>
-              </CardTitle>
+              <Zap className="h-12 w-12 text-primary mb-4" />
+              <CardTitle>Automated Execution</CardTitle>
               <CardDescription>
-                Sub-second trade execution with real-time market data
+                Lightning-fast trade execution with millisecond precision and 
+                automated position management across multiple trading pairs.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm">
-                <li>• Real-time signal generation</li>
-                <li>• Automated trade execution</li>
-                <li>• Live market data integration</li>
-                <li>• Millisecond-level precision</li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  High-Frequency Trading
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Multi-Pair Monitoring
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  24/7 Operation
+                </li>
               </ul>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-2 hover:border-primary/20 transition-colors">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Shield className="h-5 w-5 text-green-500" />
-                <span>Advanced Risk Management</span>
-              </CardTitle>
+              <Shield className="h-12 w-12 text-primary mb-4" />
+              <CardTitle>Risk Management</CardTitle>
               <CardDescription>
-                Comprehensive risk controls to protect your capital
+                Professional-grade risk controls with dynamic position sizing, 
+                stop-loss automation, and portfolio protection mechanisms.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm">
-                <li>• Customizable stop-loss levels</li>
-                <li>• Position size management</li>
-                <li>• Daily loss limits</li>
-                <li>• Portfolio diversification</li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Dynamic Stop-Loss
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Position Sizing
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Portfolio Protection
+                </li>
               </ul>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-2 hover:border-primary/20 transition-colors">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <BarChart3 className="h-5 w-5 text-purple-500" />
-                <span>Real-Time Analytics</span>
-              </CardTitle>
+              <Activity className="h-12 w-12 text-primary mb-4" />
+              <CardTitle>Real-Time Analytics</CardTitle>
               <CardDescription>
-                Comprehensive performance tracking and insights
+                Comprehensive performance tracking with live charts, trade history, 
+                and detailed analytics for informed decision making.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm">
-                <li>• Live trading charts</li>
-                <li>• Performance metrics</li>
-                <li>• Trade history analysis</li>
-                <li>• Profit/loss tracking</li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Live Performance Metrics
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Trade History Tracking
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Profit/Loss Analysis
+                </li>
               </ul>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-2 hover:border-primary/20 transition-colors">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Activity className="h-5 w-5 text-orange-500" />
-                <span>Live Market Signals</span>
-              </CardTitle>
+              <Target className="h-12 w-12 text-primary mb-4" />
+              <CardTitle>Strategy Optimization</CardTitle>
               <CardDescription>
-                Real-time buy/sell/hold signals with confidence scores
+                Adaptive trading strategies that automatically adjust to market conditions 
+                and optimize performance based on historical data.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm">
-                <li>• AI-generated signals</li>
-                <li>• Confidence scoring</li>
-                <li>• Signal reasoning</li>
-                <li>• Historical accuracy</li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Adaptive Algorithms
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Backtesting Integration
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Performance Optimization
+                </li>
               </ul>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-2 hover:border-primary/20 transition-colors">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Target className="h-5 w-5 text-red-500" />
-                <span>Dual Dashboard Access</span>
-              </CardTitle>
+              <BarChart3 className="h-12 w-12 text-primary mb-4" />
+              <CardTitle>Portfolio Management</CardTitle>
               <CardDescription>
-                Separate interfaces for owners and investors
+                Professional portfolio management with deposit/withdrawal controls, 
+                investment tracking, and transparent performance reporting.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm">
-                <li>• Owner: Full control & configuration</li>
-                <li>• Investor: Performance monitoring</li>
-                <li>• Role-based access control</li>
-                <li>• Customizable views</li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Secure Fund Management
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Transparent Reporting
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  Investment Tracking
+                </li>
               </ul>
             </CardContent>
           </Card>
@@ -205,32 +256,31 @@ const Index = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-muted/30 py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Start Trading?</h2>
-          <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join the future of automated trading with AI-powered strategies that work around the clock
-          </p>
-          <Button size="lg" asChild>
-            <Link to="/auth">
-              <TrendingUp className="h-5 w-5 mr-2" />
-              Get Started Today
-            </Link>
-          </Button>
-        </div>
+      <section className="container mx-auto px-4 py-16">
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="text-center py-12">
+            <h3 className="text-3xl font-bold mb-4">Ready to Start Trading?</h3>
+            <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Join our automated trading platform and let AI handle your cryptocurrency trading 
+              with professional oversight and risk management.
+            </p>
+            <div className="flex items-center justify-center space-x-4">
+              <Link to="/auth">
+                <Button size="lg" className="px-8">
+                  Create Investor Account
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="h-6 w-6 text-primary" />
-              <span className="font-semibold">Waves Quant Engine</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              © 2025 Waves Quant Engine. Advanced AI Trading Technology.
-            </p>
+      <footer className="border-t bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center text-sm text-muted-foreground">
+            <p>© 2024 Waves Quant Engine. Professional AI-powered trading automation.</p>
           </div>
         </div>
       </footer>

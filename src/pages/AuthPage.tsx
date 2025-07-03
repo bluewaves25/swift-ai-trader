@@ -5,17 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
-import { TrendingUp, Shield, Zap } from "lucide-react";
+import { TrendingUp, Shield, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { useNavigate } from "react-router-dom";
 
 const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<'owner' | 'investor'>('investor');
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
+  const navigate = useNavigate();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,14 +27,27 @@ const AuthPage = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await signUp(email, password, role);
+    // Force investor role for all sign-ups
+    await signUp(email, password, 'investor');
     setLoading(false);
+  };
+
+  const handleClose = () => {
+    navigate('/');
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 p-4">
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 flex items-center space-x-2">
         <ThemeToggle />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleClose}
+          className="h-8 w-8"
+        >
+          <X className="h-4 w-4" />
+        </Button>
       </div>
       
       <div className="w-full max-w-md space-y-8">
@@ -52,14 +65,14 @@ const AuthPage = () => {
           <CardHeader>
             <CardTitle>Welcome Back</CardTitle>
             <CardDescription>
-              Sign in to your account or create a new one
+              Sign in to your account or create an investor account
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                <TabsTrigger value="signup">Investor Sign Up</TabsTrigger>
               </TabsList>
               
               <TabsContent value="signin">
@@ -112,30 +125,17 @@ const AuthPage = () => {
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Account Type</Label>
-                    <Select value={role} onValueChange={(value: 'owner' | 'investor') => setRole(value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="investor">
-                          <div className="flex items-center space-x-2">
-                            <Shield className="h-4 w-4" />
-                            <span>Investor - View Performance</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="owner">
-                          <div className="flex items-center space-x-2">
-                            <Zap className="h-4 w-4" />
-                            <span>Owner - Full Control</span>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <Shield className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Investor Account</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Track performance, manage deposits/withdrawals
+                    </p>
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Creating account..." : "Create Account"}
+                    {loading ? "Creating account..." : "Create Investor Account"}
                   </Button>
                 </form>
               </TabsContent>
@@ -144,7 +144,7 @@ const AuthPage = () => {
         </Card>
 
         <div className="text-center text-sm text-muted-foreground">
-          <p>Advanced AI strategies for every market condition</p>
+          <p>Automated AI trading with professional oversight</p>
         </div>
       </div>
     </div>

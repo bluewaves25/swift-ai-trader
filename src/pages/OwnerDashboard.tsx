@@ -19,7 +19,11 @@ import {
   Brain,
   Target,
   Shield,
-  Cpu
+  Cpu,
+  X,
+  Square,
+  Play,
+  Pause
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import TradingChart from "@/components/trading/TradingChart";
@@ -29,9 +33,11 @@ import PairStrategies from "@/components/trading/PairStrategies";
 import RiskManagement from "@/components/trading/RiskManagement";
 import PerformanceAnalytics from "@/components/trading/PerformanceAnalytics";
 import TradingEngine from "@/components/trading/TradingEngine";
+import { useNavigate } from "react-router-dom";
 
 const OwnerDashboard = () => {
   const { signOut, user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalBalance: 0,
     dailyPnL: 0,
@@ -41,6 +47,7 @@ const OwnerDashboard = () => {
     engineStatus: 'stopped'
   });
   const [isEngineRunning, setIsEngineRunning] = useState(false);
+  const [canClosePositions, setCanClosePositions] = useState(false);
 
   useEffect(() => {
     fetchDashboardStats();
@@ -61,7 +68,7 @@ const OwnerDashboard = () => {
       const today = new Date().toISOString().split('T')[0];
       const { data: todayTrades } = await supabase
         .from('trades')
-        .select('profit_loss')
+        .select('profit_loss, status')
         .gte('created_at', `${today}T00:00:00Z`)
         .lt('created_at', `${today}T23:59:59Z`);
 
@@ -70,6 +77,12 @@ const OwnerDashboard = () => {
         .from('trading_pairs')
         .select('id')
         .eq('is_active', true);
+
+      // Check if there are open positions
+      const { data: openTrades } = await supabase
+        .from('trades')
+        .select('id')
+        .eq('status', 'executed');
 
       const dailyPnL = todayTrades?.reduce((sum, trade) => sum + (trade.profit_loss || 0), 0) || 0;
       const winningTrades = todayTrades?.filter(trade => (trade.profit_loss || 0) > 0).length || 0;
@@ -83,6 +96,8 @@ const OwnerDashboard = () => {
         activePairs: activePairs?.length || 0,
         engineStatus: isEngineRunning ? 'running' : 'stopped'
       });
+
+      setCanClosePositions((openTrades?.length || 0) > 0);
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     }
@@ -90,7 +105,38 @@ const OwnerDashboard = () => {
 
   const handleEngineToggle = () => {
     setIsEngineRunning(!isEngineRunning);
-    toast.success(isEngineRunning ? 'Trading engine stopped' : 'Trading engine started');
+    toast.success(isEngineRunning ? 'Trading engine stopped - automated trading disabled' : 'Trading engine started - automated trading enabled');
+  };
+
+  const handleCloseAllPositions = async () => {
+    try {
+      // Close all open positions
+      const { error } = await supabase
+        .from('trades')
+        .update({ 
+          status: 'cancelled',
+          closed_at: new Date().toISOString()
+        })
+        .eq('status', 'executed');
+
+      if (error) throw error;
+
+      toast.success('All open positions closed successfully');
+      fetchDashboardStats();
+    } catch (error) {
+      console.error('Error closing positions:', error);
+      toast.error('Failed to close positions');
+    }
+  };
+
+  const handleEmergencyStop = () => {
+    setIsEngineRunning(false);
+    handleCloseAllPositions();
+    toast.warning('EMERGENCY STOP: All trading halted and positions closed');
+  };
+
+  const handleClose = () => {
+    navigate('/');
   };
 
   return (
@@ -104,7 +150,7 @@ const OwnerDashboard = () => {
                 <TrendingUp className="h-8 w-8 text-primary" />
                 <div>
                   <h1 className="text-2xl font-bold">Waves Quant Engine</h1>
-                  <p className="text-sm text-muted-foreground">Owner Dashboard</p>
+                  <p className="text-sm text-muted-foreground">Owner Control Panel</p>
                 </div>
               </div>
             </div>
@@ -119,6 +165,14 @@ const OwnerDashboard = () => {
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
               </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleClose}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
@@ -126,7 +180,7 @@ const OwnerDashboard = () => {
 
       {/* Stats Cards */}
       <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 mb-6">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -200,8 +254,32 @@ const OwnerDashboard = () => {
                   onClick={handleEngineToggle}
                   className="w-full"
                 >
-                  <Zap className="h-4 w-4 mr-2" />
-                  {isEngineRunning ? "Stop" : "Start"} Engine
+                  {isEngineRunning ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+                  {isEngineRunning ? "Stop" : "Start"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex flex-col space-y-2">
+                <Button 
+                  variant="outline"
+                  onClick={handleCloseAllPositions}
+                  disabled={!canClosePositions}
+                  className="w-full text-xs"
+                >
+                  <Square className="h-3 w-3 mr-1" />
+                  Close All
+                </Button>
+                <Button 
+                  variant="destructive"
+                  onClick={handleEmergencyStop}
+                  className="w-full text-xs"
+                >
+                  <Shield className="h-3 w-3 mr-1" />
+                  Emergency
                 </Button>
               </div>
             </CardContent>

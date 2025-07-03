@@ -70,13 +70,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, role: 'owner' | 'investor' = 'investor') => {
     try {
+      // Only allow investor sign-ups through the UI
+      if (role === 'owner') {
+        toast.error('Owner accounts must be created manually by the administrator.');
+        return { error: new Error('Owner registration not allowed') };
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
-            role: role
+            role: 'investor' // Force investor role
           }
         }
       });
@@ -86,7 +92,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error };
       }
 
-      toast.success('Check your email to confirm your account');
+      toast.success('Check your email to confirm your investor account');
       return { error: null };
     } catch (error: any) {
       toast.error('An unexpected error occurred');
