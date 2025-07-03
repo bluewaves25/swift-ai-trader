@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -54,10 +53,16 @@ const PairStrategies = () => {
 
   const updateStrategy = async (strategyId: string, newStrategy: string) => {
     try {
+      // Ensure the strategy value is one of the allowed types
+      const validStrategies = ['breakout', 'mean_reversion', 'momentum', 'scalping', 'grid'];
+      if (!validStrategies.includes(newStrategy)) {
+        throw new Error('Invalid strategy type');
+      }
+
       const { error } = await supabase
         .from('pair_strategies')
         .update({ 
-          current_strategy: newStrategy,
+          current_strategy: newStrategy as "breakout" | "mean_reversion" | "momentum" | "scalping" | "grid",
           last_updated: new Date().toISOString()
         })
         .eq('id', strategyId);
