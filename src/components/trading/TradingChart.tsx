@@ -113,15 +113,18 @@ const TradingChart = () => {
     const volatility = 0.02;
     const now = new Date();
     
+    const conditions: Array<'trending_up' | 'trending_down' | 'ranging' | 'volatile'> = 
+      ['trending_up', 'trending_down', 'ranging', 'volatile'];
+    
     const newDataPoint = {
-      id: `mock-${now.getTime()}`,
+      pair_id: selectedPair,
       timestamp: now.toISOString(),
       open_price: basePrice * (1 + (Math.random() - 0.5) * volatility),
       high_price: basePrice * (1 + Math.random() * volatility),
       low_price: basePrice * (1 - Math.random() * volatility),
       close_price: basePrice * (1 + (Math.random() - 0.5) * volatility),
       volume: Math.random() * 1000000,
-      market_condition: ['trending_up', 'trending_down', 'ranging', 'volatile'][Math.floor(Math.random() * 4)],
+      market_condition: conditions[Math.floor(Math.random() * conditions.length)],
       rsi: 30 + Math.random() * 40,
       macd: (Math.random() - 0.5) * 100,
       bollinger_upper: basePrice * 1.02,

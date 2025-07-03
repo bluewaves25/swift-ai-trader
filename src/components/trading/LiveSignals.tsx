@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -134,7 +133,7 @@ const LiveSignals = () => {
       
       // AI Decision Logic based on market condition
       let signal: 'buy' | 'sell' | 'hold' = 'hold';
-      let strategy: string = 'momentum';
+      let strategy: 'breakout' | 'mean_reversion' | 'momentum' | 'scalping' | 'grid' = 'momentum';
       let reasoning: string = '';
       
       switch (condition) {

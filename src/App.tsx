@@ -1,93 +1,78 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme/theme-provider";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { useAuth } from "@/hooks/useAuth";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import LoadingScreen from "@/components/LoadingScreen";
 import AuthPage from "@/pages/AuthPage";
+import Index from "@/pages/Index";
 import OwnerDashboard from "@/pages/OwnerDashboard";
 import InvestorDashboard from "@/pages/InvestorDashboard";
-import LoadingScreen from "@/components/LoadingScreen";
+import NotFound from "@/pages/NotFound";
+import "./App.css";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode; requiredRole?: 'owner' | 'investor' }) => {
+function AppRoutes() {
   const { user, loading, userRole } = useAuth();
-  
-  if (loading) return <LoadingScreen />;
-  if (!user) return <Navigate to="/auth" replace />;
-  if (requiredRole && userRole !== requiredRole) return <Navigate to="/unauthorized" replace />;
-  
-  return <>{children}</>;
-};
 
-const AppRoutes = () => {
-  const { user, loading } = useAuth();
-
-  if (loading) return <LoadingScreen />;
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <Routes>
-      <Route 
-        path="/auth" 
-        element={user ? <Navigate to="/" replace /> : <AuthPage />} 
-      />
-      <Route 
-        path="/" 
-        element={
-          <ProtectedRoute>
-            <DashboardRouter />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/owner" 
-        element={
-          <ProtectedRoute requiredRole="owner">
-            <OwnerDashboard />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/investor" 
-        element={
-          <ProtectedRoute requiredRole="investor">
-            <InvestorDashboard />
-          </ProtectedRoute>
-        } 
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/auth" element={
+        user ? (
+          <Navigate to={userRole === 'owner' ? '/owner' : '/investor'} replace />
+        ) : (
+          <AuthPage />
+        )
+      } />
+      
+      <Route path="/" element={
+        user ? (
+          <Navigate to={userRole === 'owner' ? '/owner' : '/investor'} replace />
+        ) : (
+          <Index />
+        )
+      } />
+
+      <Route path="/owner" element={
+        user && userRole === 'owner' ? (
+          <OwnerDashboard />
+        ) : (
+          <Navigate to="/auth" replace />
+        )
+      } />
+
+      <Route path="/investor" element={
+        user && userRole === 'investor' ? (
+          <InvestorDashboard />
+        ) : (
+          <Navigate to="/auth" replace />
+        )
+      } />
+
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
-};
+}
 
-const DashboardRouter = () => {
-  const { userRole } = useAuth();
-  
-  if (userRole === 'owner') {
-    return <Navigate to="/owner" replace />;
-  } else {
-    return <Navigate to="/investor" replace />;
-  }
-};
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="dark" storageKey="waves-quant-theme">
-      <TooltipProvider>
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="system" storageKey="waves-quant-theme">
         <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+          <Router>
             <AppRoutes />
-          </BrowserRouter>
+            <Toaster />
+          </Router>
         </AuthProvider>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;
