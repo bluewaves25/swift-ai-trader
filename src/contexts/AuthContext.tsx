@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,13 +37,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .select('role')
                 .eq('id', session.user.id)
                 .single();
-              
-              if (error) {
-                console.error('Error fetching user role:', error);
-                setUserRole('investor'); // Default role
-              } else {
-                setUserRole(userData?.role || 'investor');
-              }
+              setUserRole(userData?.role || 'investor');
             } catch (error) {
               console.error('Error in role fetch:', error);
               setUserRole('investor');
