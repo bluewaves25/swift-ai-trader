@@ -1,0 +1,12 @@
+fastapi==0.115.0
+uvicorn==0.30.6
+ccxt==4.3.0
+supabase==2.9.1
+python-dotenv==1.0.1
+pandas==2.2.3
+scikit-learn==1.5.2
+stable-baselines3==2.3.2
+numpy==1.26.4
+apscheduler==3.10.4
+requests==2.32.3
+openai==1.47.1
