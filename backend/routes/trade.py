@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, HTTPException
 from supabase_client import SupabaseClient
 import ccxt.async_support as ccxt
