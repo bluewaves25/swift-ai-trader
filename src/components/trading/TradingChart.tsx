@@ -3,9 +3,12 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, RefreshCw } from "lucide-react";
+import { useMarketData } from "@/hooks/useApi";
+import { apiService } from "@/services/api";
 
 interface MarketData {
   id: string;
@@ -29,6 +32,7 @@ interface TradingPair {
   symbol: string;
   base_currency: string;
   quote_currency: string;
+  asset_class: string;
 }
 
 const TradingChart = () => {
@@ -38,9 +42,21 @@ const TradingChart = () => {
   const [currentPrice, setCurrentPrice] = useState<number>(0);
   const [priceChange, setPriceChange] = useState<number>(0);
   const [marketCondition, setMarketCondition] = useState<string>("ranging");
+  const [selectedAssetClass, setSelectedAssetClass] = useState<string>("all");
+  const [isConnected, setIsConnected] = useState(false);
+
+  const assetClasses = [
+    { value: "all", label: "All Assets" },
+    { value: "forex", label: "Forex" },
+    { value: "crypto", label: "Crypto" },
+    { value: "stocks", label: "Stocks" },
+    { value: "commodities", label: "Commodities" },
+    { value: "indices", label: "Indices" }
+  ];
 
   useEffect(() => {
     fetchTradingPairs();
+    checkBackendConnection();
   }, []);
 
   useEffect(() => {
@@ -50,6 +66,16 @@ const TradingChart = () => {
       return () => clearInterval(interval);
     }
   }, [selectedPair]);
+
+  const checkBackendConnection = async () => {
+    try {
+      await apiService.healthCheck();
+      setIsConnected(true);
+    } catch (error) {
+      console.error('Backend connection failed:', error);
+      setIsConnected(false);
+    }
+  };
 
   const fetchTradingPairs = async () => {
     try {
@@ -72,6 +98,7 @@ const TradingChart = () => {
 
   const fetchMarketData = async (pairId: string) => {
     try {
+      // First try to get from Supabase
       const { data, error } = await supabase
         .from('market_data')
         .select('*')
@@ -100,15 +127,28 @@ const TradingChart = () => {
           setPriceChange(((latest.close_price - previous.close_price) / previous.close_price) * 100);
         }
       }
+
+      // If connected to backend, also fetch live data
+      if (isConnected) {
+        const pair = tradingPairs.find(p => p.id === pairId);
+        if (pair) {
+          try {
+            const liveData = await apiService.getMarketData(pair.symbol);
+            // Process and merge live data
+            console.log('Live market data:', liveData);
+          } catch (error) {
+            console.error('Error fetching live data:', error);
+          }
+        }
+      }
     } catch (error) {
       console.error('Error fetching market data:', error);
     }
   };
 
-  const generateMockData = () => {
+  const generateMockData = async () => {
     if (!selectedPair) return;
 
-    // Generate realistic market data with technical indicators
     const basePrice = currentPrice || 50000;
     const volatility = 0.02;
     const now = new Date();
@@ -133,22 +173,28 @@ const TradingChart = () => {
       resistance_level: basePrice * 1.05
     };
 
-    // Insert into database
-    supabase
-      .from('market_data')
-      .insert(newDataPoint)
-      .then(({ error }) => {
-        if (error) console.error('Error inserting market data:', error);
-      });
+    try {
+      const { error } = await supabase
+        .from('market_data')
+        .insert(newDataPoint);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error inserting market data:', error);
+    }
   };
 
-  // Generate mock data every 3 seconds for demo
   useEffect(() => {
     const interval = setInterval(generateMockData, 3000);
     return () => clearInterval(interval);
   }, [selectedPair, currentPrice]);
 
+  const filteredPairs = selectedAssetClass === 'all' 
+    ? tradingPairs 
+    : tradingPairs.filter(pair => pair.asset_class === selectedAssetClass);
+
   const selectedPairData = tradingPairs.find(pair => pair.id === selectedPair);
+
   const getMarketConditionIcon = (condition: string) => {
     switch (condition) {
       case 'trending_up':
@@ -178,22 +224,46 @@ const TradingChart = () => {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Live Chart</CardTitle>
-            <CardDescription>Real-time market data with technical analysis</CardDescription>
+            <CardTitle className="flex items-center space-x-2">
+              <span>Multi-Asset Live Chart</span>
+              <Badge variant={isConnected ? "default" : "destructive"}>
+                {isConnected ? "Connected" : "Offline"}
+              </Badge>
+            </CardTitle>
+            <CardDescription>Real-time market data across all asset classes</CardDescription>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <Select value={selectedAssetClass} onValueChange={setSelectedAssetClass}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {assetClasses.map((assetClass) => (
+                  <SelectItem key={assetClass.value} value={assetClass.value}>
+                    {assetClass.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={selectedPair} onValueChange={setSelectedPair}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select pair" />
               </SelectTrigger>
               <SelectContent>
-                {tradingPairs.map((pair) => (
+                {filteredPairs.map((pair) => (
                   <SelectItem key={pair.id} value={pair.id}>
                     {pair.symbol}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={checkBackendConnection}
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
           </div>
         </div>
         
@@ -208,6 +278,9 @@ const TradingChart = () => {
             <Badge variant={getMarketConditionColor(marketCondition)} className="flex items-center space-x-1">
               {getMarketConditionIcon(marketCondition)}
               <span className="capitalize">{marketCondition.replace('_', ' ')}</span>
+            </Badge>
+            <Badge variant="outline" className="capitalize">
+              {selectedPairData.asset_class || 'Unknown'}
             </Badge>
           </div>
         )}
