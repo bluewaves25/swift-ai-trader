@@ -1,7 +1,7 @@
 
 fastapi==0.115.0
 uvicorn==0.30.6
-MetaTrader5==5.0.45 
+MetaTrader5==5.0.5120
 ccxt==4.4.92 
 python-dotenv==1.0.1 
 pandas==2.2.3 

@@ -2,6 +2,7 @@ import express from 'express';
 import { PythonShell } from 'python-shell';
 import ccxt from 'ccxt';
 import dotenv from 'dotenv';
+import axios from 'axios';
 
 dotenv.config();
 
@@ -31,11 +32,9 @@ const brokers = {
       return JSON.parse(results[0]);
     },
     async deposit(accountNumber, password, server, amount) {
-      // Exness deposits are manual; log request for manual action
       return { status: 'pending', message: `Deposit of ${amount} requested for Exness account ${accountNumber}` };
     },
     async withdraw(accountNumber, password, server, amount) {
-      // Exness withdrawals are manual; log request for manual action
       return { status: 'pending', message: `Withdrawal of ${amount} requested for Exness account ${accountNumber}` };
     },
   },
@@ -132,6 +131,29 @@ app.post('/withdraw/:broker/:account', async (req, res) => {
     } else {
       res.status(400).json({ error: 'Unsupported broker' });
     }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/sentiment/:symbol', async (req, res) => {
+  const { symbol } = req.params;
+  try {
+    const response = await axios.post(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
+        model: 'mistralai/mixtral-8x7b-instruct',
+        messages: [{ role: 'user', content: `Analyze sentiment for ${symbol} based on recent financial news.` }],
+        max_tokens: 50,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    res.json({ sentiment: response.data.choices[0].message.content.trim() });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
