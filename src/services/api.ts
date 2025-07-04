@@ -1,127 +1,135 @@
 
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'http://localhost:8000';
 
-// Create axios instance with default config
+// Create axios instance with enhanced config
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor for auth
+// Enhanced request interceptor
 api.interceptors.request.use(
   (config) => {
-    // Add auth token if available
     const token = localStorage.getItem('supabase-auth-token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Add request timestamp for debugging
+    config.metadata = { startTime: new Date() };
+    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    console.error('Request interceptor error:', error);
+    return Promise.reject(error);
+  }
 );
 
-// Response interceptor for error handling
+// Enhanced response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const endTime = new Date();
+    const duration = endTime.getTime() - response.config.metadata?.startTime?.getTime();
+    console.log(`API Response: ${response.config.url} (${duration}ms)`);
+    return response;
+  },
   (error) => {
-    console.error('API Error:', error.response?.data || error.message);
+    const message = error.response?.data?.message || error.message || 'Network Error';
+    console.error('API Error:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      message,
+      data: error.response?.data
+    });
+    
+    // Enhanced error handling
+    if (error.response?.status === 401) {
+      localStorage.removeItem('supabase-auth-token');
+      window.location.href = '/auth';
+    }
+    
     return Promise.reject(error);
   }
 );
 
 export const apiService = {
-  // Trading operations
-  async getBalance(broker: string, account: string, params?: any) {
-    const response = await api.get(`/balance/${broker}/${account}`, { params });
+  // Enhanced wallet operations
+  async getBalance(userId: string) {
+    const response = await api.get(`/api/wallet/balance?user_id=${userId}`);
     return response.data;
   },
 
-  async executeTrade(broker: string, account: string, tradeData: any, params?: any) {
-    const response = await api.post(`/trade/${broker}/${account}`, tradeData, { params });
+  async updateBalance(userId: string, balance: any) {
+    const response = await api.post(`/api/wallet/update`, { user_id: userId, ...balance });
     return response.data;
   },
 
-  async deposit(broker: string, account: string, depositData: any, params?: any) {
-    const response = await api.post(`/deposit/${broker}/${account}`, depositData, { params });
-    return response.data;
-  },
-
-  async withdraw(broker: string, account: string, withdrawData: any, params?: any) {
-    const response = await api.post(`/withdraw/${broker}/${account}`, withdrawData, { params });
-    return response.data;
-  },
-
-  // Market data
-  async getMarketData(symbol: string) {
-    const response = await api.get(`/market-data/${symbol}`);
-    return response.data;
-  },
-
-  async getHistoricalData(symbol: string, timeframe: string, limit?: number) {
-    const response = await api.get(`/historical-data/${symbol}/${timeframe}`, {
-      params: { limit }
+  // Enhanced trading operations  
+  async executeTrade(symbol: string, tradeType: string, amount: number) {
+    const response = await api.post('/api/trade/execute', {
+      symbol,
+      trade_type: tradeType,
+      amount
     });
     return response.data;
   },
 
-  // AI Signals
-  async getSentiment(symbol: string) {
-    const response = await api.get(`/sentiment/${symbol}`);
+  async getTradeHistory(symbol?: string) {
+    const params = symbol ? { symbol } : {};
+    const response = await api.get('/api/trade/history', { params });
     return response.data;
   },
 
+  // Enhanced strategy operations
   async getAISignals(symbol?: string) {
-    const response = await api.get('/ai-signals', {
-      params: { symbol }
-    });
+    const params = symbol ? { symbol } : {};
+    const response = await api.get('/api/strategies/signals', { params });
     return response.data;
   },
 
-  // Portfolio management
-  async getPortfolioStats(userId: string) {
-    const response = await api.get(`/portfolio/${userId}`);
+  async getStrategyPerformance(symbol?: string) {
+    const params = symbol ? { symbol } : {};
+    const response = await api.get('/api/strategies/performance', { params });
     return response.data;
   },
 
-  async updateRiskSettings(userId: string, settings: any) {
-    const response = await api.put(`/risk-settings/${userId}`, settings);
-    return response.data;
-  },
-
-  // Strategy management
-  async getStrategies() {
-    const response = await api.get('/strategies');
-    return response.data;
-  },
-
-  async updateStrategy(strategyId: string, params: any) {
-    const response = await api.put(`/strategies/${strategyId}`, params);
+  async updateRiskParams(params: any) {
+    const response = await api.post('/api/strategies/risk', params);
     return response.data;
   },
 
   // Trading engine control
   async startTradingEngine() {
-    const response = await api.post('/engine/start');
+    const response = await api.post('/api/engine/start');
     return response.data;
   },
 
   async stopTradingEngine() {
-    const response = await api.post('/engine/stop');
+    const response = await api.post('/api/engine/stop');
     return response.data;
   },
 
   async emergencyStop() {
-    const response = await api.post('/engine/emergency-stop');
+    const response = await api.post('/api/engine/emergency-stop');
     return response.data;
   },
 
-  async closeAllPositions() {
-    const response = await api.post('/engine/close-all');
+  // Market data
+  async getMarketData(symbol: string) {
+    const response = await api.get(`/api/market-data/${symbol}`);
+    return response.data;
+  },
+
+  async getHistoricalData(symbol: string, timeframe: string = '1h', limit: number = 100) {
+    const response = await api.get(`/api/historical-data/${symbol}/${timeframe}`, {
+      params: { limit }
+    });
     return response.data;
   },
 

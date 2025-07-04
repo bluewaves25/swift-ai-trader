@@ -263,6 +263,54 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          address: string | null
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          date_of_birth: string | null
+          full_name: string | null
+          id: string
+          investment_experience: string | null
+          nationality: string | null
+          occupation: string | null
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          full_name?: string | null
+          id?: string
+          investment_experience?: string | null
+          nationality?: string | null
+          occupation?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          full_name?: string | null
+          id?: string
+          investment_experience?: string | null
+          nationality?: string | null
+          occupation?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       risk_settings: {
         Row: {
           created_at: string | null
@@ -306,6 +354,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      support_tickets: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          priority: string
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          priority?: string
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          priority?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       trades: {
         Row: {
@@ -403,6 +484,84 @@ export type Database = {
           min_trade_amount?: number | null
           quote_currency?: string
           symbol?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          exness_account: string | null
+          id: string
+          notes: string | null
+          reference_id: string | null
+          status: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          exness_account?: string | null
+          id?: string
+          notes?: string | null
+          reference_id?: string | null
+          status?: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          exness_account?: string | null
+          id?: string
+          notes?: string | null
+          reference_id?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          dark_mode: boolean | null
+          email_notifications: boolean | null
+          id: string
+          language: string | null
+          sms_notifications: boolean | null
+          timezone: string | null
+          trade_alerts: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dark_mode?: boolean | null
+          email_notifications?: boolean | null
+          id?: string
+          language?: string | null
+          sms_notifications?: boolean | null
+          timezone?: string | null
+          trade_alerts?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dark_mode?: boolean | null
+          email_notifications?: boolean | null
+          id?: string
+          language?: string | null
+          sms_notifications?: boolean | null
+          timezone?: string | null
+          trade_alerts?: boolean | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

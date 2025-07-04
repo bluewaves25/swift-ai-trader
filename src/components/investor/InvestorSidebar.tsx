@@ -1,43 +1,31 @@
 
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
+import { cn } from "@/lib/utils";
+import { 
+  LayoutDashboard, 
+  Wallet, 
+  Activity, 
+  History, 
+  BookOpen,
+  CreditCard,
+  Settings,
+  User,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Info,
+  Mail,
+  FileText,
+  LogOut
+} from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { 
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-  BarChart3,
-  Wallet,
-  Activity,
-  FileText,
-  CreditCard,
-  Settings,
-  User,
-  TrendingUp,
-  Eye,
-  ChevronDown,
-  DollarSign,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  LogOut,
-} from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
 
 interface InvestorSidebarProps {
   activeSection: string;
@@ -45,140 +33,178 @@ interface InvestorSidebarProps {
 }
 
 export function InvestorSidebar({ activeSection, onSectionChange }: InvestorSidebarProps) {
-  const { collapsed } = useSidebar();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isPaymentsOpen, setIsPaymentsOpen] = useState(false);
   const { signOut } = useAuth();
-  const [paymentsOpen, setPaymentsOpen] = useState(false);
 
-  const mainMenuItems = [
-    { id: "overview", title: "Overview", icon: BarChart3 },
-    { id: "portfolio", title: "Portfolio", icon: Wallet },
-    { id: "signals", title: "Live Signals", icon: Activity },
-    { id: "trades", title: "Trade History", icon: TrendingUp },
-    { id: "journal", title: "Journal", icon: FileText },
+  const mainNavItems = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'portfolio', label: 'Portfolio', icon: Wallet },
+    { id: 'signals', label: 'Live Signals', icon: Activity },
+    { id: 'trades', label: 'Trade History', icon: History },
+    { id: 'journal', label: 'Journal', icon: BookOpen },
   ];
 
   const paymentItems = [
-    { id: "deposit", title: "Deposit", icon: ArrowUpCircle },
-    { id: "withdraw", title: "Withdraw", icon: ArrowDownCircle },
+    { id: 'deposit', label: 'Deposit', icon: ArrowUpCircle },
+    { id: 'withdraw', label: 'Withdraw', icon: ArrowDownCircle },
   ];
 
-  const bottomMenuItems = [
-    { id: "settings", title: "Settings", icon: Settings },
-    { id: "profile", title: "Profile", icon: User },
+  const bottomNavItems = [
+    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'profile', label: 'Profile', icon: User },
   ];
 
-  const isActive = (id: string) => activeSection === id;
+  const footerLinks = [
+    { id: 'about', label: 'About', icon: Info, href: '/about' },
+    { id: 'contact', label: 'Contact', icon: Mail, href: '/contact' },
+    { id: 'terms', label: 'Terms', icon: FileText, href: '/terms' },
+  ];
+
+  const handleNavClick = (sectionId: string) => {
+    if (sectionId === 'deposit' || sectionId === 'withdraw') {
+      onSectionChange('payments');
+    } else {
+      onSectionChange(sectionId);
+    }
+  };
+
+  const NavItem = ({ item, isActive = false }: { item: any; isActive?: boolean }) => (
+    <Button
+      variant={isActive ? "secondary" : "ghost"}
+      className={cn(
+        "w-full justify-start h-12",
+        isCollapsed && "px-2",
+        isActive && "bg-primary/10 text-primary"
+      )}
+      onClick={() => handleNavClick(item.id)}
+    >
+      <item.icon className={cn("h-5 w-5", isCollapsed ? "mx-auto" : "mr-3")} />
+      {!isCollapsed && <span>{item.label}</span>}
+    </Button>
+  );
 
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible>
-      <SidebarHeader className="p-4">
-        <div className="flex items-center space-x-2">
-          <TrendingUp className="h-8 w-8 text-primary" />
-          {!collapsed && (
-            <div>
-              <h2 className="text-lg font-bold">Waves Quant</h2>
-              <Badge variant="outline" className="text-xs">
-                <Eye className="h-3 w-3 mr-1" />
-                Investor
-              </Badge>
+    <div className={cn(
+      "flex flex-col h-full bg-card border-r transition-all duration-300",
+      isCollapsed ? "w-16" : "w-64"
+    )}>
+      {/* Header */}
+      <div className="p-4 border-b">
+        <div className="flex items-center justify-between">
+          {!isCollapsed && (
+            <div className="flex items-center space-x-2">
+              <Activity className="h-6 w-6 text-primary" />
+              <span className="font-semibold">Investor Panel</span>
             </div>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="h-8 w-8 p-0"
+          >
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </Button>
         </div>
-      </SidebarHeader>
+      </div>
 
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Trading</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainMenuItems.map((item) => (
-                <SidebarMenuItem key={item.id}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.id)}
-                    onClick={() => onSectionChange(item.id)}
-                  >
-                    <button className="flex items-center space-x-2 w-full text-left">
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </button>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+      {/* Main Navigation */}
+      <div className="flex-1 p-2 space-y-1">
+        {mainNavItems.map((item) => (
+          <NavItem
+            key={item.id}
+            item={item}
+            isActive={activeSection === item.id}
+          />
+        ))}
+
+        {/* Payments Collapsible */}
+        <Collapsible open={isPaymentsOpen} onOpenChange={setIsPaymentsOpen}>
+          <CollapsibleTrigger asChild>
+            <Button
+              variant={activeSection === 'payments' ? "secondary" : "ghost"}
+              className={cn(
+                "w-full justify-start h-12",
+                isCollapsed && "px-2",
+                activeSection === 'payments' && "bg-primary/10 text-primary"
+              )}
+            >
+              <CreditCard className={cn("h-5 w-5", isCollapsed ? "mx-auto" : "mr-3")} />
+              {!isCollapsed && (
+                <>
+                  <span className="flex-1 text-left">Payments</span>
+                  <ChevronRight className={cn(
+                    "h-4 w-4 transition-transform",
+                    isPaymentsOpen && "rotate-90"
+                  )} />
+                </>
+              )}
+            </Button>
+          </CollapsibleTrigger>
+          
+          {!isCollapsed && (
+            <CollapsibleContent className="space-y-1">
+              {paymentItems.map((item) => (
+                <Button
+                  key={item.id}
+                  variant="ghost"
+                  className="w-full justify-start h-10 pl-8 text-sm"
+                  onClick={() => handleNavClick(item.id)}
+                >
+                  <item.icon className="h-4 w-4 mr-3" />
+                  <span>{item.label}</span>
+                </Button>
               ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+            </CollapsibleContent>
+          )}
+        </Collapsible>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Payments</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <Collapsible open={paymentsOpen} onOpenChange={setPaymentsOpen}>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton className="flex items-center justify-between w-full">
-                      <div className="flex items-center space-x-2">
-                        <CreditCard className="h-4 w-4" />
-                        {!collapsed && <span>Payments</span>}
-                      </div>
-                      {!collapsed && <ChevronDown className="h-4 w-4" />}
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  {!collapsed && (
-                    <CollapsibleContent className="ml-6 mt-2 space-y-1">
-                      {paymentItems.map((item) => (
-                        <Button
-                          key={item.id}
-                          variant={isActive(item.id) ? "default" : "ghost"}
-                          size="sm"
-                          className="w-full justify-start"
-                          onClick={() => onSectionChange(item.id)}
-                        >
-                          <item.icon className="h-4 w-4 mr-2" />
-                          {item.title}
-                        </Button>
-                      ))}
-                    </CollapsibleContent>
-                  )}
-                </Collapsible>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Bottom Navigation */}
+        <div className="pt-4 border-t space-y-1">
+          {bottomNavItems.map((item) => (
+            <NavItem
+              key={item.id}
+              item={item}
+              isActive={activeSection === item.id}
+            />
+          ))}
+        </div>
+      </div>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Account</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {bottomMenuItems.map((item) => (
-                <SidebarMenuItem key={item.id}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.id)}
-                    onClick={() => onSectionChange(item.id)}
-                  >
-                    <button className="flex items-center space-x-2 w-full text-left">
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </button>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-
-      <SidebarFooter className="p-4">
+      {/* Footer Links */}
+      <div className="p-2 border-t space-y-1">
+        {footerLinks.map((link) => (
+          <Button
+            key={link.id}
+            variant="ghost"
+            className={cn(
+              "w-full justify-start h-10 text-sm text-muted-foreground",
+              isCollapsed && "px-2"
+            )}
+            onClick={() => window.open(link.href, '_blank')}
+          >
+            <link.icon className={cn("h-4 w-4", isCollapsed ? "mx-auto" : "mr-3")} />
+            {!isCollapsed && <span>{link.label}</span>}
+          </Button>
+        ))}
+        
         <Button
-          variant="outline"
+          variant="ghost"
+          className={cn(
+            "w-full justify-start h-10 text-sm text-red-600 hover:text-red-700 hover:bg-red-50",
+            isCollapsed && "px-2"
+          )}
           onClick={signOut}
-          className="w-full justify-start"
         >
-          <LogOut className="h-4 w-4 mr-2" />
-          {!collapsed && "Sign Out"}
+          <LogOut className={cn("h-4 w-4", isCollapsed ? "mx-auto" : "mr-3")} />
+          {!isCollapsed && <span>Sign Out</span>}
         </Button>
-      </SidebarFooter>
-    </Sidebar>
+      </div>
+    </div>
   );
 }
