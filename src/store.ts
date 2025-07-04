@@ -1,5 +1,6 @@
+
 import { configureStore } from '@reduxjs/toolkit';
-import tradingReducer from './redux/selector';
+import tradingReducer from './redux/tradingSlice';
 
 export const store = configureStore({
   reducer: {

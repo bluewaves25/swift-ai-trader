@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { TrendingUp, TrendingDown, Minus, RefreshCw } from "lucide-react";
-import { useMarketData } from "@/hooks/useApi";
 import { apiService } from "@/services/api";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
 
 interface MarketData {
   id: string;
@@ -32,10 +32,11 @@ interface TradingPair {
   symbol: string;
   base_currency: string;
   quote_currency: string;
-  asset_class: string;
+  asset_class?: string;
 }
 
 const TradingChart = () => {
+  const { handleError } = useErrorHandler();
   const [selectedPair, setSelectedPair] = useState<string>("");
   const [tradingPairs, setTradingPairs] = useState<TradingPair[]>([]);
   const [marketData, setMarketData] = useState<MarketData[]>([]);
@@ -54,8 +55,17 @@ const TradingChart = () => {
     { value: "indices", label: "Indices" }
   ];
 
+  // Asset mappings for different classes
+  const assetSymbols = {
+    forex: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'],
+    crypto: ['BTCUSD', 'ETHUSD', 'ADAUSD', 'XRPUSD', 'DOTUSD', 'LINKUSD', 'BNBUSD', 'SOLUSD'],
+    stocks: ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX'],
+    commodities: ['XAUUSD', 'XAGUSD', 'USOIL', 'UKOIL', 'NATGAS', 'COPPER', 'WHEAT', 'CORN'],
+    indices: ['SPX500', 'NAS100', 'DOW30', 'UK100', 'GER40', 'FRA40', 'JPN225', 'AUS200']
+  };
+
   useEffect(() => {
-    fetchTradingPairs();
+    initializeTradingPairs();
     checkBackendConnection();
   }, []);
 
@@ -67,6 +77,86 @@ const TradingChart = () => {
     }
   }, [selectedPair]);
 
+  const initializeTradingPairs = async () => {
+    try {
+      // First try to get existing pairs from database
+      const { data: existingPairs } = await supabase
+        .from('trading_pairs')
+        .select('*')
+        .eq('is_active', true);
+
+      if (existingPairs && existingPairs.length > 0) {
+        // Map existing pairs to include asset_class
+        const mappedPairs = existingPairs.map(pair => ({
+          ...pair,
+          asset_class: getAssetClass(pair.symbol)
+        }));
+        setTradingPairs(mappedPairs);
+        if (!selectedPair) {
+          setSelectedPair(mappedPairs[0].id);
+        }
+      } else {
+        // Create default trading pairs if none exist
+        await createDefaultTradingPairs();
+      }
+    } catch (error) {
+      handleError(error);
+    }
+  };
+
+  const getAssetClass = (symbol: string) => {
+    for (const [assetClass, symbols] of Object.entries(assetSymbols)) {
+      if (symbols.includes(symbol)) {
+        return assetClass;
+      }
+    }
+    return 'forex'; // default
+  };
+
+  const createDefaultTradingPairs = async () => {
+    try {
+      const allPairs = [];
+      
+      // Create pairs for each asset class
+      Object.entries(assetSymbols).forEach(([assetClass, symbols]) => {
+        symbols.forEach(symbol => {
+          const [base, quote] = symbol.includes('USD') 
+            ? symbol.endsWith('USD') 
+              ? [symbol.replace('USD', ''), 'USD']
+              : ['USD', symbol.replace('USD', '')]
+            : [symbol.slice(0, 3), symbol.slice(3)];
+          
+          allPairs.push({
+            symbol,
+            base_currency: base,
+            quote_currency: quote,
+            is_active: true
+          });
+        });
+      });
+
+      const { data, error } = await supabase
+        .from('trading_pairs')
+        .insert(allPairs)
+        .select();
+
+      if (error) throw error;
+
+      if (data) {
+        const mappedPairs = data.map(pair => ({
+          ...pair,
+          asset_class: getAssetClass(pair.symbol)
+        }));
+        setTradingPairs(mappedPairs);
+        if (!selectedPair) {
+          setSelectedPair(mappedPairs[0].id);
+        }
+      }
+    } catch (error) {
+      handleError(error);
+    }
+  };
+
   const checkBackendConnection = async () => {
     try {
       await apiService.healthCheck();
@@ -77,28 +167,8 @@ const TradingChart = () => {
     }
   };
 
-  const fetchTradingPairs = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('trading_pairs')
-        .select('*')
-        .eq('is_active', true)
-        .order('symbol');
-
-      if (error) throw error;
-      
-      setTradingPairs(data || []);
-      if (data?.length && !selectedPair) {
-        setSelectedPair(data[0].id);
-      }
-    } catch (error) {
-      console.error('Error fetching trading pairs:', error);
-    }
-  };
-
   const fetchMarketData = async (pairId: string) => {
     try {
-      // First try to get from Supabase
       const { data, error } = await supabase
         .from('market_data')
         .select('*')
@@ -128,13 +198,11 @@ const TradingChart = () => {
         }
       }
 
-      // If connected to backend, also fetch live data
       if (isConnected) {
         const pair = tradingPairs.find(p => p.id === pairId);
         if (pair) {
           try {
             const liveData = await apiService.getMarketData(pair.symbol);
-            // Process and merge live data
             console.log('Live market data:', liveData);
           } catch (error) {
             console.error('Error fetching live data:', error);
@@ -142,7 +210,7 @@ const TradingChart = () => {
         }
       }
     } catch (error) {
-      console.error('Error fetching market data:', error);
+      handleError(error);
     }
   };
 
@@ -222,7 +290,7 @@ const TradingChart = () => {
   return (
     <Card className="h-[500px]">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <CardTitle className="flex items-center space-x-2">
               <span>Multi-Asset Live Chart</span>
@@ -232,9 +300,9 @@ const TradingChart = () => {
             </CardTitle>
             <CardDescription>Real-time market data across all asset classes</CardDescription>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
             <Select value={selectedAssetClass} onValueChange={setSelectedAssetClass}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-full sm:w-[140px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -246,7 +314,7 @@ const TradingChart = () => {
               </SelectContent>
             </Select>
             <Select value={selectedPair} onValueChange={setSelectedPair}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Select pair" />
               </SelectTrigger>
               <SelectContent>
@@ -261,6 +329,7 @@ const TradingChart = () => {
               variant="outline"
               size="sm"
               onClick={checkBackendConnection}
+              className="w-full sm:w-auto"
             >
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -268,7 +337,7 @@ const TradingChart = () => {
         </div>
         
         {selectedPairData && (
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
             <div>
               <p className="text-2xl font-bold">${currentPrice.toFixed(2)}</p>
               <p className={`text-sm ${priceChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>

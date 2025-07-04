@@ -54,11 +54,11 @@ export function useApi<T>(
 }
 
 // Specific hooks for common operations
-export function useBalance(broker: string, account: string, params?: any) {
+export function useBalance(userId: string) {
   return useApi(
-    () => apiService.getBalance(broker, account, params),
-    [broker, account, params],
-    { immediate: !!broker && !!account }
+    () => apiService.getBalance(userId),
+    [userId],
+    { immediate: !!userId }
   );
 }
 
@@ -67,14 +67,6 @@ export function useMarketData(symbol: string) {
     () => apiService.getMarketData(symbol),
     [symbol],
     { immediate: !!symbol }
-  );
-}
-
-export function usePortfolioStats(userId: string) {
-  return useApi(
-    () => apiService.getPortfolioStats(userId),
-    [userId],
-    { immediate: !!userId }
   );
 }
 

@@ -3,7 +3,10 @@ import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8000';
 
-// Create axios instance with enhanced config
+interface RequestConfig {
+  startTime?: Date;
+}
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
@@ -12,7 +15,6 @@ const api = axios.create({
   },
 });
 
-// Enhanced request interceptor
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('supabase-auth-token');
@@ -20,8 +22,7 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Add request timestamp for debugging
-    config.metadata = { startTime: new Date() };
+    (config as any).requestStartTime = new Date();
     console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
@@ -31,11 +32,11 @@ api.interceptors.request.use(
   }
 );
 
-// Enhanced response interceptor
 api.interceptors.response.use(
   (response) => {
     const endTime = new Date();
-    const duration = endTime.getTime() - response.config.metadata?.startTime?.getTime();
+    const startTime = (response.config as any).requestStartTime;
+    const duration = startTime ? endTime.getTime() - startTime.getTime() : 0;
     console.log(`API Response: ${response.config.url} (${duration}ms)`);
     return response;
   },
@@ -48,7 +49,6 @@ api.interceptors.response.use(
       data: error.response?.data
     });
     
-    // Enhanced error handling
     if (error.response?.status === 401) {
       localStorage.removeItem('supabase-auth-token');
       window.location.href = '/auth';
@@ -59,7 +59,6 @@ api.interceptors.response.use(
 );
 
 export const apiService = {
-  // Enhanced wallet operations
   async getBalance(userId: string) {
     const response = await api.get(`/api/wallet/balance?user_id=${userId}`);
     return response.data;
@@ -70,7 +69,6 @@ export const apiService = {
     return response.data;
   },
 
-  // Enhanced trading operations  
   async executeTrade(symbol: string, tradeType: string, amount: number) {
     const response = await api.post('/api/trade/execute', {
       symbol,
@@ -86,7 +84,6 @@ export const apiService = {
     return response.data;
   },
 
-  // Enhanced strategy operations
   async getAISignals(symbol?: string) {
     const params = symbol ? { symbol } : {};
     const response = await api.get('/api/strategies/signals', { params });
@@ -104,7 +101,6 @@ export const apiService = {
     return response.data;
   },
 
-  // Trading engine control
   async startTradingEngine() {
     const response = await api.post('/api/engine/start');
     return response.data;
@@ -120,7 +116,6 @@ export const apiService = {
     return response.data;
   },
 
-  // Market data
   async getMarketData(symbol: string) {
     const response = await api.get(`/api/market-data/${symbol}`);
     return response.data;
@@ -133,7 +128,6 @@ export const apiService = {
     return response.data;
   },
 
-  // Health check
   async healthCheck() {
     const response = await api.get('/health');
     return response.data;
