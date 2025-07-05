@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,23 +30,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth event:', event, session?.user?.id);
         setUser(session?.user ?? null);
         setLoading(false);
 
         if (event === 'SIGNED_IN' && session?.user) {
-          // Check user role and redirect accordingly
-          const { data: userData } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
+          try {
+            // Check user role and redirect accordingly
+            const { data: userData, error } = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', session.user.id)
+              .single();
 
-          if (userData?.role === 'owner') {
-            navigate('/owner-dashboard');
-          } else {
+            console.log('User data:', userData, 'Error:', error);
+
+            if (error) {
+              console.error('Error fetching user role:', error);
+              // Default to investor if we can't fetch role
+              navigate('/investor-dashboard');
+              toast.success('Successfully logged in!');
+              return;
+            }
+
+            if (userData?.role === 'owner') {
+              navigate('/owner-dashboard');
+            } else {
+              navigate('/investor-dashboard');
+            }
+            toast.success('Successfully logged in!');
+          } catch (error) {
+            console.error('Error in auth state change:', error);
             navigate('/investor-dashboard');
+            toast.success('Successfully logged in!');
           }
-          toast.success('Successfully logged in!');
         }
 
         if (event === 'SIGNED_OUT') {
@@ -70,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
     } catch (error: any) {
+      console.error('Sign in error:', error);
       toast.error(error.message || 'Failed to sign in');
       throw error;
     } finally {
@@ -85,12 +102,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
         options: {
           data: userData,
+          emailRedirectTo: `${window.location.origin}/`,
         },
       });
 
       if (error) throw error;
       toast.success('Account created successfully! Please check your email to verify your account.');
     } catch (error: any) {
+      console.error('Sign up error:', error);
       toast.error(error.message || 'Failed to create account');
       throw error;
     } finally {

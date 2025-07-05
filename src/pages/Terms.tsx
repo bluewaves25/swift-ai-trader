@@ -1,14 +1,20 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, ArrowLeft } from "lucide-react";
+import { TrendingUp, ArrowLeft, Menu } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 export default function Terms() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur p-4">
         <div className="container mx-auto flex items-center justify-between">
@@ -16,9 +22,49 @@ export default function Terms() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Home
           </Button>
+          
           <div className="flex items-center space-x-2">
             <TrendingUp className="h-6 w-6 text-primary" />
             <span className="text-xl font-bold">Waves Quant Engine</span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-4">
+              <Button variant="ghost" onClick={() => navigate('/about')}>
+                About
+              </Button>
+              <Button variant="ghost" onClick={() => navigate('/contact')}>
+                Contact
+              </Button>
+              <Button variant="ghost" onClick={() => navigate('/auth')}>
+                Sign In
+              </Button>
+            </div>
+            
+            {/* Mobile Navigation */}
+            <div className="md:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => navigate('/about')}>
+                    About
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/contact')}>
+                    Contact
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/auth')}>
+                    Sign In
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            
+            <ThemeToggle />
           </div>
         </div>
       </header>
