@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,7 +9,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, userData: any) => Promise<void>;
+  signUp: (email: string, password: string, userData?: any) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
 }
@@ -36,24 +37,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (event === 'SIGNED_IN' && session?.user) {
           try {
-            // Check user role and redirect accordingly
-            const { data: userData, error } = await supabase
+            // Check if user exists in our users table, if not create them
+            const { data: existingUser, error: fetchError } = await supabase
               .from('users')
               .select('role')
               .eq('id', session.user.id)
               .single();
 
-            console.log('User data:', userData, 'Error:', error);
+            if (fetchError && fetchError.code === 'PGRST116') {
+              // User doesn't exist, create them
+              const { error: createError } = await supabase
+                .from('users')
+                .insert({
+                  id: session.user.id,
+                  email: session.user.email!,
+                  role: 'investor'
+                });
 
-            if (error) {
-              console.error('Error fetching user role:', error);
-              // Default to investor if we can't fetch role
+              if (createError) {
+                console.error('Error creating user:', createError);
+              }
+              
+              // Default to investor dashboard for new users
+              navigate('/investor-dashboard');
+              toast.success('Account created successfully!');
+              return;
+            }
+
+            if (fetchError) {
+              console.error('Error fetching user role:', fetchError);
               navigate('/investor-dashboard');
               toast.success('Successfully logged in!');
               return;
             }
 
-            if (userData?.role === 'owner') {
+            // Redirect based on role
+            if (existingUser?.role === 'owner') {
               navigate('/owner-dashboard');
             } else {
               navigate('/investor-dashboard');
@@ -94,14 +113,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, userData: any) => {
+  const signUp = async (email: string, password: string, userData?: any) => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: userData,
           emailRedirectTo: `${window.location.origin}/`,
         },
       });

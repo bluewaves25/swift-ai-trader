@@ -60,30 +60,30 @@ export default function Contact() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur p-4">
+      <header className="border-b border-white/10 bg-black/20 backdrop-blur-lg p-4">
         <div className="container mx-auto flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate('/')}>
+          <Button variant="ghost" onClick={() => navigate('/')} className="text-white hover:bg-white/10">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Home
           </Button>
           
           <div className="flex items-center space-x-2">
-            <TrendingUp className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">Waves Quant Engine</span>
+            <TrendingUp className="h-6 w-6 text-blue-400" />
+            <span className="text-xl font-bold text-white">Waves Quant Engine</span>
           </div>
           
           <div className="flex items-center space-x-2">
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-4">
-              <Button variant="ghost" onClick={() => navigate('/about')}>
+              <Button variant="ghost" onClick={() => navigate('/about')} className="text-white hover:bg-white/10">
                 About
               </Button>
-              <Button variant="ghost" onClick={() => navigate('/terms')}>
+              <Button variant="ghost" onClick={() => navigate('/terms')} className="text-white hover:bg-white/10">
                 Terms
               </Button>
-              <Button variant="ghost" onClick={() => navigate('/auth')}>
+              <Button variant="ghost" onClick={() => navigate('/auth')} className="text-white hover:bg-white/10">
                 Sign In
               </Button>
             </div>
@@ -92,18 +92,18 @@ export default function Contact() {
             <div className="md:hidden">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
                     <Menu className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => navigate('/about')}>
+                <DropdownMenuContent align="end" className="bg-slate-900/95 border-white/20">
+                  <DropdownMenuItem onClick={() => navigate('/about')} className="text-white hover:bg-white/10">
                     About
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/terms')}>
+                  <DropdownMenuItem onClick={() => navigate('/terms')} className="text-white hover:bg-white/10">
                     Terms
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/auth')}>
+                  <DropdownMenuItem onClick={() => navigate('/auth')} className="text-white hover:bg-white/10">
                     Sign In
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -117,8 +117,8 @@ export default function Contact() {
 
       <div className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <h1 className="text-4xl font-bold mb-4 text-white">Contact Us</h1>
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
             Have questions about our trading platform? We're here to help you get started 
             with automated trading.
           </p>
@@ -127,35 +127,35 @@ export default function Contact() {
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Contact Information */}
           <div className="space-y-8">
-            <Card>
+            <Card className="bg-white/5 border-white/10 backdrop-blur-lg">
               <CardHeader>
-                <CardTitle>Get in Touch</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-white">Get in Touch</CardTitle>
+                <CardDescription className="text-gray-300">
                   Reach out to our support team for any questions or assistance
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center space-x-3">
-                  <Mail className="h-5 w-5 text-primary" />
+                  <Mail className="h-5 w-5 text-blue-400" />
                   <div>
-                    <p className="font-medium">Email Support</p>
-                    <p className="text-muted-foreground">support@wavesquant.com</p>
+                    <p className="font-medium text-white">Email Support</p>
+                    <p className="text-gray-300">support@wavesquant.com</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-3">
-                  <Phone className="h-5 w-5 text-primary" />
+                  <Phone className="h-5 w-5 text-blue-400" />
                   <div>
-                    <p className="font-medium">Phone Support</p>
-                    <p className="text-muted-foreground">+233 (500) 33-4946</p>
+                    <p className="font-medium text-white">Phone Support</p>
+                    <p className="text-gray-300">+233 (500) 33-4946</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-3">
-                  <MapPin className="h-5 w-5 text-primary" />
+                  <MapPin className="h-5 w-5 text-blue-400" />
                   <div>
-                    <p className="font-medium">Office Address</p>
-                    <p className="text-muted-foreground">
+                    <p className="font-medium text-white">Office Address</p>
+                    <p className="text-gray-300">
                       123 Financial District<br />
                       Techiman, BE 10004
                     </p>
@@ -163,10 +163,10 @@ export default function Contact() {
                 </div>
                 
                 <div className="flex items-center space-x-3">
-                  <Clock className="h-5 w-5 text-primary" />
+                  <Clock className="h-5 w-5 text-blue-400" />
                   <div>
-                    <p className="font-medium">Support Hours</p>
-                    <p className="text-muted-foreground">
+                    <p className="font-medium text-white">Support Hours</p>
+                    <p className="text-gray-300">
                       Monday - Friday: 9:00 AM - 6:00 PM EST<br />
                       Saturday: 10:00 AM - 4:00 PM EST
                     </p>
@@ -175,26 +175,26 @@ export default function Contact() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-white/5 border-white/10 backdrop-blur-lg">
               <CardHeader>
-                <CardTitle>Frequently Asked Questions</CardTitle>
+                <CardTitle className="text-white">Frequently Asked Questions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="font-medium mb-1">How do I get started?</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-medium mb-1 text-white">How do I get started?</p>
+                  <p className="text-sm text-gray-300">
                     Simply sign up for an investor account, complete your profile, and make your first deposit to start automated trading.
                   </p>
                 </div>
                 <div>
-                  <p className="font-medium mb-1">What is the minimum deposit?</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-medium mb-1 text-white">What is the minimum deposit?</p>
+                  <p className="text-sm text-gray-300">
                     The minimum deposit is $100 to get started with our automated trading platform.
                   </p>
                 </div>
                 <div>
-                  <p className="font-medium mb-1">How can I withdraw my funds?</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-medium mb-1 text-white">How can I withdraw my funds?</p>
+                  <p className="text-sm text-gray-300">
                     Withdrawal requests can be made after 2 weeks of investment and are processed within 24-48 hours.
                   </p>
                 </div>
@@ -203,10 +203,10 @@ export default function Contact() {
           </div>
 
           {/* Contact Form */}
-          <Card>
+          <Card className="bg-white/5 border-white/10 backdrop-blur-lg">
             <CardHeader>
-              <CardTitle>Send us a Message</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">Send us a Message</CardTitle>
+              <CardDescription className="text-gray-300">
                 Fill out the form below and we'll get back to you as soon as possible
               </CardDescription>
             </CardHeader>
@@ -214,17 +214,18 @@ export default function Contact() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full Name *</Label>
+                    <Label htmlFor="name" className="text-white">Full Name *</Label>
                     <Input
                       id="name"
                       value={formData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
                       placeholder="Your full name"
                       required
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email Address *</Label>
+                    <Label htmlFor="email" className="text-white">Email Address *</Label>
                     <Input
                       id="email"
                       type="email"
@@ -232,22 +233,24 @@ export default function Contact() {
                       onChange={(e) => handleInputChange('email', e.target.value)}
                       placeholder="your.email@example.com"
                       required
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="subject">Subject</Label>
+                  <Label htmlFor="subject" className="text-white">Subject</Label>
                   <Input
                     id="subject"
                     value={formData.subject}
                     onChange={(e) => handleInputChange('subject', e.target.value)}
                     placeholder="What is this regarding?"
+                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="message">Message *</Label>
+                  <Label htmlFor="message" className="text-white">Message *</Label>
                   <Textarea
                     id="message"
                     value={formData.message}
@@ -255,10 +258,11 @@ export default function Contact() {
                     placeholder="Please describe your question or concern..."
                     rows={6}
                     required
+                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
                   />
                 </div>
 
-                <Button type="submit" disabled={loading} className="w-full">
+                <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                   {loading ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
