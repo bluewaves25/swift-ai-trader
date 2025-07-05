@@ -1,4 +1,3 @@
-
 import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { ProtectedRoute } from "@/components/common/ProtectedRoute";
 
 // Lazy load pages for better performance
 const Index = lazy(() => import("./pages/Index"));
@@ -46,8 +46,22 @@ function App() {
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/auth" element={<AuthPage />} />
-                    <Route path="/investor-dashboard" element={<InvestorDashboard />} />
-                    <Route path="/owner-dashboard" element={<OwnerDashboard />} />
+                    <Route
+                      path="/investor-dashboard"
+                      element={
+                        <ProtectedRoute>
+                          <InvestorDashboard />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/owner-dashboard"
+                      element={
+                        <ProtectedRoute>
+                          <OwnerDashboard />
+                        </ProtectedRoute>
+                      }
+                    />
                     <Route path="/about" element={<About />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/terms" element={<Terms />} />

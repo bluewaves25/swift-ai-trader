@@ -36,3 +36,5 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 };
 
 export default ProtectedRoute;
+
+// Example useAuth hook

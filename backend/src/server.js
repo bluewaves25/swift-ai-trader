@@ -1,4 +1,3 @@
-
 import express from 'express';
 import { PythonShell } from 'python-shell';
 import ccxt from 'ccxt';
