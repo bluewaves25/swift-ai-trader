@@ -23,7 +23,7 @@ const Index = () => {
               <Link to="/contact" className="text-gray-300 hover:text-white transition-colors">Contact</Link>
               <Link to="/terms" className="text-gray-300 hover:text-white transition-colors">Terms</Link>
               <Link to="/auth">
-                <Button variant="outline" className="text-white border-white/20 hover:bg-white/10">
+                <Button variant="outline" className="text-white border-white/40 bg-white/10 hover:bg-white/20 backdrop-blur">
                   Login
                 </Button>
               </Link>
@@ -47,13 +47,13 @@ const Index = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/auth">
-                <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3">
+                <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 shadow-lg">
                   Start Trading
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
               <Link to="/about">
-                <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 px-8 py-3">
+                <Button size="lg" variant="outline" className="border-white/40 text-white bg-white/10 hover:bg-white/20 backdrop-blur px-8 py-3">
                   Learn More
                 </Button>
               </Link>
@@ -148,7 +148,7 @@ const Index = () => {
             Join sophisticated traders using our advanced multi-asset platform
           </p>
           <Link to="/auth">
-            <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-12 py-4 text-lg">
+            <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-12 py-4 text-lg shadow-lg">
               Get Started Now
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>

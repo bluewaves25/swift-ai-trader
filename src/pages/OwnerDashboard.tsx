@@ -26,6 +26,8 @@ import {
   Pause
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { OwnerSidebar } from "@/components/owner/OwnerSidebar";
 import TradingChart from "@/components/trading/TradingChart";
 import LiveSignals from "@/components/trading/LiveSignals";
 import TradeHistory from "@/components/trading/TradeHistory";
@@ -34,10 +36,12 @@ import RiskManagement from "@/components/trading/RiskManagement";
 import PerformanceAnalytics from "@/components/trading/PerformanceAnalytics";
 import TradingEngine from "@/components/trading/TradingEngine";
 import { useNavigate } from "react-router-dom";
+import { apiService } from "@/services/api";
 
 const OwnerDashboard = () => {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState('overview');
   const [stats, setStats] = useState({
     totalBalance: 0,
     dailyPnL: 0,
@@ -51,20 +55,18 @@ const OwnerDashboard = () => {
 
   useEffect(() => {
     fetchDashboardStats();
-    const interval = setInterval(fetchDashboardStats, 5000); // Update every 5 seconds
+    const interval = setInterval(fetchDashboardStats, 5000);
     return () => clearInterval(interval);
   }, []);
 
   const fetchDashboardStats = async () => {
     try {
-      // Fetch portfolio data
       const { data: portfolio } = await supabase
         .from('portfolios')
         .select('*')
         .eq('user_id', user?.id)
         .single();
 
-      // Fetch today's trades
       const today = new Date().toISOString().split('T')[0];
       const { data: todayTrades } = await supabase
         .from('trades')
@@ -72,13 +74,11 @@ const OwnerDashboard = () => {
         .gte('created_at', `${today}T00:00:00Z`)
         .lt('created_at', `${today}T23:59:59Z`);
 
-      // Fetch active pairs
       const { data: activePairs } = await supabase
         .from('trading_pairs')
         .select('id')
         .eq('is_active', true);
 
-      // Check if there are open positions
       const { data: openTrades } = await supabase
         .from('trades')
         .select('id')
@@ -103,14 +103,25 @@ const OwnerDashboard = () => {
     }
   };
 
-  const handleEngineToggle = () => {
-    setIsEngineRunning(!isEngineRunning);
-    toast.success(isEngineRunning ? 'Trading engine stopped - automated trading disabled' : 'Trading engine started - automated trading enabled');
+  const handleEngineToggle = async () => {
+    try {
+      if (isEngineRunning) {
+        await apiService.stopTradingEngine();
+        setIsEngineRunning(false);
+        toast.success('Trading engine stopped - automated trading disabled');
+      } else {
+        await apiService.startTradingEngine();
+        setIsEngineRunning(true);
+        toast.success('Trading engine started - automated trading enabled');
+      }
+    } catch (error) {
+      toast.error('Failed to toggle trading engine');
+      console.error('Engine toggle error:', error);
+    }
   };
 
   const handleCloseAllPositions = async () => {
     try {
-      // Close all open positions
       const { error } = await supabase
         .from('trades')
         .update({ 
@@ -129,203 +140,198 @@ const OwnerDashboard = () => {
     }
   };
 
-  const handleEmergencyStop = () => {
-    setIsEngineRunning(false);
-    handleCloseAllPositions();
-    toast.warning('EMERGENCY STOP: All trading halted and positions closed');
+  const handleEmergencyStop = async () => {
+    try {
+      await apiService.emergencyStop();
+      setIsEngineRunning(false);
+      handleCloseAllPositions();
+      toast.warning('EMERGENCY STOP: All trading halted and positions closed');
+    } catch (error) {
+      toast.error('Failed to execute emergency stop');
+    }
   };
 
   const handleClose = () => {
     navigate('/');
   };
 
+  const renderContent = () => {
+    const contentMap = {
+      'overview': (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <TradingChart />
+          <TradingEngine isRunning={isEngineRunning} />
+        </div>
+      ),
+      'engine': <TradingEngine isRunning={isEngineRunning} />,
+      'signals': <LiveSignals />,
+      'strategies': <PairStrategies />,
+      'trades': <TradeHistory />,
+      'risk': <RiskManagement />,
+      'analytics': <PerformanceAnalytics />,
+      'users': <div className="text-center text-muted-foreground">User Management - Coming Soon</div>,
+      'settings': <div className="text-center text-muted-foreground">Settings - Coming Soon</div>
+    };
+
+    return contentMap[activeSection as keyof typeof contentMap] || (
+      <div className="text-center text-muted-foreground">Section not found</div>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-8 w-8 text-primary" />
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <OwnerSidebar 
+          activeSection={activeSection} 
+          onSectionChange={setActiveSection}
+        />
+        
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <SidebarTrigger />
                 <div>
                   <h1 className="text-2xl font-bold">Waves Quant Engine</h1>
                   <p className="text-sm text-muted-foreground">Owner Control Panel</p>
                 </div>
               </div>
+              
+              <div className="flex items-center space-x-4">
+                <Badge variant={isEngineRunning ? "default" : "secondary"} className="px-3 py-1">
+                  <Cpu className="h-4 w-4 mr-1" />
+                  {isEngineRunning ? "Engine Running" : "Engine Stopped"}
+                </Badge>
+                <ThemeToggle />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleClose}
+                  className="h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            
-            <div className="flex items-center space-x-4">
-              <Badge variant={isEngineRunning ? "default" : "secondary"} className="px-3 py-1">
-                <Cpu className="h-4 w-4 mr-1" />
-                {isEngineRunning ? "Engine Running" : "Engine Stopped"}
-              </Badge>
-              <ThemeToggle />
-              <Button variant="outline" onClick={signOut}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleClose}
-                className="h-8 w-8"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+          </header>
+
+          {/* Stats Cards */}
+          <div className="p-6 border-b">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Balance</p>
+                      <p className="text-2xl font-bold">${stats.totalBalance.toFixed(2)}</p>
+                    </div>
+                    <DollarSign className="h-8 w-8 text-green-500" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Daily P&L</p>
+                      <p className={`text-2xl font-bold ${stats.dailyPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        ${stats.dailyPnL.toFixed(2)}
+                      </p>
+                    </div>
+                    {stats.dailyPnL >= 0 ? 
+                      <TrendingUp className="h-8 w-8 text-green-500" /> :
+                      <TrendingDown className="h-8 w-8 text-red-500" />
+                    }
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Trades</p>
+                      <p className="text-2xl font-bold">{stats.totalTrades}</p>
+                    </div>
+                    <Activity className="h-8 w-8 text-blue-500" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Win Rate</p>
+                      <p className="text-2xl font-bold">{stats.winRate.toFixed(1)}%</p>
+                    </div>
+                    <Target className="h-8 w-8 text-purple-500" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Active Pairs</p>
+                      <p className="text-2xl font-bold">{stats.activePairs}</p>
+                    </div>
+                    <BarChart3 className="h-8 w-8 text-orange-500" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-center">
+                    <Button 
+                      variant={isEngineRunning ? "destructive" : "default"}
+                      onClick={handleEngineToggle}
+                      className="w-full"
+                    >
+                      {isEngineRunning ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+                      {isEngineRunning ? "Stop" : "Start"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex flex-col space-y-2">
+                    <Button 
+                      variant="outline"
+                      onClick={handleCloseAllPositions}
+                      disabled={!canClosePositions}
+                      className="w-full text-xs"
+                    >
+                      <Square className="h-3 w-3 mr-1" />
+                      Close All
+                    </Button>
+                    <Button 
+                      variant="destructive"
+                      onClick={handleEmergencyStop}
+                      className="w-full text-xs"
+                    >
+                      <Shield className="h-3 w-3 mr-1" />
+                      Emergency
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
-        </div>
-      </header>
 
-      {/* Stats Cards */}
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Balance</p>
-                  <p className="text-2xl font-bold">${stats.totalBalance.toFixed(2)}</p>
-                </div>
-                <DollarSign className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Daily P&L</p>
-                  <p className={`text-2xl font-bold ${stats.dailyPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    ${stats.dailyPnL.toFixed(2)}
-                  </p>
-                </div>
-                {stats.dailyPnL >= 0 ? 
-                  <TrendingUp className="h-8 w-8 text-green-500" /> :
-                  <TrendingDown className="h-8 w-8 text-red-500" />
-                }
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Trades</p>
-                  <p className="text-2xl font-bold">{stats.totalTrades}</p>
-                </div>
-                <Activity className="h-8 w-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Win Rate</p>
-                  <p className="text-2xl font-bold">{stats.winRate.toFixed(1)}%</p>
-                </div>
-                <Target className="h-8 w-8 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Active Pairs</p>
-                  <p className="text-2xl font-bold">{stats.activePairs}</p>
-                </div>
-                <BarChart3 className="h-8 w-8 text-orange-500" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-center">
-                <Button 
-                  variant={isEngineRunning ? "destructive" : "default"}
-                  onClick={handleEngineToggle}
-                  className="w-full"
-                >
-                  {isEngineRunning ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
-                  {isEngineRunning ? "Stop" : "Start"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col space-y-2">
-                <Button 
-                  variant="outline"
-                  onClick={handleCloseAllPositions}
-                  disabled={!canClosePositions}
-                  className="w-full text-xs"
-                >
-                  <Square className="h-3 w-3 mr-1" />
-                  Close All
-                </Button>
-                <Button 
-                  variant="destructive"
-                  onClick={handleEmergencyStop}
-                  className="w-full text-xs"
-                >
-                  <Shield className="h-3 w-3 mr-1" />
-                  Emergency
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Main Content */}
+          <main className="flex-1 p-6 overflow-auto">
+            {renderContent()}
+          </main>
         </div>
-
-        {/* Main Content */}
-        <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="signals">Live Signals</TabsTrigger>
-            <TabsTrigger value="strategies">Strategies</TabsTrigger>
-            <TabsTrigger value="trades">Trades</TabsTrigger>
-            <TabsTrigger value="risk">Risk</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="overview" className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <TradingChart />
-              <TradingEngine isRunning={isEngineRunning} />
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="signals">
-            <LiveSignals />
-          </TabsContent>
-          
-          <TabsContent value="strategies">
-            <PairStrategies />
-          </TabsContent>
-          
-          <TabsContent value="trades">
-            <TradeHistory />
-          </TabsContent>
-          
-          <TabsContent value="risk">
-            <RiskManagement />
-          </TabsContent>
-          
-          <TabsContent value="analytics">
-            <PerformanceAnalytics />
-          </TabsContent>
-        </Tabs>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
