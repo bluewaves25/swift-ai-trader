@@ -99,7 +99,7 @@ export default function Contact() {
                   <Phone className="h-5 w-5 text-primary" />
                   <div>
                     <p className="font-medium">Phone Support</p>
-                    <p className="text-muted-foreground">+1 (555) 123-4567</p>
+                    <p className="text-muted-foreground">+233 (500) 33-4946</p>
                   </div>
                 </div>
                 
@@ -109,7 +109,7 @@ export default function Contact() {
                     <p className="font-medium">Office Address</p>
                     <p className="text-muted-foreground">
                       123 Financial District<br />
-                      New York, NY 10004
+                      Techiman, BE 10004
                     </p>
                   </div>
                 </div>

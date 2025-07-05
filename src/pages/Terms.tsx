@@ -108,7 +108,7 @@ export default function Terms() {
                 <h4 className="font-semibold">Deposits:</h4>
                 <ul className="list-disc pl-6 space-y-1">
                   <li>Minimum deposit: $100</li>
-                  <li>Funds are deposited directly to your linked Exness trading account</li>
+                  <li>Funds are deposited directly to your account</li>
                   <li>Deposits are typically processed within 24 hours</li>
                 </ul>
                 
@@ -131,7 +131,7 @@ export default function Terms() {
                 <ul className="list-disc pl-6 space-y-1">
                   <li>Performance-based fees on profitable trades</li>
                   <li>No monthly subscription or platform fees</li>
-                  <li>Third-party broker fees may apply (Exness spreads and commissions)</li>
+                  <li>Third-party broker fees may apply (Brokerage spreads and commissions)</li>
                   <li>Bank transfer fees for deposits/withdrawals may apply</li>
                 </ul>
                 <p>All fees will be clearly disclosed before any transactions.</p>
@@ -201,8 +201,8 @@ export default function Terms() {
                 <p>For questions about these Terms of Service, please contact us:</p>
                 <ul className="list-none space-y-1">
                   <li>Email: legal@wavesquant.com</li>
-                  <li>Phone: +1 (555) 123-4567</li>
-                  <li>Address: 123 Financial District, New York, NY 10004</li>
+                  <li>Phone: +233 (500) 33-4946</li>
+                  <li>Address: 123 Financial District, Techiman, BE 10004</li>
                 </ul>
               </CardContent>
             </Card>
