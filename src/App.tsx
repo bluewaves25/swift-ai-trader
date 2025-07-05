@@ -40,8 +40,8 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
           <TooltipProvider>
-            <AuthProvider>
-              <BrowserRouter>
+            <BrowserRouter>
+              <AuthProvider>
                 <Suspense fallback={<LoadingSpinner />}>
                   <Routes>
                     <Route path="/" element={<Index />} />
@@ -55,8 +55,8 @@ function App() {
                   </Routes>
                 </Suspense>
                 <Toaster />
-              </BrowserRouter>
-            </AuthProvider>
+              </AuthProvider>
+            </BrowserRouter>
           </TooltipProvider>
         </ThemeProvider>
       </QueryClientProvider>

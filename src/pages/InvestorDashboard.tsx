@@ -24,7 +24,7 @@ const InvestorPortfolio = lazy(() => import("@/components/investor/InvestorPortf
 const LiveSignals = lazy(() => import("@/components/trading/LiveSignals"));
 const TradeHistory = lazy(() => import("@/components/trading/TradeHistory"));
 const InvestorJournal = lazy(() => import("@/components/investor/InvestorJournal"));
-const InvestorPayments = lazy(() => import("@/components/investor/InvestorPayments"));
+const InvestorPayments = lazy(() => import("@/components/investor/InvestorPayments").then(module => ({ default: module.InvestorPayments })));
 const InvestorSettings = lazy(() => import("@/components/investor/InvestorSettings"));
 const InvestorProfile = lazy(() => import("@/components/investor/InvestorProfile"));
 
