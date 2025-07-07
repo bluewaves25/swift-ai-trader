@@ -17,8 +17,7 @@ import {
   DollarSign,
   Activity,
   MessageCircle,
-  Send,
-  Twitter
+  Send
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -52,7 +51,7 @@ const Index = () => {
       <div 
         className="relative min-h-screen overflow-hidden"
         style={{
-          backgroundImage: `linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(139, 92, 246, 0.95) 50%, rgba(79, 70, 229, 0.95) 100%), url('/assets/landing_background/landing_background_1.png')`,
+          backgroundImage: `linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(139, 92, 246, 0.95) 50%, rgba(79, 70, 229, 0.95) 100%), url('/landing_background_1.png')`,
           backgroundSize: 'cover, cover',
           backgroundPosition: 'center, center',
           backgroundBlendMode: 'overlay, normal'
@@ -65,8 +64,8 @@ const Index = () => {
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-400/20 rounded-full blur-3xl animate-pulse delay-500"></div>
         </div>
 
-        {/* Header - Now Sticky */}
-        <div className="sticky top-0 z-50 border-b border-white/10 bg-white/10 backdrop-blur-md supports-[backdrop-filter]:bg-white/5">
+        {/* Header - Sticky with glassmorphism */}
+        <div className="sticky top-0 z-50 border-b border-white/10 bg-white/10 backdrop-blur-xl supports-[backdrop-filter]:bg-white/5">
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -108,14 +107,14 @@ const Index = () => {
                 AI-Powered Trading Platform
               </Badge>
               
-              <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight">
+              <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight text-white drop-shadow-lg">
                 <span className="text-white">Trade Smarter with</span>
                 <span className="block bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent">
                   AI Precision
                 </span>
               </h1>
               
-              <p className="text-xl md:text-2xl mb-12 text-white/95 max-w-3xl mx-auto leading-relaxed font-medium">
+              <p className="text-xl md:text-2xl mb-12 text-white/95 max-w-3xl mx-auto leading-relaxed font-medium drop-shadow">
                 Experience the future of trading with our advanced AI algorithms that analyze market patterns, 
                 execute precise trades, and maximize your investment potential 24/7.
               </p>
@@ -362,7 +361,9 @@ const Index = () => {
             <div className="flex items-center space-x-4">
               <span className="text-sm text-muted-foreground">Join Community:</span>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <Twitter className="h-4 w-4" />
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
               </Button>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                 <MessageCircle className="h-4 w-4" />

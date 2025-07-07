@@ -17,7 +17,7 @@ interface PaymentFormProps {
 
 const PaymentForm = ({ transactionType }: PaymentFormProps) => {
   const { user } = useAuth();
-  const [step, setStep] = useState(1); // 1: method selection, 2: form, 3: review
+  const [step, setStep] = useState(1);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [amount, setAmount] = useState("");
   const [userDetails, setUserDetails] = useState({
@@ -87,6 +87,8 @@ const PaymentForm = ({ transactionType }: PaymentFormProps) => {
   };
 
   const handleConfirmTransaction = async () => {
+    if (loading) return;
+    
     setLoading(true);
     
     try {
@@ -135,13 +137,10 @@ const PaymentForm = ({ transactionType }: PaymentFormProps) => {
 
       toast.success(`${transactionType} request submitted successfully!`);
       
-      // Reset form and redirect to transactions
+      // Reset form
       setStep(1);
       setSelectedMethod(null);
       setAmount("");
-      
-      // Navigate to transactions section
-      window.dispatchEvent(new CustomEvent('navigate-to-transactions'));
       
     } catch (error) {
       console.error(`Error processing ${transactionType}:`, error);

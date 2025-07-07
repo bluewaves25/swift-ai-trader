@@ -26,7 +26,7 @@ const TradeHistory = lazy(() => import("@/components/trading/TradeHistory"));
 const InvestorJournal = lazy(() => import("@/components/investor/InvestorJournal"));
 const DepositForm = lazy(() => import("@/components/payments/PaymentForm"));
 const WithdrawalForm = lazy(() => import("@/components/payments/PaymentForm"));
-const TransactionsList = lazy(() => import("@/components/payments/TransactionsList"));
+const TransactionsList = lazy(() => import("@/components/payments/TransactionsList").then(module => ({ default: module.TransactionsList })));
 const InvestorSettings = lazy(() => import("@/components/investor/InvestorSettings"));
 const InvestorProfile = lazy(() => import("@/components/investor/InvestorProfile"));
 
