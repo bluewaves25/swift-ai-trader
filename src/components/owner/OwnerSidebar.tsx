@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -13,12 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Info,
-  Mail,
-  FileText,
   Cpu,
-  Target,
-  AlertTriangle
+  Target
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -40,16 +37,7 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
     { id: 'risk', label: 'Risk Management', icon: Shield },
     { id: 'analytics', label: 'Performance', icon: BarChart3 },
     { id: 'users', label: 'User Management', icon: Users },
-  ];
-
-  const bottomNavItems = [
     { id: 'settings', label: 'Settings', icon: Settings },
-  ];
-
-  const footerLinks = [
-    { id: 'about', label: 'About', icon: Info, href: '/about' },
-    { id: 'contact', label: 'Contact', icon: Mail, href: '/contact' },
-    { id: 'terms', label: 'Terms', icon: FileText, href: '/terms' },
   ];
 
   const NavItem = ({ item, isActive = false }: { item: any; isActive?: boolean }) => (
@@ -105,46 +93,19 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
             isActive={activeSection === item.id}
           />
         ))}
-
-        {/* Bottom Navigation */}
-        <div className="pt-4 border-t space-y-1">
-          {bottomNavItems.map((item) => (
-            <NavItem
-              key={item.id}
-              item={item}
-              isActive={activeSection === item.id}
-            />
-          ))}
-        </div>
       </div>
 
-      {/* Footer Links */}
-      <div className="p-2 border-t space-y-1">
-        {footerLinks.map((link) => (
-          <Button
-            key={link.id}
-            variant="ghost"
-            className={cn(
-              "w-full justify-start h-10 text-sm text-muted-foreground",
-              isCollapsed && "px-2"
-            )}
-            onClick={() => window.open(link.href, '_blank')}
-          >
-            <link.icon className={cn("h-4 w-4", isCollapsed ? "mx-auto" : "mr-3")} />
-            {!isCollapsed && <span>{link.label}</span>}
-          </Button>
-        ))}
-
-        {/* Sign Out Button */}
+      {/* Sign Out Button */}
+      <div className="p-2 border-t">
         <Button
           variant="ghost"
           className={cn(
-            "w-full justify-start h-10 text-sm text-red-600 hover:text-red-700 hover:bg-red-50",
+            "w-full justify-start h-12 text-red-600 hover:text-red-700 hover:bg-red-50",
             isCollapsed && "px-2"
           )}
           onClick={signOut}
         >
-          <LogOut className={cn("h-4 w-4", isCollapsed ? "mx-auto" : "mr-3")} />
+          <LogOut className={cn("h-5 w-5", isCollapsed ? "mx-auto" : "mr-3")} />
           {!isCollapsed && <span>Sign Out</span>}
         </Button>
       </div>

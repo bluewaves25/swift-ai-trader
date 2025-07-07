@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { TrendingUp, Shield, X } from "lucide-react";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { useNavigate } from "react-router-dom";
 
 const AuthPage = () => {
@@ -47,8 +46,7 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
-      <div className="absolute top-4 right-4 flex items-center space-x-2">
-        <ThemeToggle />
+      <div className="absolute top-4 right-4">
         <Button
           variant="ghost"
           size="icon"

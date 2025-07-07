@@ -14,7 +14,9 @@ import {
   Star,
   Users,
   DollarSign,
-  Activity
+  Activity,
+  MessageCircle,
+  Send
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -49,7 +51,7 @@ const Index = () => {
       <div 
         className="relative min-h-screen bg-gradient-to-br from-blue-600 via-purple-700 to-indigo-800 overflow-hidden"
         style={{
-          backgroundImage: `url('/assets/landing_background/landing_background_1.png'), linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #4F46E5 100%)`,
+          backgroundImage: `url('/assets/landing_background/landing_background_1.png'), linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(139, 92, 246, 0.9) 50%, rgba(79, 70, 229, 0.9) 100%)`,
           backgroundSize: 'cover, cover',
           backgroundPosition: 'center, center',
           backgroundBlendMode: 'overlay, normal'
@@ -71,17 +73,23 @@ const Index = () => {
                 <span className="text-2xl font-bold text-white">Waves Quant Engine</span>
               </div>
               <div className="flex items-center space-x-6">
-                <div className="hidden md:flex items-center space-x-6">
+                <div className="flex items-center space-x-6">
                   <Link to="/about" className="text-white/80 hover:text-white transition-colors">About</Link>
                   <Link to="/contact" className="text-white/80 hover:text-white transition-colors">Contact</Link>
                   <Link to="/terms" className="text-white/80 hover:text-white transition-colors">Terms</Link>
                 </div>
                 {user ? (
-                  <Button onClick={() => navigate('/investor')}>
+                  <Button 
+                    onClick={() => navigate('/investor')}
+                    className="bg-white text-blue-600 hover:bg-gray-100"
+                  >
                     Go to Dashboard
                   </Button>
                 ) : (
-                  <Button onClick={() => navigate('/auth')} variant="secondary">
+                  <Button 
+                    onClick={() => navigate('/auth')} 
+                    className="bg-white text-blue-600 hover:bg-gray-100"
+                  >
                     Sign In
                   </Button>
                 )}
@@ -156,7 +164,7 @@ const Index = () => {
                   size="lg" 
                   variant="outline"
                   onClick={() => navigate('/about')}
-                  className="border-white/20 text-white hover:bg-white/10 backdrop-blur-sm"
+                  className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm bg-white/5"
                 >
                   Learn More
                 </Button>
@@ -345,12 +353,26 @@ const Index = () => {
               <Brain className="h-6 w-6 text-primary" />
               <span className="font-bold">Waves Quant Engine</span>
             </div>
-            <div className="flex items-center space-x-6 text-sm text-muted-foreground">
+            <div className="flex items-center space-x-6 text-sm text-muted-foreground mb-4 md:mb-0">
               <Link to="/about" className="hover:text-primary transition-colors">About</Link>
               <Link to="/contact" className="hover:text-primary transition-colors">Contact</Link>
               <Link to="/terms" className="hover:text-primary transition-colors">Terms</Link>
-              <span>© 2024 Waves Quant Engine. All rights reserved.</span>
             </div>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-muted-foreground">Join Community:</span>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <Users className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="text-center text-xs text-muted-foreground mt-4">
+            © 2024 Waves Quant Engine. All rights reserved.
           </div>
         </div>
       </div>

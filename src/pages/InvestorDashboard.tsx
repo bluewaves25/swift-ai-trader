@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,9 @@ const InvestorPortfolio = lazy(() => import("@/components/investor/InvestorPortf
 const LiveSignals = lazy(() => import("@/components/trading/LiveSignals"));
 const TradeHistory = lazy(() => import("@/components/trading/TradeHistory"));
 const InvestorJournal = lazy(() => import("@/components/investor/InvestorJournal"));
-const InvestorPayments = lazy(() => import("@/components/investor/InvestorPayments").then(module => ({ default: module.InvestorPayments })));
+const DepositForm = lazy(() => import("@/components/payments/PaymentForm"));
+const WithdrawalForm = lazy(() => import("@/components/payments/PaymentForm"));
+const TransactionsList = lazy(() => import("@/components/payments/TransactionsList"));
 const InvestorSettings = lazy(() => import("@/components/investor/InvestorSettings"));
 const InvestorProfile = lazy(() => import("@/components/investor/InvestorProfile"));
 
@@ -46,7 +49,9 @@ const InvestorDashboard = () => {
       'signals': <LiveSignals />,
       'trades': <TradeHistory />,
       'journal': <InvestorJournal />,
-      'payments': <InvestorPayments />,
+      'deposit': <DepositForm transactionType="deposit" />,
+      'withdraw': <WithdrawalForm transactionType="withdrawal" />,
+      'transactions': <TransactionsList />,
       'settings': <InvestorSettings />,
       'profile': <InvestorProfile />
     };
@@ -93,7 +98,6 @@ const InvestorDashboard = () => {
                     Live Trading
                   </Badge>
                   <ThemeToggle />
-                  {/* Sign out button removed */}
                 </div>
               </div>
             </header>

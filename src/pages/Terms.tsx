@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
@@ -8,9 +7,9 @@ const Terms = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+      <div className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -27,7 +26,7 @@ const Terms = () => {
                 Terms of Service
               </h1>
             </div>
-            <div className="hidden md:flex items-center space-x-6">
+            <div className="flex items-center space-x-6">
               <Link to="/about" className="text-foreground hover:text-primary transition-colors">About</Link>
               <Link to="/contact" className="text-foreground hover:text-primary transition-colors">Contact</Link>
               <Link to="/terms" className="text-foreground hover:text-primary transition-colors">Terms</Link>
