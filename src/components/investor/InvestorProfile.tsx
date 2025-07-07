@@ -1,32 +1,38 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useErrorHandler } from "@/hooks/useErrorHandler";
+import { User, Phone, Mail, Calendar } from "lucide-react";
 
-const InvestorProfile = () => {
+interface Profile {
+  id: string;
+  full_name: string;
+  phone_number: string;
+  date_of_birth: string;
+  user_id: string;
+}
+
+export default function InvestorProfile() {
   const { user } = useAuth();
-  const { handleError } = useErrorHandler();
-  const [profile, setProfile] = useState({
-    full_name: '',
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    fullName: '',
     phone: '',
-    address: '',
-    bio: '',
-    date_of_birth: '',
-    nationality: '',
-    occupation: '',
-    investment_experience: ''
+    dateOfBirth: '',
+    email: user?.email || ''
   });
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchProfile();
+    if (user) {
+      fetchProfile();
+    }
   }, [user]);
 
   const fetchProfile = async () => {
@@ -37,135 +43,126 @@ const InvestorProfile = () => {
         .eq('user_id', user?.id)
         .single();
 
-      if (error && error.code !== 'PGRST116') throw error;
-      
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
       if (data) {
-        setProfile({
-          full_name: data.full_name || '',
-          phone: data.phone || '',
-          address: data.address || '',
-          bio: data.bio || '',
-          date_of_birth: data.date_of_birth || '',
-          nationality: data.nationality || '',
-          occupation: data.occupation || '',
-          investment_experience: data.investment_experience || ''
+        setProfile(data);
+        setFormData({
+          fullName: data.full_name || '',
+          phone: data.phone_number || '',
+          dateOfBirth: data.date_of_birth || '',
+          email: user?.email || ''
         });
       }
     } catch (error) {
-      handleError(error);
-    }
-  };
-
-  const updateProfile = async () => {
-    if (!user) return;
-
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          user_id: user.id,
-          ...profile,
-          updated_at: new Date().toISOString()
-        });
-
-      if (error) throw error;
-      toast.success('Profile updated successfully');
-    } catch (error) {
-      handleError(error);
+      console.error('Error fetching profile:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user?.id,
+          full_name: formData.fullName,
+          phone_number: formData.phone,
+          date_of_birth: formData.dateOfBirth
+        });
+
+      if (error) throw error;
+
+      toast.success('Profile updated successfully');
+      fetchProfile();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-6">Loading profile...</div>;
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Profile</h2>
-        <p className="text-muted-foreground">Manage your personal information</p>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Profile Settings</h2>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Personal Information</CardTitle>
-          <CardDescription>Update your profile details</CardDescription>
+          <CardTitle className="flex items-center space-x-2">
+            <User className="h-5 w-5" />
+            <span>Personal Information</span>
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="full_name">Full Name</Label>
+              <Label htmlFor="fullName">Full Name</Label>
               <Input
-                id="full_name"
-                value={profile.full_name}
-                onChange={(e) => setProfile(prev => ({ ...prev, full_name: e.target.value }))}
+                id="fullName"
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                placeholder="Enter your full name"
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                value={profile.phone}
-                onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
-              />
+              <Label htmlFor="email">Email Address</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  value={formData.email}
+                  disabled
+                  className="pl-10"
+                />
+              </div>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="date_of_birth">Date of Birth</Label>
-              <Input
-                id="date_of_birth"
-                type="date"
-                value={profile.date_of_birth}
-                onChange={(e) => setProfile(prev => ({ ...prev, date_of_birth: e.target.value }))}
-              />
+              <Label htmlFor="phone">Phone Number</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="Enter your phone number"
+                  className="pl-10"
+                />
+              </div>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="nationality">Nationality</Label>
-              <Input
-                id="nationality"
-                value={profile.nationality}
-                onChange={(e) => setProfile(prev => ({ ...prev, nationality: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="occupation">Occupation</Label>
-              <Input
-                id="occupation"
-                value={profile.occupation}
-                onChange={(e) => setProfile(prev => ({ ...prev, occupation: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="investment_experience">Investment Experience</Label>
-              <Input
-                id="investment_experience"
-                value={profile.investment_experience}
-                onChange={(e) => setProfile(prev => ({ ...prev, investment_experience: e.target.value }))}
-              />
+              <Label htmlFor="dateOfBirth">Date of Birth</Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="dateOfBirth"
+                  type="date"
+                  value={formData.dateOfBirth}
+                  onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                  className="pl-10"
+                />
+              </div>
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Input
-              id="address"
-              value={profile.address}
-              onChange={(e) => setProfile(prev => ({ ...prev, address: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bio">Bio</Label>
-            <Textarea
-              id="bio"
-              value={profile.bio}
-              onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
-              rows={4}
-            />
-          </div>
-          <Button onClick={updateProfile} disabled={loading}>
-            {loading ? 'Saving...' : 'Save Profile'}
+
+          <Button onClick={handleSave} disabled={saving} className="w-full">
+            {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </CardContent>
       </Card>
     </div>
   );
-};
-
-export default InvestorProfile;
+}

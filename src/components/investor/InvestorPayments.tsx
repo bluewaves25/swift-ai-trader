@@ -1,204 +1,90 @@
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useNavigate } from "react-router-dom";
-import { PaymentMethodSelector } from "@/components/payments/PaymentMethodSelector";
-import { PaymentForm } from "@/components/payments/PaymentForm";
-import { PaymentReview } from "@/components/payments/PaymentReview";
+import PaymentForm from "@/components/payments/PaymentForm";
 import { TransactionsList } from "@/components/payments/TransactionsList";
-import { paymentApi, PaymentMethod } from "@/services/paymentApi";
-import { toast } from "sonner";
-import { 
-  ArrowUpCircle, 
-  ArrowDownCircle, 
-  Receipt,
-  ArrowLeft
-} from "lucide-react";
+import { PlusCircle, MinusCircle, List, ArrowLeft } from "lucide-react";
 
-type PaymentStep = 'method' | 'form' | 'review' | 'transactions';
-type TransactionType = 'deposit' | 'withdrawal';
+type PaymentView = 'main' | 'deposit' | 'withdraw' | 'transactions';
 
-export function InvestorPayments() {
-  const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState<PaymentStep>('transactions');
-  const [transactionType, setTransactionType] = useState<TransactionType>('deposit');
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>();
-  const [amount, setAmount] = useState<string>('');
-  const [userDetails, setUserDetails] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+export default function InvestorPayments() {
+  const [currentView, setCurrentView] = useState<PaymentView>('main');
 
-  const startDeposit = () => {
-    setTransactionType('deposit');
-    setCurrentStep('method');
-  };
+  const renderMainView = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Payments</h2>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('deposit')}>
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4">
+              <PlusCircle className="h-6 w-6 text-green-600" />
+            </div>
+            <CardTitle className="text-lg">Deposit</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-muted-foreground mb-4">Add funds to your account</p>
+            <Button className="w-full">Make Deposit</Button>
+          </CardContent>
+        </Card>
 
-  const startWithdrawal = () => {
-    setTransactionType('withdrawal');
-    setCurrentStep('form'); // Skip method selection for withdrawals
-  };
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('withdraw')}>
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
+              <MinusCircle className="h-6 w-6 text-red-600" />
+            </div>
+            <CardTitle className="text-lg">Withdraw</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-muted-foreground mb-4">Withdraw funds from your account</p>
+            <Button variant="outline" className="w-full">Make Withdrawal</Button>
+          </CardContent>
+        </Card>
 
-  const handleMethodSelect = (method: PaymentMethod) => {
-    setSelectedMethod(method);
-    setCurrentStep('form');
-  };
-
-  const handleFormSubmit = (details: any) => {
-    setUserDetails(details);
-    setCurrentStep('review');
-  };
-
-  const handleConfirm = async () => {
-    if (!amount || parseFloat(amount) <= 0) {
-      toast.error('Please enter a valid amount');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      if (transactionType === 'deposit' && selectedMethod) {
-        await paymentApi.processDeposit({
-          amount: parseFloat(amount),
-          currency: 'USD',
-          paymentMethod: selectedMethod,
-          userDetails
-        });
-        toast.success('Deposit initiated successfully! Check Transactions for progress.');
-      } else if (transactionType === 'withdrawal') {
-        await paymentApi.processWithdrawal({
-          amount: parseFloat(amount),
-          currency: 'USD',
-          userDetails
-        });
-        toast.success('Withdrawal request submitted! Check Transactions for progress.');
-      }
-
-      // Reset form and go to transactions
-      setAmount('');
-      setSelectedMethod(undefined);
-      setUserDetails(null);
-      setCurrentStep('transactions');
-    } catch (error) {
-      console.error('Payment error:', error);
-      toast.error('Payment processing failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const renderCurrentStep = () => {
-    switch (currentStep) {
-      case 'method':
-        return (
-          <PaymentMethodSelector
-            onSelect={handleMethodSelect}
-            selectedMethod={selectedMethod}
-          />
-        );
-
-      case 'form':
-        return selectedMethod || transactionType === 'withdrawal' ? (
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {transactionType === 'deposit' ? 'Deposit' : 'Withdrawal'} Amount
-                </CardTitle>
-                <CardDescription>
-                  Enter the amount you'd like to {transactionType}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount (USD)</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    placeholder="Enter amount"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    min="10"
-                    step="10"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-            
-            <PaymentForm
-              paymentMethod={selectedMethod || { id: 'previous', name: 'Previous Method', icon: '💳', type: 'card' }}
-              amount={parseFloat(amount) || 0}
-              onSubmit={handleFormSubmit}
-              onBack={() => transactionType === 'deposit' ? setCurrentStep('method') : setCurrentStep('transactions')}
-            />
-          </div>
-        ) : null;
-
-      case 'review':
-        return selectedMethod && userDetails ? (
-          <PaymentReview
-            paymentMethod={selectedMethod}
-            amount={parseFloat(amount) || 0}
-            userDetails={userDetails}
-            onConfirm={handleConfirm}
-            onBack={() => setCurrentStep('form')}
-            loading={loading}
-          />
-        ) : null;
-
-      case 'transactions':
-      default:
-        return <TransactionsList />;
-    }
-  };
-
-  if (currentStep === 'transactions') {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">Payments</h2>
-            <p className="text-muted-foreground">Manage your deposits and withdrawals</p>
-          </div>
-          <div className="flex space-x-2">
-            <Button onClick={startDeposit} className="flex items-center space-x-2">
-              <ArrowUpCircle className="h-4 w-4" />
-              <span>Deposit</span>
-            </Button>
-            <Button onClick={startWithdrawal} variant="outline" className="flex items-center space-x-2">
-              <ArrowDownCircle className="h-4 w-4" />
-              <span>Withdraw</span>
-            </Button>
-          </div>
-        </div>
-        
-        {renderCurrentStep()}
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('transactions')}>
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-4">
+              <List className="h-6 w-6 text-blue-600" />
+            </div>
+            <CardTitle className="text-lg">Transactions</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-muted-foreground mb-4">View transaction history</p>
+            <Button variant="outline" className="w-full">View History</Button>
+          </CardContent>
+        </Card>
       </div>
-    );
-  }
+    </div>
+  );
+
+  const renderView = () => {
+    switch (currentView) {
+      case 'deposit':
+        return <PaymentForm transactionType="deposit" />;
+      case 'withdraw':
+        return <PaymentForm transactionType="withdrawal" />;
+      case 'transactions':
+        return <TransactionsList />;
+      default:
+        return renderMainView();
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setCurrentStep('transactions')}
-          className="flex items-center space-x-2"
+      {currentView !== 'main' && (
+        <Button 
+          variant="ghost" 
+          onClick={() => setCurrentView('main')}
+          className="mb-4"
         >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Transactions</span>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Payments
         </Button>
-        <div>
-          <h2 className="text-2xl font-bold capitalize">{transactionType}</h2>
-          <p className="text-muted-foreground">
-            {transactionType === 'deposit' ? 'Add funds to your account' : 'Withdraw funds from your account'}
-          </p>
-        </div>
-      </div>
-
-      {renderCurrentStep()}
+      )}
+      
+      {renderView()}
     </div>
   );
 }

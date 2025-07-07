@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +17,8 @@ import {
   DollarSign,
   Activity,
   MessageCircle,
-  Send
+  Send,
+  Twitter
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,7 +34,6 @@ const Index = () => {
   });
 
   useEffect(() => {
-    // Simulate real-time stats updates
     const interval = setInterval(() => {
       setStats(prev => ({
         totalUsers: prev.totalUsers + Math.floor(Math.random() * 3),
@@ -49,9 +50,9 @@ const Index = () => {
     <div className="min-h-screen">
       {/* Hero Section with Background Image */}
       <div 
-        className="relative min-h-screen bg-gradient-to-br from-blue-600 via-purple-700 to-indigo-800 overflow-hidden"
+        className="relative min-h-screen overflow-hidden"
         style={{
-          backgroundImage: `url('/assets/landing_background/landing_background_1.png'), linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(139, 92, 246, 0.9) 50%, rgba(79, 70, 229, 0.9) 100%)`,
+          backgroundImage: `linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(139, 92, 246, 0.95) 50%, rgba(79, 70, 229, 0.95) 100%), url('/assets/landing_background/landing_background_1.png')`,
           backgroundSize: 'cover, cover',
           backgroundPosition: 'center, center',
           backgroundBlendMode: 'overlay, normal'
@@ -64,8 +65,8 @@ const Index = () => {
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-400/20 rounded-full blur-3xl animate-pulse delay-500"></div>
         </div>
 
-        {/* Header */}
-        <div className="relative z-10 border-b border-white/10 bg-white/5 backdrop-blur-sm">
+        {/* Header - Now Sticky */}
+        <div className="sticky top-0 z-50 border-b border-white/10 bg-white/10 backdrop-blur-md supports-[backdrop-filter]:bg-white/5">
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -73,22 +74,22 @@ const Index = () => {
                 <span className="text-2xl font-bold text-white">Waves Quant Engine</span>
               </div>
               <div className="flex items-center space-x-6">
-                <div className="flex items-center space-x-6">
-                  <Link to="/about" className="text-white/80 hover:text-white transition-colors">About</Link>
-                  <Link to="/contact" className="text-white/80 hover:text-white transition-colors">Contact</Link>
-                  <Link to="/terms" className="text-white/80 hover:text-white transition-colors">Terms</Link>
+                <div className="hidden md:flex items-center space-x-6">
+                  <Link to="/about" className="text-white/90 hover:text-white transition-colors font-medium">About</Link>
+                  <Link to="/contact" className="text-white/90 hover:text-white transition-colors font-medium">Contact</Link>
+                  <Link to="/terms" className="text-white/90 hover:text-white transition-colors font-medium">Terms</Link>
                 </div>
                 {user ? (
                   <Button 
-                    onClick={() => navigate('/investor')}
-                    className="bg-white text-blue-600 hover:bg-gray-100"
+                    onClick={() => navigate('/investor-dashboard')}
+                    className="bg-white/90 text-blue-600 hover:bg-white font-semibold"
                   >
                     Go to Dashboard
                   </Button>
                 ) : (
                   <Button 
                     onClick={() => navigate('/auth')} 
-                    className="bg-white text-blue-600 hover:bg-gray-100"
+                    className="bg-white/90 text-blue-600 hover:bg-white font-semibold"
                   >
                     Sign In
                   </Button>
@@ -102,52 +103,52 @@ const Index = () => {
         <div className="relative z-10 flex items-center min-h-[calc(100vh-80px)]">
           <div className="container mx-auto px-4 py-20">
             <div className="text-center text-white">
-              <Badge variant="secondary" className="mb-6 bg-white/10 text-white border-white/20">
+              <Badge variant="secondary" className="mb-6 bg-white/20 text-white border-white/30 backdrop-blur-sm">
                 <Zap className="h-4 w-4 mr-2" />
                 AI-Powered Trading Platform
               </Badge>
               
               <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight">
-                Trade Smarter with
-                <span className="block bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
+                <span className="text-white">Trade Smarter with</span>
+                <span className="block bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent">
                   AI Precision
                 </span>
               </h1>
               
-              <p className="text-xl md:text-2xl mb-12 text-white/90 max-w-3xl mx-auto leading-relaxed">
+              <p className="text-xl md:text-2xl mb-12 text-white/95 max-w-3xl mx-auto leading-relaxed font-medium">
                 Experience the future of trading with our advanced AI algorithms that analyze market patterns, 
                 execute precise trades, and maximize your investment potential 24/7.
               </p>
 
               {/* Live Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12 max-w-4xl mx-auto">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                <div className="bg-white/15 backdrop-blur-md rounded-xl p-4 border border-white/20">
                   <div className="flex items-center justify-center mb-2">
                     <Users className="h-5 w-5 text-blue-300" />
                   </div>
-                  <div className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</div>
-                  <div className="text-sm text-white/70">Active Traders</div>
+                  <div className="text-2xl font-bold text-white">{stats.totalUsers.toLocaleString()}</div>
+                  <div className="text-sm text-white/80 font-medium">Active Traders</div>
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                <div className="bg-white/15 backdrop-blur-md rounded-xl p-4 border border-white/20">
                   <div className="flex items-center justify-center mb-2">
                     <Activity className="h-5 w-5 text-green-300" />
                   </div>
-                  <div className="text-2xl font-bold">{stats.totalTrades.toLocaleString()}</div>
-                  <div className="text-sm text-white/70">Trades Executed</div>
+                  <div className="text-2xl font-bold text-white">{stats.totalTrades.toLocaleString()}</div>
+                  <div className="text-sm text-white/80 font-medium">Trades Executed</div>
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                <div className="bg-white/15 backdrop-blur-md rounded-xl p-4 border border-white/20">
                   <div className="flex items-center justify-center mb-2">
                     <Target className="h-5 w-5 text-purple-300" />
                   </div>
-                  <div className="text-2xl font-bold">{stats.successRate.toFixed(1)}%</div>
-                  <div className="text-sm text-white/70">Success Rate</div>
+                  <div className="text-2xl font-bold text-white">{stats.successRate.toFixed(1)}%</div>
+                  <div className="text-sm text-white/80 font-medium">Success Rate</div>
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                <div className="bg-white/15 backdrop-blur-md rounded-xl p-4 border border-white/20">
                   <div className="flex items-center justify-center mb-2">
                     <DollarSign className="h-5 w-5 text-yellow-300" />
                   </div>
-                  <div className="text-2xl font-bold">${(stats.totalProfit / 1000000).toFixed(1)}M</div>
-                  <div className="text-sm text-white/70">Total Profits</div>
+                  <div className="text-2xl font-bold text-white">${(stats.totalProfit / 1000000).toFixed(1)}M</div>
+                  <div className="text-sm text-white/80 font-medium">Total Profits</div>
                 </div>
               </div>
               
@@ -155,7 +156,7 @@ const Index = () => {
                 <Button 
                   size="lg" 
                   onClick={() => navigate('/auth')}
-                  className="bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                  className="bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold"
                 >
                   Start Trading Now
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -164,7 +165,7 @@ const Index = () => {
                   size="lg" 
                   variant="outline"
                   onClick={() => navigate('/about')}
-                  className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm bg-white/5"
+                  className="border-white/40 text-white hover:bg-white/15 backdrop-blur-sm bg-white/10 font-semibold"
                 >
                   Learn More
                 </Button>
@@ -313,7 +314,7 @@ const Index = () => {
             <Button 
               size="lg" 
               onClick={() => navigate('/auth')}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold"
             >
               Get Started Free
               <ArrowRight className="ml-2 h-5 w-5" />
@@ -322,7 +323,7 @@ const Index = () => {
               size="lg" 
               variant="outline"
               onClick={() => navigate('/contact')}
-              className="border-white/20 text-white hover:bg-white/10"
+              className="border-white/30 text-white hover:bg-white/10 font-semibold"
             >
               Contact Sales
             </Button>
@@ -361,10 +362,10 @@ const Index = () => {
             <div className="flex items-center space-x-4">
               <span className="text-sm text-muted-foreground">Join Community:</span>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MessageCircle className="h-4 w-4" />
+                <Twitter className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <Users className="h-4 w-4" />
+                <MessageCircle className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                 <Send className="h-4 w-4" />
