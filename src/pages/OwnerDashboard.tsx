@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -204,14 +203,7 @@ const OwnerDashboard = () => {
                   {isEngineRunning ? "Engine Running" : "Engine Stopped"}
                 </Badge>
                 <ThemeToggle />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleClose}
-                  className="h-8 w-8"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                {/* Removed sign out/close button */}
               </div>
             </div>
           </header>

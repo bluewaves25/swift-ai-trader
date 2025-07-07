@@ -128,14 +128,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    setLoading(true);
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      // Do not setLoading or navigate here; let onAuthStateChange handle it
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign out');
-    } finally {
-      setLoading(false);
     }
   };
 

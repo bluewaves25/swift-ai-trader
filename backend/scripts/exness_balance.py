@@ -2,19 +2,12 @@ import MetaTrader5 as mt5
 import sys
 import json
 
-account = sys.argv[1]
-password = sys.argv[2]
-server = sys.argv[3]
+def get_balance(account: str, password: str, server: str):
+    mt5.initialize()
+    if not mt5.login(int(account), password, server):
+        return {"error": "MT5 login failed"}
+    return {"balance": mt5.account_info().balance}
 
-if not mt5.initialize(login=int(account), password=password, server=server):
-    print(json.dumps({"error": "MT5 initialization failed"}))
-    mt5.shutdown()
-    sys.exit()
-
-account_info = mt5.account_info()
-if account_info:
-    print(json.dumps({"balance": account_info.balance, "currency": account_info.currency}))
-else:
-    print(json.dumps({"error": "Failed to fetch account info"}))
-
-mt5.shutdown()
+if __name__ == "__main__":
+    account, password, server = sys.argv[1], sys.argv[2], sys.argv[3]
+    print(json.dumps(get_balance(account, password, server)))

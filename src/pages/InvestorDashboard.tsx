@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,10 +39,6 @@ const InvestorDashboard = () => {
   const { handleError } = useErrorHandler();
   const [activeSection, setActiveSection] = useState('overview');
 
-  const handleClose = () => {
-    navigate('/');
-  };
-
   const renderContent = () => {
     const contentMap = {
       'overview': <DashboardOverview />,
@@ -72,13 +67,13 @@ const InvestorDashboard = () => {
   return (
     <ErrorBoundary>
       <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-background">
+        <div className="min-h-screen flex w-full bg-background overflow-hidden">
           <InvestorSidebar 
             activeSection={activeSection} 
             onSectionChange={setActiveSection}
           />
           
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col max-w-full max-h-screen overflow-hidden">
             {/* Header */}
             <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50 p-4">
               <div className="flex items-center justify-between">
@@ -98,20 +93,13 @@ const InvestorDashboard = () => {
                     Live Trading
                   </Badge>
                   <ThemeToggle />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleClose}
-                    className="h-8 w-8"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  {/* Sign out button removed */}
                 </div>
               </div>
             </header>
 
             {/* Main Content */}
-            <main className="flex-1 p-6 overflow-auto">
+            <main className="flex-1 p-6 overflow-auto max-w-full max-h-full">
               {renderContent()}
             </main>
           </div>

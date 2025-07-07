@@ -6,7 +6,7 @@ The Waves Quant Engine backend provides a comprehensive REST API for multi-asset
 
 ## Base URL
 ```
-http://localhost:8000
+http://localhost:3000
 ```
 
 ## Authentication

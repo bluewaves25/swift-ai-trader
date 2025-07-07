@@ -1,40 +1,21 @@
-import asyncio
 import ccxt.async_support as ccxt
-from dotenv import load_dotenv
+import MetaTrader5 as mt5
+from python_dotenv import load_dotenv
 import os
-from datetime import datetime
-from supabase_client import SupabaseClient
+import pandas as pd
 
 load_dotenv()
 
 class MarketData:
     def __init__(self):
-        self.exness = ccxt.exness({
-            'apiKey': os.getenv("EXNESS_API_KEY"),
-            'secret': os.getenv("EXNESS_API_SECRET"),
-            'enableRateLimit': True,
-        })
-        self.db = SupabaseClient()
+        self.binance = ccxt.binance({"apiKey": os.getenv("BINANCE_API_KEY"), "secret": os.getenv("BINANCE_SECRET")})
+        self.exness = mt5
 
-    async def fetch_candles(self, symbol: str, timeframe: str = '1s'):
-        try:
-            while True:
-                candles = await self.exness.fetch_ohlcv(symbol, timeframe, limit=1)
-                if candles:
-                    candle = candles[-1]
-                    data = {
-                        'symbol': symbol,
-                        'timestamp': datetime.utcfromtimestamp(candle[0] / 1000).isoformat(),
-                        'open': candle[1],
-                        'high': candle[2],
-                        'low': candle[3],
-                        'close': candle[4],
-                        'volume': candle[5]
-                    }
-                    self.db.save_market_data(data)
-                await asyncio.sleep(1)
-        finally:
-            await self.exness.close()
+    async def get_binance_data(self, symbol: str, timeframe: str = "1m"):
+        ohlcv = await self.binance.fetch_ohlcv(symbol, timeframe)
+        return pd.DataFrame(ohlcv, columns=["timestamp", "open", "high", "low", "close", "volume"])
 
-    async def close(self):
-        await self.exness.close()
+    async def get_exness_data(self, symbol: str, timeframe: int = mt5.TIMEFRAME_M1):
+        mt5.initialize()
+        rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, 100)
+        return pd.DataFrame(rates, columns=["time", "open", "high", "low", "close", "tick_volume"])

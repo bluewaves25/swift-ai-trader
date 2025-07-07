@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -135,7 +134,8 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
             {!isCollapsed && <span>{link.label}</span>}
           </Button>
         ))}
-        
+
+        {/* Sign Out Button */}
         <Button
           variant="ghost"
           className={cn(

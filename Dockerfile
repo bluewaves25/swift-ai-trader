@@ -1,10 +1,8 @@
-FROM node:18
+FROM python:3.9-slim
+
 WORKDIR /app
-COPY backend/package*.json ./backend/
-RUN cd backend && npm install
-COPY backend/ ./backend/
-RUN apt-get update && apt-get install -y python3 python3-pip
-RUN pip3 install -r backend/requirements.txt
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/ ./backend
 EXPOSE 3000
-WORKDIR /app/backend/src
-CMD ["npm", "run", "dev"]
+CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "backend.src.server:app", "--bind", "0.0.0.0:3000"]

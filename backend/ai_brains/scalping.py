@@ -1,11 +1,16 @@
-class ScalpingStrategy:
-    def analyze(self, data: dict):
-        current_price = data['close'][-1]
-        sma_short = sum(data['close'][-5:]) / 5
-        sma_long = sum(data['close'][-20:]) / 20
+from data_feed.market_data import MarketData
+import pandas as pd
+from ta import add_all_ta_features
 
-        if current_price > sma_short > sma_long:
-            return {'signal': 'buy', 'confidence': 0.9, 'stop_loss': current_price * 0.995, 'take_profit': current_price * 1.005}
-        elif current_price < sma_short < sma_long:
-            return {'signal': 'sell', 'confidence': 0.9, 'stop_loss': current_price * 1.005, 'take_profit': current_price * 0.995}
-        return {'signal': 'hold', 'confidence': 0.5}
+class ScalpingStrategy:
+    def __init__(self):
+        self.market_data = MarketData()
+
+    async def generate_signal(self, symbol: str, broker: str):
+        data = await self.market_data.get_binance_data(symbol) if broker == "binance" else await self.market_data.get_exness_data(symbol)
+        data = add_all_ta_features(data, open="open", high="high", low="low", close="close", volume="volume")
+        if data["trend_macd_diff"].iloc[-1] > 0 and data["trend_macd_diff"].iloc[-2] <= 0:
+            return {"side": "buy", "volume": 0.01, "price": data["close"].iloc[-1]}
+        elif data["trend_macd_diff"].iloc[-1] < 0 and data["trend_macd_diff"].iloc[-2] >= 0:
+            return {"side": "sell", "volume": 0.01, "price": data["close"].iloc[-1]}
+        return None

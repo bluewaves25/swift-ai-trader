@@ -1,11 +1,16 @@
-class MeanReversionStrategy:
-    def analyze(self, data: dict):
-        current_price = data['close'][-1]
-        mean_price = sum(data['close'][-20:]) / 20
-        std_price = (sum((x - mean_price) ** 2 for x in data['close'][-20:]) / 20) ** 0.5
+from data_feed.market_data import MarketData
+import pandas as pd
+from ta import add_all_ta_features
 
-        if current_price < mean_price - std_price:
-            return {'signal': 'buy', 'confidence': 0.8, 'stop_loss': current_price * 0.99, 'take_profit': mean_price}
-        elif current_price > mean_price + std_price:
-            return {'signal': 'sell', 'confidence': 0.8, 'stop_loss': current_price * 1.01, 'take_profit': mean_price}
-        return {'signal': 'hold', 'confidence': 0.5}
+class MeanReversionStrategy:
+    def __init__(self):
+        self.market_data = MarketData()
+
+    async def generate_signal(self, symbol: str, broker: str):
+        data = await self.market_data.get_binance_data(symbol) if broker == "binance" else await self.market_data.get_exness_data(symbol)
+        data = add_all_ta_features(data, open="open", high="high", low="low", close="close", volume="volume")
+        if data["momentum_rsi"].iloc[-1] < 30:
+            return {"side": "buy", "volume": 0.01, "price": data["close"].iloc[-1]}
+        elif data["momentum_rsi"].iloc[-1] > 70:
+            return {"side": "sell", "volume": 0.01, "price": data["close"].iloc[-1]}
+        return None
