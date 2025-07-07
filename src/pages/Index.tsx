@@ -351,7 +351,7 @@ const Index = () => {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
               <Brain className="h-6 w-6 text-primary" />
-              <span className="font-bold">Waves Quant Engine</span>
+              <span className="font-bold text-gray-200">Waves Quant Engine</span>
             </div>
             <div className="flex items-center space-x-6 text-sm text-muted-foreground mb-4 md:mb-0">
               <Link to="/about" className="hover:text-primary transition-colors">About</Link>

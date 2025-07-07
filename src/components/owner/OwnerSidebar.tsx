@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -65,7 +64,7 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
         <div className="flex items-center justify-between">
           {!isCollapsed && (
             <div className="flex items-center space-x-2">
-              <TrendingUp className="h-6 w-6 text-primary" />
+              <Brain className="h-6 w-6 text-primary" /> {/* Changed to Brain icon */}
               <span className="font-semibold">Owner Panel</span>
             </div>
           )}

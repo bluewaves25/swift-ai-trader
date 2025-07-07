@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,14 +34,22 @@ const OwnerDashboard = () => {
 
   const fetchDashboardStats = async () => {
     try {
-      const [usersResult, tradesResult] = await Promise.all([
-        supabase.from('users').select('id', { count: 'exact' }),
-        supabase.from('trades').select('id', { count: 'exact' })
-      ]);
+      // Fetch the count of users from the users table
+      const { count: userCount, error: userError } = await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true });
+
+      // Fetch the count of trades from the trades table
+      const { count: tradeCount, error: tradeError } = await supabase
+        .from('trades')
+        .select('id', { count: 'exact', head: true });
+
+      if (userError) throw userError;
+      if (tradeError) throw tradeError;
 
       setStats({
-        totalUsers: usersResult.count || 0,
-        totalTrades: tradesResult.count || 0,
+        totalUsers: userCount || 0,
+        totalTrades: tradeCount || 0,
         totalRevenue: 0,
         systemStatus: 'active'
       });
@@ -123,7 +130,6 @@ const OwnerDashboard = () => {
             <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <SidebarTrigger />
                   <div>
                     <h1 className="text-2xl font-bold">Owner Dashboard</h1>
                     <p className="text-sm text-muted-foreground">

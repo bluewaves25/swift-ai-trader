@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,14 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
-import { TrendingUp, Shield, X } from "lucide-react";
+import { TrendingUp, Shield, X, Brain } from "lucide-react"; // <-- import Brain
 import { useNavigate } from "react-router-dom";
 
 const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const { signIn, signUp, resetPassword } = useAuth();
   const navigate = useNavigate();
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -40,6 +42,20 @@ const AuthPage = () => {
     }
   };
 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    try {
+      await resetPassword(resetEmail);
+      setShowReset(false);
+      setResetEmail("");
+    } catch (error) {
+      // Error is already handled in AuthContext
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   const handleClose = () => {
     navigate('/');
   };
@@ -60,7 +76,7 @@ const AuthPage = () => {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center space-x-2">
-            <TrendingUp className="h-8 w-8 text-blue-400" />
+            <Brain className="h-8 w-8 text-blue-400" /> {/* Changed to Brain icon */}
             <h1 className="text-3xl font-bold text-white">Waves Quant Engine</h1>
           </div>
           <p className="text-gray-300">
@@ -106,10 +122,40 @@ const AuthPage = () => {
                       className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
                     />
                   </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      className="text-xs text-blue-300 hover:underline"
+                      onClick={() => setShowReset(true)}
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" disabled={loading}>
                     {loading ? "Signing in..." : "Sign In"}
                   </Button>
                 </form>
+                {showReset && (
+                  <form onSubmit={handleResetPassword} className="mt-4 space-y-3 bg-black/40 p-4 rounded-lg">
+                    <Label htmlFor="reset-email" className="text-white">Enter your email to reset password</Label>
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      required
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    />
+                    <div className="flex gap-2">
+                      <Button type="submit" className="w-full bg-blue-600" disabled={resetLoading}>
+                        {resetLoading ? "Sending..." : "Send Reset Email"}
+                      </Button>
+                      <Button type="button" variant="outline" className="w-full" onClick={() => setShowReset(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                )}
               </TabsContent>
               
               <TabsContent value="signup">

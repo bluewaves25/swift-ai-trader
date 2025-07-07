@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,7 +82,6 @@ const InvestorDashboard = () => {
             <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <SidebarTrigger />
                   <div>
                     <h1 className="text-2xl font-bold">Waves Quant Engine</h1>
                     <p className="text-sm text-muted-foreground">
