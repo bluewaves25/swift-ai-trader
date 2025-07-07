@@ -1,7 +1,9 @@
 
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://your-production-domain.com/api' 
+  : 'http://localhost:3000/api';
 
 interface RequestConfig {
   startTime?: Date;
@@ -59,18 +61,20 @@ api.interceptors.response.use(
 );
 
 export const apiService = {
+  // Portfolio & Balance
   async getBalance(userId: string) {
-    const response = await api.get(`/api/wallet/balance?user_id=${userId}`);
+    const response = await api.get(`/wallet/balance/exness/default`);
     return response.data;
   },
 
   async updateBalance(userId: string, balance: any) {
-    const response = await api.post(`/api/wallet/update`, { user_id: userId, ...balance });
+    const response = await api.post(`/wallet/update`, { user_id: userId, ...balance });
     return response.data;
   },
 
+  // Trading Operations
   async executeTrade(symbol: string, tradeType: string, amount: number) {
-    const response = await api.post('/api/trade/execute', {
+    const response = await api.post('/trade/execute', {
       symbol,
       trade_type: tradeType,
       amount
@@ -80,54 +84,69 @@ export const apiService = {
 
   async getTradeHistory(symbol?: string) {
     const params = symbol ? { symbol } : {};
-    const response = await api.get('/api/trade/history', { params });
+    const response = await api.get('/trade/history', { params });
     return response.data;
   },
 
+  // AI Strategies & Signals
   async getAISignals(symbol?: string) {
     const params = symbol ? { symbol } : {};
-    const response = await api.get('/api/strategies/signals', { params });
+    const response = await api.get('/strategies/signals', { params });
     return response.data;
   },
 
   async getStrategyPerformance(symbol?: string) {
     const params = symbol ? { symbol } : {};
-    const response = await api.get('/api/strategies/performance', { params });
+    const response = await api.get('/strategies/performance', { params });
     return response.data;
   },
 
   async updateRiskParams(params: any) {
-    const response = await api.post('/api/strategies/risk', params);
+    const response = await api.post('/strategies/risk', params);
     return response.data;
   },
 
+  // Trading Engine Control
   async startTradingEngine() {
-    const response = await api.post('/api/engine/start');
+    const response = await api.post('/engine/start');
     return response.data;
   },
 
   async stopTradingEngine() {
-    const response = await api.post('/api/engine/stop');
+    const response = await api.post('/engine/stop');
     return response.data;
   },
 
   async emergencyStop() {
-    const response = await api.post('/api/engine/emergency-stop');
+    const response = await api.post('/engine/emergency-stop');
     return response.data;
   },
 
+  // Market Data
   async getMarketData(symbol: string) {
-    const response = await api.get(`/api/market-data/${symbol}`);
+    const response = await api.get(`/market-data/${symbol}`);
     return response.data;
   },
 
   async getHistoricalData(symbol: string, timeframe: string = '1h', limit: number = 100) {
-    const response = await api.get(`/api/historical-data/${symbol}/${timeframe}`, {
+    const response = await api.get(`/historical-data/${symbol}/${timeframe}`, {
       params: { limit }
     });
     return response.data;
   },
 
+  // Payments & Transactions
+  async processDeposit(data: any) {
+    const response = await api.post('/wallet/deposit/exness/default', data);
+    return response.data;
+  },
+
+  async processWithdrawal(data: any) {
+    const response = await api.post('/wallet/withdraw/exness/default', data);
+    return response.data;
+  },
+
+  // System Health
   async healthCheck() {
     const response = await api.get('/health');
     return response.data;

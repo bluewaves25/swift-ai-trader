@@ -1,255 +1,176 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
-import { 
-  TrendingUp, 
-  Shield, 
-  Users, 
-  Globe, 
-  Zap, 
-  BarChart3,
-  ArrowLeft,
-  CheckCircle,
-  Menu
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { ArrowLeft, BarChart3, Shield, Zap, Users, Award, Target } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 
-export default function About() {
+const About = () => {
   const navigate = useNavigate();
 
-  const features = [
-    {
-      icon: <TrendingUp className="h-6 w-6" />,
-      title: "AI-Powered Algorithms",
-      description: "Our sophisticated machine learning models analyze market patterns 24/7 to identify profitable trading opportunities across all asset classes."
-    },
-    {
-      icon: <Shield className="h-6 w-6" />,
-      title: "Advanced Risk Management", 
-      description: "Multi-layer risk controls including stop-loss automation, position sizing, and exposure limits protect your investment at all times."
-    },
-    {
-      icon: <Zap className="h-6 w-6" />,
-      title: "High-Frequency Execution",
-      description: "Lightning-fast trade execution captures micro-movements in the market, maximizing profit potential while minimizing slippage."
-    },
-    {
-      icon: <Globe className="h-6 w-6" />,
-      title: "Multi-Asset Trading",
-      description: "Trade across forex, cryptocurrencies, stocks, commodities, and indices from a single, unified platform."
-    }
-  ];
-
-  const stats = [
-    { label: "Assets Supported", value: "500+" },
-    { label: "Trading Strategies", value: "12" },
-    { label: "Average Win Rate", value: "84.3%" },
-    { label: "Uptime", value: "99.9%" }
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
       {/* Header */}
-      <header className="border-b border-white/10 bg-black/20 backdrop-blur-lg p-4">
-        <div className="container mx-auto flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate('/')} className="text-white hover:bg-white/10">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Home
-          </Button>
-          
-          <div className="flex items-center space-x-2">
-            <TrendingUp className="h-6 w-6 text-blue-400" />
-            <span className="text-xl font-bold text-white">Waves Quant Engine</span>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-4">
-              <Button variant="ghost" onClick={() => navigate('/contact')} className="text-white hover:bg-white/10">
-                Contact
+      <div className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/')}
+                className="flex items-center space-x-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Home</span>
               </Button>
-              <Button variant="ghost" onClick={() => navigate('/terms')} className="text-white hover:bg-white/10">
-                Terms
-              </Button>
-              <Button variant="ghost" onClick={() => navigate('/auth')} className="text-white hover:bg-white/10">
-                Sign In
-              </Button>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                About Waves Quant Engine
+              </h1>
             </div>
-            
-            {/* Mobile Navigation */}
-            <div className="md:hidden">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
-                    <Menu className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-slate-900/95 border-white/20">
-                  <DropdownMenuItem onClick={() => navigate('/contact')} className="text-white hover:bg-white/10">
-                    Contact
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/terms')} className="text-white hover:bg-white/10">
-                    Terms
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/auth')} className="text-white hover:bg-white/10">
-                    Sign In
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            <div className="hidden md:flex items-center space-x-6">
+              <Link to="/about" className="text-foreground hover:text-primary transition-colors">About</Link>
+              <Link to="/contact" className="text-foreground hover:text-primary transition-colors">Contact</Link>
+              <Link to="/terms" className="text-foreground hover:text-primary transition-colors">Terms</Link>
+              <Link to="/auth" className="text-foreground hover:text-primary transition-colors">Sign In</Link>
             </div>
-            
-            <ThemeToggle />
           </div>
         </div>
-      </header>
+      </div>
 
       <div className="container mx-auto px-4 py-12">
         {/* Hero Section */}
-        <div className="text-center mb-16">
-          <Badge variant="outline" className="mb-4 border-purple-500/20 bg-purple-600/20 text-purple-300">
-            Professional Trading Platform
+        <div className="text-center mb-12">
+          <Badge variant="outline" className="mb-4">
+            Advanced AI Trading Platform
           </Badge>
-          <h1 className="text-4xl lg:text-5xl font-bold mb-6 text-white">
-            About Waves Quant Engine
-          </h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            We are pioneering the future of automated trading by combining institutional-grade 
-            algorithms with cutting-edge technology to democratize professional trading for everyone.
+          <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Revolutionizing Trading with AI
+          </h2>
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            Waves Quant Engine combines cutting-edge artificial intelligence with sophisticated trading algorithms 
+            to deliver superior investment performance for our clients.
           </p>
         </div>
 
-        {/* Mission Statement */}
-        <Card className="mb-16 bg-white/5 border-white/10 backdrop-blur-lg">
-          <CardContent className="p-8 lg:p-12">
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div>
-                <h2 className="text-3xl font-bold mb-4 text-white">Our Mission</h2>
-                <p className="text-lg text-gray-300 mb-6">
-                  To democratize institutional-grade trading technology and make sophisticated 
-                  algorithmic trading accessible to individual investors worldwide.
-                </p>
-                <div className="space-y-3">
-                  {[
-                    "Transparent and automated trading",
-                    "Advanced risk management",
-                    "24/7 market monitoring",
-                    "Professional-grade execution"
-                  ].map((item, index) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <CheckCircle className="h-5 w-5 text-green-400" />
-                      <span className="text-white">{item}</span>
-                    </div>
-                  ))}
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+          <Card className="group hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                  <BarChart3 className="h-6 w-6 text-blue-600" />
                 </div>
+                <h3 className="font-semibold text-lg">Advanced Analytics</h3>
               </div>
-              <div className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-2xl p-8">
-                <div className="grid grid-cols-2 gap-6">
-                  {stats.map((stat, index) => (
-                    <div key={index} className="text-center">
-                      <div className="text-2xl font-bold text-blue-400 mb-1">
-                        {stat.value}
-                      </div>
-                      <p className="text-sm text-gray-300">{stat.label}</p>
-                    </div>
-                  ))}
+              <p className="text-muted-foreground">
+                Real-time market analysis powered by machine learning algorithms that process thousands of data points per second.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                  <Shield className="h-6 w-6 text-green-600" />
                 </div>
+                <h3 className="font-semibold text-lg">Risk Management</h3>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              <p className="text-muted-foreground">
+                Sophisticated risk controls and portfolio protection mechanisms to safeguard your investments.
+              </p>
+            </CardContent>
+          </Card>
 
-        {/* Features */}
-        <div className="mb-16">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4 text-white">What Sets Us Apart</h2>
-            <p className="text-xl text-gray-300">
-              Advanced technology meets professional trading expertise
-            </p>
-          </div>
+          <Card className="group hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                  <Zap className="h-6 w-6 text-purple-600" />
+                </div>
+                <h3 className="font-semibold text-lg">Lightning Fast</h3>
+              </div>
+              <p className="text-muted-foreground">
+                Ultra-low latency execution ensures you never miss market opportunities with our optimized infrastructure.
+              </p>
+            </CardContent>
+          </Card>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            {features.map((feature, index) => (
-              <Card key={index} className="bg-white/5 border-white/10 backdrop-blur-lg">
-                <CardHeader>
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-600/20 rounded-lg text-blue-400">
-                      {feature.icon}
-                    </div>
-                    <CardTitle className="text-xl text-white">{feature.title}</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-base text-gray-300">
-                    {feature.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card className="group hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                  <Users className="h-6 w-6 text-orange-600" />
+                </div>
+                <h3 className="font-semibold text-lg">Expert Team</h3>
+              </div>
+              <p className="text-muted-foreground">
+                Led by seasoned quantitative analysts and AI researchers with decades of combined experience.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-lg">
+                  <Award className="h-6 w-6 text-red-600" />
+                </div>
+                <h3 className="font-semibold text-lg">Proven Results</h3>
+              </div>
+              <p className="text-muted-foreground">
+                Consistent outperformance with a track record of delivering superior risk-adjusted returns.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-teal-100 dark:bg-teal-900/20 rounded-lg">
+                  <Target className="h-6 w-6 text-teal-600" />
+                </div>
+                <h3 className="font-semibold text-lg">Multi-Asset</h3>
+              </div>
+              <p className="text-muted-foreground">
+                Trade across multiple asset classes including forex, commodities, indices, and cryptocurrencies.
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Technology Stack */}
-        <Card className="mb-16 bg-white/5 border-white/10 backdrop-blur-lg">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl text-white">Our Technology</CardTitle>
-            <CardDescription className="text-gray-300">
-              Built with cutting-edge technology for maximum performance and reliability
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <BarChart3 className="h-12 w-12 text-blue-400 mx-auto mb-4" />
-                <h3 className="font-semibold mb-2 text-white">Machine Learning</h3>
-                <p className="text-gray-300 text-sm">
-                  Advanced AI algorithms that adapt and learn from market conditions
-                </p>
-              </div>
-              <div className="text-center">
-                <Zap className="h-12 w-12 text-blue-400 mx-auto mb-4" />
-                <h3 className="font-semibold mb-2 text-white">High-Performance Computing</h3>
-                <p className="text-gray-300 text-sm">
-                  Ultra-low latency execution with institutional-grade infrastructure
-                </p>
-              </div>
-              <div className="text-center">
-                <Shield className="h-12 w-12 text-blue-400 mx-auto mb-4" />
-                <h3 className="font-semibold mb-2 text-white">Security First</h3>
-                <p className="text-gray-300 text-sm">
-                  Bank-level security with encrypted data and secure API connections
-                </p>
-              </div>
-            </div>
+        {/* Mission Statement */}
+        <Card className="mb-12">
+          <CardContent className="p-8 text-center">
+            <h3 className="text-2xl font-bold mb-4">Our Mission</h3>
+            <p className="text-lg text-muted-foreground max-w-4xl mx-auto">
+              At Waves Quant Engine, we believe that advanced technology should be accessible to all investors. 
+              Our mission is to democratize quantitative trading by providing institutional-grade AI trading systems 
+              to individual investors, enabling them to participate in sophisticated investment strategies previously 
+              available only to large hedge funds and financial institutions.
+            </p>
           </CardContent>
         </Card>
 
         {/* Call to Action */}
-        <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-          <CardContent className="p-8 lg:p-12 text-center">
-            <h2 className="text-3xl font-bold mb-4">Ready to Start Trading?</h2>
-            <p className="text-lg mb-8 opacity-90 max-w-2xl mx-auto">
-              Join thousands of investors who trust our AI-powered platform to grow their wealth 
-              through professional automated trading.
-            </p>
-            <Button 
-              size="lg" 
-              variant="secondary" 
-              onClick={() => navigate('/auth')}
-              className="bg-white text-slate-900 hover:bg-gray-100"
-            >
+        <div className="text-center">
+          <h3 className="text-2xl font-bold mb-4">Ready to Start Trading?</h3>
+          <p className="text-muted-foreground mb-6">
+            Join thousands of investors who trust Waves Quant Engine with their trading strategies.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" onClick={() => navigate('/auth')}>
               Get Started Today
             </Button>
-          </CardContent>
-        </Card>
+            <Button size="lg" variant="outline" onClick={() => navigate('/contact')}>
+              Learn More
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default About;

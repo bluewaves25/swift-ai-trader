@@ -1,31 +1,15 @@
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useNavigate } from "react-router-dom";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Mail, Phone, MapPin, Clock } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { 
-  TrendingUp, 
-  ArrowLeft,
-  Mail,
-  Phone,
-  MapPin,
-  Clock,
-  Send,
-  Menu
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
 
-export default function Contact() {
+const Contact = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
@@ -37,249 +21,222 @@ export default function Contact() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.message) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
     setLoading(true);
+
     try {
-      // Simulate form submission
+      // Here you would typically send the form data to your backend
+      // For now, we'll just show a success message
       await new Promise(resolve => setTimeout(resolve, 1000));
-      toast.success("Message sent successfully! We'll get back to you soon.");
+      
+      toast.success('Message sent successfully! We\'ll get back to you soon.');
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error) {
-      toast.error("Failed to send message. Please try again.");
+      toast.error('Failed to send message. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
       {/* Header */}
-      <header className="border-b border-white/10 bg-black/20 backdrop-blur-lg p-4">
-        <div className="container mx-auto flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate('/')} className="text-white hover:bg-white/10">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Home
-          </Button>
-          
-          <div className="flex items-center space-x-2">
-            <TrendingUp className="h-6 w-6 text-blue-400" />
-            <span className="text-xl font-bold text-white">Waves Quant Engine</span>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-4">
-              <Button variant="ghost" onClick={() => navigate('/about')} className="text-white hover:bg-white/10">
-                About
+      <div className="border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/')}
+                className="flex items-center space-x-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Home</span>
               </Button>
-              <Button variant="ghost" onClick={() => navigate('/terms')} className="text-white hover:bg-white/10">
-                Terms
-              </Button>
-              <Button variant="ghost" onClick={() => navigate('/auth')} className="text-white hover:bg-white/10">
-                Sign In
-              </Button>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Contact Us
+              </h1>
             </div>
-            
-            {/* Mobile Navigation */}
-            <div className="md:hidden">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
-                    <Menu className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-slate-900/95 border-white/20">
-                  <DropdownMenuItem onClick={() => navigate('/about')} className="text-white hover:bg-white/10">
-                    About
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/terms')} className="text-white hover:bg-white/10">
-                    Terms
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/auth')} className="text-white hover:bg-white/10">
-                    Sign In
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            <div className="hidden md:flex items-center space-x-6">
+              <Link to="/about" className="text-foreground hover:text-primary transition-colors">About</Link>
+              <Link to="/contact" className="text-foreground hover:text-primary transition-colors">Contact</Link>
+              <Link to="/terms" className="text-foreground hover:text-primary transition-colors">Terms</Link>
+              <Link to="/auth" className="text-foreground hover:text-primary transition-colors">Sign In</Link>
             </div>
-            
-            <ThemeToggle />
           </div>
         </div>
-      </header>
+      </div>
 
       <div className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 text-white">Contact Us</h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Have questions about our trading platform? We're here to help you get started 
-            with automated trading.
+          <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Get in Touch
+          </h2>
+          <p className="text-xl text-muted-foreground">
+            Have questions about our AI trading platform? We're here to help.
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-12">
-          {/* Contact Information */}
-          <div className="space-y-8">
-            <Card className="bg-white/5 border-white/10 backdrop-blur-lg">
-              <CardHeader>
-                <CardTitle className="text-white">Get in Touch</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Reach out to our support team for any questions or assistance
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-5 w-5 text-blue-400" />
-                  <div>
-                    <p className="font-medium text-white">Email Support</p>
-                    <p className="text-gray-300">support@wavesquant.com</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-5 w-5 text-blue-400" />
-                  <div>
-                    <p className="font-medium text-white">Phone Support</p>
-                    <p className="text-gray-300">+233 (500) 33-4946</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-3">
-                  <MapPin className="h-5 w-5 text-blue-400" />
-                  <div>
-                    <p className="font-medium text-white">Office Address</p>
-                    <p className="text-gray-300">
-                      123 Financial District<br />
-                      Techiman, BE 10004
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-3">
-                  <Clock className="h-5 w-5 text-blue-400" />
-                  <div>
-                    <p className="font-medium text-white">Support Hours</p>
-                    <p className="text-gray-300">
-                      Monday - Friday: 9:00 AM - 6:00 PM EST<br />
-                      Saturday: 10:00 AM - 4:00 PM EST
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/5 border-white/10 backdrop-blur-lg">
-              <CardHeader>
-                <CardTitle className="text-white">Frequently Asked Questions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="font-medium mb-1 text-white">How do I get started?</p>
-                  <p className="text-sm text-gray-300">
-                    Simply sign up for an investor account, complete your profile, and make your first deposit to start automated trading.
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium mb-1 text-white">What is the minimum deposit?</p>
-                  <p className="text-sm text-gray-300">
-                    The minimum deposit is $100 to get started with our automated trading platform.
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium mb-1 text-white">How can I withdraw my funds?</p>
-                  <p className="text-sm text-gray-300">
-                    Withdrawal requests can be made after 2 weeks of investment and are processed within 24-48 hours.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Contact Form */}
-          <Card className="bg-white/5 border-white/10 backdrop-blur-lg">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-white">Send us a Message</CardTitle>
-              <CardDescription className="text-gray-300">
-                Fill out the form below and we'll get back to you as soon as possible
+              <CardTitle>Send us a Message</CardTitle>
+              <CardDescription>
+                Fill out the form below and we'll get back to you as soon as possible.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="text-white">Full Name *</Label>
+                    <Label htmlFor="name">Full Name</Label>
                     <Input
                       id="name"
+                      name="name"
                       value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      placeholder="Your full name"
+                      onChange={handleChange}
                       required
-                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-white">Email Address *</Label>
+                    <Label htmlFor="email">Email Address</Label>
                     <Input
                       id="email"
+                      name="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      placeholder="your.email@example.com"
+                      onChange={handleChange}
                       required
-                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
                     />
                   </div>
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="subject" className="text-white">Subject</Label>
+                  <Label htmlFor="subject">Subject</Label>
                   <Input
                     id="subject"
+                    name="subject"
                     value={formData.subject}
-                    onChange={(e) => handleInputChange('subject', e.target.value)}
-                    placeholder="What is this regarding?"
-                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                    onChange={handleChange}
+                    required
                   />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="message" className="text-white">Message *</Label>
+                  <Label htmlFor="message">Message</Label>
                   <Textarea
                     id="message"
-                    value={formData.message}
-                    onChange={(e) => handleInputChange('message', e.target.value)}
-                    placeholder="Please describe your question or concern..."
+                    name="message"
                     rows={6}
+                    value={formData.message}
+                    onChange={handleChange}
                     required
-                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
                   />
                 </div>
-
-                <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Send Message
-                    </>
-                  )}
+                <Button type="submit" disabled={loading} className="w-full">
+                  {loading ? 'Sending...' : 'Send Message'}
                 </Button>
               </form>
             </CardContent>
           </Card>
+
+          {/* Contact Information */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Contact Information</CardTitle>
+                <CardDescription>
+                  Reach out to us through any of these channels.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-start space-x-4">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                    <Mail className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Email</h4>
+                    <p className="text-muted-foreground">support@wavesquant.com</p>
+                    <p className="text-sm text-muted-foreground">We typically respond within 24 hours</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-4">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                    <Phone className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Phone</h4>
+                    <p className="text-muted-foreground">+1 (555) 123-4567</p>
+                    <p className="text-sm text-muted-foreground">Mon-Fri, 9AM-6PM EST</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-4">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                    <MapPin className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Office</h4>
+                    <p className="text-muted-foreground">
+                      123 Financial District<br />
+                      New York, NY 10004<br />
+                      United States
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-4">
+                  <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                    <Clock className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Business Hours</h4>
+                    <p className="text-muted-foreground">
+                      Monday - Friday: 9:00 AM - 6:00 PM EST<br />
+                      Saturday - Sunday: Closed
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Frequently Asked Questions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-2">How do I get started?</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Simply sign up for an account, complete the verification process, and make your first deposit to start trading.
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">What is the minimum deposit?</h4>
+                  <p className="text-sm text-muted-foreground">
+                    The minimum deposit is $100 to get started with our AI trading platform.
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Is my money safe?</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Yes, we use bank-grade security and segregated accounts to protect your funds.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default Contact;

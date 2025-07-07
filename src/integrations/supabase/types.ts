@@ -7,168 +7,201 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instanciate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
       ai_signals: {
         Row: {
-          confidence: number
-          created_at: string | null
-          entry_price: number | null
-          executed: boolean | null
+          confidence: number | null
           id: string
-          pair_id: string | null
-          reasoning: string | null
-          signal: Database["public"]["Enums"]["signal_type"]
-          stop_loss: number | null
-          strategy_used: Database["public"]["Enums"]["strategy_type"]
-          take_profit: number | null
+          signal: string | null
+          symbol: string
+          timestamp: string | null
         }
         Insert: {
-          confidence: number
-          created_at?: string | null
-          entry_price?: number | null
-          executed?: boolean | null
+          confidence?: number | null
           id?: string
-          pair_id?: string | null
-          reasoning?: string | null
-          signal: Database["public"]["Enums"]["signal_type"]
-          stop_loss?: number | null
-          strategy_used: Database["public"]["Enums"]["strategy_type"]
-          take_profit?: number | null
+          signal?: string | null
+          symbol: string
+          timestamp?: string | null
         }
         Update: {
-          confidence?: number
-          created_at?: string | null
-          entry_price?: number | null
-          executed?: boolean | null
+          confidence?: number | null
           id?: string
-          pair_id?: string | null
-          reasoning?: string | null
-          signal?: Database["public"]["Enums"]["signal_type"]
-          stop_loss?: number | null
-          strategy_used?: Database["public"]["Enums"]["strategy_type"]
-          take_profit?: number | null
+          signal?: string | null
+          symbol?: string
+          timestamp?: string | null
+        }
+        Relationships: []
+      }
+      bonuses: {
+        Row: {
+          amount: number
+          bonus_type: string
+          created_at: string | null
+          description: string | null
+          id: string
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          bonus_type: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          bonus_type?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      fees: {
+        Row: {
+          amount: number
+          broker: string | null
+          id: string
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          broker?: string | null
+          id?: string
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          broker?: string | null
+          id?: string
+          timestamp?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "ai_signals_pair_id_fkey"
+            foreignKeyName: "fees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      losses: {
+        Row: {
+          amount: number
+          broker: string | null
+          id: string
+          pair_id: string | null
+          timestamp: string | null
+          type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          broker?: string | null
+          id?: string
+          pair_id?: string | null
+          timestamp?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          broker?: string | null
+          id?: string
+          pair_id?: string | null
+          timestamp?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "losses_pair_id_fkey"
             columns: ["pair_id"]
             isOneToOne: false
             referencedRelation: "trading_pairs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "losses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
       }
       market_data: {
         Row: {
-          bollinger_lower: number | null
-          bollinger_upper: number | null
-          close_price: number
-          high_price: number
+          close: number | null
+          high: number | null
           id: string
-          low_price: number
-          macd: number | null
-          market_condition:
-            | Database["public"]["Enums"]["market_condition"]
-            | null
-          open_price: number
-          pair_id: string | null
-          resistance_level: number | null
-          rsi: number | null
-          support_level: number | null
+          low: number | null
+          open: number | null
+          symbol: string
           timestamp: string | null
-          volatility: number | null
-          volume: number
+          volume: number | null
         }
         Insert: {
-          bollinger_lower?: number | null
-          bollinger_upper?: number | null
-          close_price: number
-          high_price: number
+          close?: number | null
+          high?: number | null
           id?: string
-          low_price: number
-          macd?: number | null
-          market_condition?:
-            | Database["public"]["Enums"]["market_condition"]
-            | null
-          open_price: number
-          pair_id?: string | null
-          resistance_level?: number | null
-          rsi?: number | null
-          support_level?: number | null
+          low?: number | null
+          open?: number | null
+          symbol: string
           timestamp?: string | null
-          volatility?: number | null
-          volume: number
+          volume?: number | null
         }
         Update: {
-          bollinger_lower?: number | null
-          bollinger_upper?: number | null
-          close_price?: number
-          high_price?: number
+          close?: number | null
+          high?: number | null
           id?: string
-          low_price?: number
-          macd?: number | null
-          market_condition?:
-            | Database["public"]["Enums"]["market_condition"]
-            | null
-          open_price?: number
-          pair_id?: string | null
-          resistance_level?: number | null
-          rsi?: number | null
-          support_level?: number | null
+          low?: number | null
+          open?: number | null
+          symbol?: string
           timestamp?: string | null
-          volatility?: number | null
-          volume?: number
+          volume?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "market_data_pair_id_fkey"
-            columns: ["pair_id"]
-            isOneToOne: false
-            referencedRelation: "trading_pairs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       pair_strategies: {
         Row: {
-          confidence_score: number | null
-          current_strategy: Database["public"]["Enums"]["strategy_type"]
+          created_at: string | null
           id: string
-          last_updated: string | null
           pair_id: string | null
-          performance_score: number | null
-          strategy_params: Json | null
-          total_trades: number | null
-          winning_trades: number | null
+          strategy: string
         }
         Insert: {
-          confidence_score?: number | null
-          current_strategy: Database["public"]["Enums"]["strategy_type"]
+          created_at?: string | null
           id?: string
-          last_updated?: string | null
           pair_id?: string | null
-          performance_score?: number | null
-          strategy_params?: Json | null
-          total_trades?: number | null
-          winning_trades?: number | null
+          strategy: string
         }
         Update: {
-          confidence_score?: number | null
-          current_strategy?: Database["public"]["Enums"]["strategy_type"]
+          created_at?: string | null
           id?: string
-          last_updated?: string | null
           pair_id?: string | null
-          performance_score?: number | null
-          strategy_params?: Json | null
-          total_trades?: number | null
-          winning_trades?: number | null
+          strategy?: string
         }
         Relationships: [
           {
             foreignKeyName: "pair_strategies_pair_id_fkey"
             columns: ["pair_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "trading_pairs"
             referencedColumns: ["id"]
           },
@@ -176,82 +209,72 @@ export type Database = {
       }
       performance_analytics: {
         Row: {
-          avg_profit_per_trade: number | null
-          created_at: string | null
-          date: string
           id: string
-          max_drawdown: number | null
-          sharpe_ratio: number | null
-          total_profit: number | null
-          total_trades: number | null
-          total_volume: number | null
+          profit_loss: number | null
+          strategy: string
+          timestamp: string | null
+          user_id: string | null
           win_rate: number | null
-          winning_trades: number | null
         }
         Insert: {
-          avg_profit_per_trade?: number | null
-          created_at?: string | null
-          date: string
           id?: string
-          max_drawdown?: number | null
-          sharpe_ratio?: number | null
-          total_profit?: number | null
-          total_trades?: number | null
-          total_volume?: number | null
+          profit_loss?: number | null
+          strategy: string
+          timestamp?: string | null
+          user_id?: string | null
           win_rate?: number | null
-          winning_trades?: number | null
         }
         Update: {
-          avg_profit_per_trade?: number | null
-          created_at?: string | null
-          date?: string
           id?: string
-          max_drawdown?: number | null
-          sharpe_ratio?: number | null
-          total_profit?: number | null
-          total_trades?: number | null
-          total_volume?: number | null
+          profit_loss?: number | null
+          strategy?: string
+          timestamp?: string | null
+          user_id?: string | null
           win_rate?: number | null
-          winning_trades?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "performance_analytics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       portfolios: {
         Row: {
           available_balance: number | null
+          broker: string | null
           created_at: string | null
           id: string
+          invested_amount: number | null
           realized_pnl: number | null
           total_balance: number | null
-          total_trades: number | null
           unrealized_pnl: number | null
-          updated_at: string | null
           user_id: string | null
-          winning_trades: number | null
         }
         Insert: {
           available_balance?: number | null
+          broker?: string | null
           created_at?: string | null
           id?: string
+          invested_amount?: number | null
           realized_pnl?: number | null
           total_balance?: number | null
-          total_trades?: number | null
           unrealized_pnl?: number | null
-          updated_at?: string | null
           user_id?: string | null
-          winning_trades?: number | null
         }
         Update: {
           available_balance?: number | null
+          broker?: string | null
           created_at?: string | null
           id?: string
+          invested_amount?: number | null
           realized_pnl?: number | null
           total_balance?: number | null
-          total_trades?: number | null
           unrealized_pnl?: number | null
-          updated_at?: string | null
           user_id?: string | null
-          winning_trades?: number | null
         }
         Relationships: [
           {
@@ -265,91 +288,104 @@ export type Database = {
       }
       profiles: {
         Row: {
-          address: string | null
-          avatar_url: string | null
-          bio: string | null
-          created_at: string
+          created_at: string | null
           date_of_birth: string | null
           full_name: string | null
           id: string
-          investment_experience: string | null
-          nationality: string | null
-          occupation: string | null
-          phone: string | null
-          updated_at: string
-          user_id: string
+          name: string | null
+          phone_number: string | null
+          user_id: string | null
         }
         Insert: {
-          address?: string | null
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string
+          created_at?: string | null
           date_of_birth?: string | null
           full_name?: string | null
           id?: string
-          investment_experience?: string | null
-          nationality?: string | null
-          occupation?: string | null
-          phone?: string | null
-          updated_at?: string
-          user_id: string
+          name?: string | null
+          phone_number?: string | null
+          user_id?: string | null
         }
         Update: {
-          address?: string | null
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string
+          created_at?: string | null
           date_of_birth?: string | null
           full_name?: string | null
           id?: string
-          investment_experience?: string | null
-          nationality?: string | null
-          occupation?: string | null
-          phone?: string | null
-          updated_at?: string
-          user_id?: string
+          name?: string | null
+          phone_number?: string | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       risk_settings: {
         Row: {
           created_at: string | null
           id: string
-          max_daily_loss: number | null
-          max_open_positions: number | null
+          max_loss: number | null
           max_position_size: number | null
-          risk_per_trade: number | null
-          stop_loss_percentage: number | null
-          take_profit_percentage: number | null
           user_id: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
-          max_daily_loss?: number | null
-          max_open_positions?: number | null
+          max_loss?: number | null
           max_position_size?: number | null
-          risk_per_trade?: number | null
-          stop_loss_percentage?: number | null
-          take_profit_percentage?: number | null
           user_id?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
-          max_daily_loss?: number | null
-          max_open_positions?: number | null
+          max_loss?: number | null
           max_position_size?: number | null
-          risk_per_trade?: number | null
-          stop_loss_percentage?: number | null
-          take_profit_percentage?: number | null
           user_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "risk_settings_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: true
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          created_at: string | null
+          id: string
+          renewal_date: string
+          status: string | null
+          tier: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          renewal_date: string
+          status?: string | null
+          tier: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          renewal_date?: string
+          status?: string | null
+          tier?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -357,85 +393,105 @@ export type Database = {
       }
       support_tickets: {
         Row: {
-          created_at: string
+          created_at: string | null
+          description: string
           id: string
-          message: string
-          priority: string
-          status: string
+          status: string | null
           subject: string
-          updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
+          description: string
           id?: string
-          message: string
-          priority?: string
-          status?: string
+          status?: string | null
           subject: string
-          updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
+          description?: string
           id?: string
-          message?: string
-          priority?: string
-          status?: string
+          status?: string | null
           subject?: string
-          updated_at?: string
-          user_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system: {
+        Row: {
+          id: number
+          trading_active: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          id?: number
+          trading_active?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          id?: number
+          trading_active?: boolean
+          updated_at?: string | null
         }
         Relationships: []
       }
       trades: {
         Row: {
-          amount: number
-          closed_at: string | null
-          created_at: string | null
-          entry_price: number
-          execution_time: string | null
-          exit_price: number | null
+          account_number: string
+          broker: string | null
           id: string
+          order_id: string | null
           pair_id: string | null
-          profit_loss: number | null
-          signal_id: string | null
-          status: Database["public"]["Enums"]["trade_status"] | null
+          price: number
+          side: string | null
+          status: string | null
           stop_loss: number | null
+          symbol: string
           take_profit: number | null
-          trade_type: Database["public"]["Enums"]["trade_type"]
+          timestamp: string | null
+          user_id: string | null
+          volume: number
         }
         Insert: {
-          amount: number
-          closed_at?: string | null
-          created_at?: string | null
-          entry_price: number
-          execution_time?: string | null
-          exit_price?: number | null
+          account_number: string
+          broker?: string | null
           id?: string
+          order_id?: string | null
           pair_id?: string | null
-          profit_loss?: number | null
-          signal_id?: string | null
-          status?: Database["public"]["Enums"]["trade_status"] | null
+          price: number
+          side?: string | null
+          status?: string | null
           stop_loss?: number | null
+          symbol: string
           take_profit?: number | null
-          trade_type: Database["public"]["Enums"]["trade_type"]
+          timestamp?: string | null
+          user_id?: string | null
+          volume: number
         }
         Update: {
-          amount?: number
-          closed_at?: string | null
-          created_at?: string | null
-          entry_price?: number
-          execution_time?: string | null
-          exit_price?: number | null
+          account_number?: string
+          broker?: string | null
           id?: string
+          order_id?: string | null
           pair_id?: string | null
-          profit_loss?: number | null
-          signal_id?: string | null
-          status?: Database["public"]["Enums"]["trade_status"] | null
+          price?: number
+          side?: string | null
+          status?: string | null
           stop_loss?: number | null
+          symbol?: string
           take_profit?: number | null
-          trade_type?: Database["public"]["Enums"]["trade_type"]
+          timestamp?: string | null
+          user_id?: string | null
+          volume?: number
         }
         Relationships: [
           {
@@ -446,155 +502,299 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "trades_signal_id_fkey"
-            columns: ["signal_id"]
+            foreignKeyName: "trades_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "ai_signals"
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
       }
       trading_pairs: {
         Row: {
-          base_currency: string
+          base_asset: string
+          broker: string | null
           created_at: string | null
           id: string
-          is_active: boolean | null
-          max_trade_amount: number | null
-          min_trade_amount: number | null
-          quote_currency: string
+          quote_asset: string
           symbol: string
         }
         Insert: {
-          base_currency: string
+          base_asset: string
+          broker?: string | null
           created_at?: string | null
           id?: string
-          is_active?: boolean | null
-          max_trade_amount?: number | null
-          min_trade_amount?: number | null
-          quote_currency: string
+          quote_asset: string
           symbol: string
         }
         Update: {
-          base_currency?: string
+          base_asset?: string
+          broker?: string | null
           created_at?: string | null
           id?: string
-          is_active?: boolean | null
-          max_trade_amount?: number | null
-          min_trade_amount?: number | null
-          quote_currency?: string
+          quote_asset?: string
           symbol?: string
         }
         Relationships: []
       }
+      transaction_steps: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          status: string | null
+          step_name: string
+          transaction_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: string | null
+          step_name: string
+          transaction_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: string | null
+          step_name?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_steps_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number
-          created_at: string
-          exness_account: string | null
+          broker: string | null
+          created_at: string | null
+          currency: string
+          description: string | null
+          failure_reason: string | null
           id: string
-          notes: string | null
-          reference_id: string | null
-          status: string
-          type: string
-          updated_at: string
-          user_id: string
+          method: string | null
+          payment_method: string | null
+          provider_transaction_id: string | null
+          status: string | null
+          timestamp: string | null
+          type: string | null
+          updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           amount: number
-          created_at?: string
-          exness_account?: string | null
+          broker?: string | null
+          created_at?: string | null
+          currency: string
+          description?: string | null
+          failure_reason?: string | null
           id?: string
-          notes?: string | null
-          reference_id?: string | null
-          status?: string
-          type: string
-          updated_at?: string
-          user_id: string
+          method?: string | null
+          payment_method?: string | null
+          provider_transaction_id?: string | null
+          status?: string | null
+          timestamp?: string | null
+          type?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           amount?: number
-          created_at?: string
-          exness_account?: string | null
+          broker?: string | null
+          created_at?: string | null
+          currency?: string
+          description?: string | null
+          failure_reason?: string | null
           id?: string
-          notes?: string | null
-          reference_id?: string | null
-          status?: string
-          type?: string
-          updated_at?: string
-          user_id?: string
+          method?: string | null
+          payment_method?: string | null
+          provider_transaction_id?: string | null
+          status?: string | null
+          timestamp?: string | null
+          type?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_settings: {
         Row: {
-          created_at: string
-          dark_mode: boolean | null
-          email_notifications: boolean | null
+          created_at: string | null
           id: string
-          language: string | null
-          sms_notifications: boolean | null
-          timezone: string | null
-          trade_alerts: boolean | null
-          updated_at: string
-          user_id: string
+          notifications: boolean | null
+          user_id: string | null
         }
         Insert: {
-          created_at?: string
-          dark_mode?: boolean | null
-          email_notifications?: boolean | null
+          created_at?: string | null
           id?: string
-          language?: string | null
-          sms_notifications?: boolean | null
-          timezone?: string | null
-          trade_alerts?: boolean | null
-          updated_at?: string
-          user_id: string
+          notifications?: boolean | null
+          user_id?: string | null
         }
         Update: {
-          created_at?: string
-          dark_mode?: boolean | null
-          email_notifications?: boolean | null
+          created_at?: string | null
           id?: string
-          language?: string | null
-          sms_notifications?: boolean | null
-          timezone?: string | null
-          trade_alerts?: boolean | null
-          updated_at?: string
-          user_id?: string
+          notifications?: boolean | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       users: {
         Row: {
           created_at: string | null
           email: string
           id: string
-          role: Database["public"]["Enums"]["user_role"]
-          updated_at: string | null
+          is_admin: boolean | null
+          role: string | null
         }
         Insert: {
           created_at?: string | null
           email: string
           id?: string
-          role?: Database["public"]["Enums"]["user_role"]
-          updated_at?: string | null
+          is_admin?: boolean | null
+          role?: string | null
         }
         Update: {
           created_at?: string | null
           email?: string
           id?: string
-          role?: Database["public"]["Enums"]["user_role"]
-          updated_at?: string | null
+          is_admin?: boolean | null
+          role?: string | null
         }
         Relationships: []
+      }
+      wallets: {
+        Row: {
+          account_number: string
+          balance: number
+          broker: string | null
+          created_at: string | null
+          currency: string
+          id: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          account_number: string
+          balance?: number
+          broker?: string | null
+          created_at?: string | null
+          currency: string
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          account_number?: string
+          balance?: number
+          broker?: string | null
+          created_at?: string | null
+          currency?: string
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      withdrawals: {
+        Row: {
+          account_number: string
+          address: string
+          amount: number
+          broker: string | null
+          created_at: string | null
+          currency: string
+          id: string
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          account_number: string
+          address: string
+          amount: number
+          broker?: string | null
+          created_at?: string | null
+          currency: string
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          account_number?: string
+          address?: string
+          amount?: number
+          broker?: string | null
+          created_at?: string | null
+          currency?: string
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_transaction_steps: {
+        Args: { p_transaction_id: string; p_transaction_type: string }
+        Returns: undefined
+      }
+      update_portfolio_balance: {
+        Args: {
+          p_user_id: string
+          p_amount: number
+          p_transaction_type: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       market_condition: "trending_up" | "trending_down" | "ranging" | "volatile"
@@ -615,21 +815,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -647,14 +851,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -670,14 +876,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -693,14 +901,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -708,14 +918,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
