@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,31 +45,41 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen dark">
       {/* Hero Section with Background Image */}
       <div 
         className="relative min-h-screen overflow-hidden"
         style={{
-          backgroundImage: `linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(139, 92, 246, 0.95) 50%, rgba(79, 70, 229, 0.95) 100%), url('/landing_background_1.png')`,
+          backgroundImage: `linear-gradient(135deg, rgba(59, 130, 246, 0.85) 0%, rgba(139, 92, 246, 0.85) 50%, rgba(79, 70, 229, 0.85) 100%), url('/landing_background_1.png')`,
           backgroundSize: 'cover, cover',
           backgroundPosition: 'center, center',
           backgroundBlendMode: 'overlay, normal'
         }}
       >
+        {/* Removed blur overlay, replaced with a semi-transparent dark overlay for text clarity */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div
+            className="w-full h-full"
+            style={{
+              background: 'rgba(20, 20, 30, 0.45)'
+            }}
+          />
+        </div>
+
         {/* Animated background elements */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 z-10 pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-400/20 rounded-full blur-3xl animate-pulse delay-500"></div>
         </div>
 
         {/* Header - Sticky with glassmorphism */}
-        <div className="sticky top-0 z-50 border-b border-white/10 bg-white/10 backdrop-blur-xl supports-[backdrop-filter]:bg-white/5">
+        <div className="sticky top-0 z-20 border-b border-white/10 bg-white/10 backdrop-blur-xl supports-[backdrop-filter]:bg-white/5">
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Brain className="h-8 w-8 text-white" />
-                <span className="text-2xl font-bold text-white">Waves Quant Engine</span>
+                <span className="text-2xl font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">Waves Quant Engine</span>
               </div>
               <div className="flex items-center space-x-6">
                 <div className="hidden md:flex items-center space-x-6">
@@ -78,43 +87,34 @@ const Index = () => {
                   <Link to="/contact" className="text-white/90 hover:text-white transition-colors font-medium">Contact</Link>
                   <Link to="/terms" className="text-white/90 hover:text-white transition-colors font-medium">Terms</Link>
                 </div>
-                {user ? (
-                  <Button 
-                    onClick={() => navigate('/investor-dashboard')}
-                    className="bg-white/90 text-blue-600 hover:bg-white font-semibold"
-                  >
-                    Go to Dashboard
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={() => navigate('/auth')} 
-                    className="bg-white/90 text-blue-600 hover:bg-white font-semibold"
-                  >
-                    Sign In
-                  </Button>
-                )}
+                <Button 
+                  onClick={() => navigate('/auth')} 
+                  className="bg-white/90 text-blue-600 hover:bg-white font-semibold"
+                >
+                  Sign In
+                </Button>
               </div>
             </div>
           </div>
         </div>
 
         {/* Hero Content */}
-        <div className="relative z-10 flex items-center min-h-[calc(100vh-80px)]">
+        <div className="relative z-20 flex items-center min-h-[calc(100vh-80px)]">
           <div className="container mx-auto px-4 py-20">
             <div className="text-center text-white">
-              <Badge variant="secondary" className="mb-6 bg-white/20 text-white border-white/30 backdrop-blur-sm">
+              <Badge variant="secondary" className="mb-6 bg-white/20 text-white border-white/30 backdrop-blur-sm drop-shadow-lg">
                 <Zap className="h-4 w-4 mr-2" />
                 AI-Powered Trading Platform
               </Badge>
               
-              <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight text-white drop-shadow-lg">
-                <span className="text-white">Trade Smarter with</span>
-                <span className="block bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent">
+              <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
+                <span className="text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">Trade Smarter with</span>
+                <span className="block bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
                   AI Precision
                 </span>
               </h1>
               
-              <p className="text-xl md:text-2xl mb-12 text-white/95 max-w-3xl mx-auto leading-relaxed font-medium drop-shadow">
+              <p className="text-xl md:text-2xl mb-12 text-white/95 max-w-3xl mx-auto leading-relaxed font-semibold drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                 Experience the future of trading with our advanced AI algorithms that analyze market patterns, 
                 execute precise trades, and maximize your investment potential 24/7.
               </p>
@@ -361,20 +361,20 @@ const Index = () => {
             <div className="flex items-center space-x-4">
               <span className="text-sm text-muted-foreground">Join Community:</span>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <svg className="h-4 w-4 text-gray-200" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                 </svg>
               </Button>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MessageCircle className="h-4 w-4" />
+                <MessageCircle className="h-4 w-4 text-gray-200" />
               </Button>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <Send className="h-4 w-4" />
+                <Send className="h-4 w-4 text-gray-200" />
               </Button>
             </div>
           </div>
           <div className="text-center text-xs text-muted-foreground mt-4">
-            © 2024 Waves Quant Engine. All rights reserved.
+            © 2025 Waves Quant Engine. All rights reserved.
           </div>
         </div>
       </div>

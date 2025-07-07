@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,7 +30,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth event:', event, session?.user?.id);
         setUser(session?.user ?? null);
         setLoading(false);
 
@@ -100,12 +98,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      // Do not setLoading(false) here!
     } catch (error: any) {
       console.error('Sign in error:', error);
       toast.error(error.message || 'Failed to sign in');
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -126,9 +123,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Sign up error:', error);
       toast.error(error.message || 'Failed to create account');
       throw error;
-    } finally {
-      setLoading(false);
     }
+    // Do not setLoading(false) here!
   };
 
   const signOut = async () => {
