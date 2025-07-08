@@ -444,6 +444,30 @@ export type Database = {
         }
         Relationships: []
       }
+      trade_predictions: {
+        Row: {
+          created_at: string | null
+          id: string
+          score: number
+          sentiment_score: number | null
+          symbol: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          score: number
+          sentiment_score?: number | null
+          symbol: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          score?: number
+          sentiment_score?: number | null
+          symbol?: string
+        }
+        Relationships: []
+      }
       trades: {
         Row: {
           account_number: string

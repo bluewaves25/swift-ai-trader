@@ -91,7 +91,17 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Landing page gradient for toasts */
+    --landing-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   }
+}
+
+/* Toast styling with landing page background */
+.toast-landing {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  backdrop-filter: blur(8px);
 }
 
 @layer base {

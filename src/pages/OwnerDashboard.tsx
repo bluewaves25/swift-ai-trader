@@ -13,9 +13,17 @@ import {
   Users,
   DollarSign,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  Play,
+  Pause
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { EngineControl } from "@/components/owner/EngineControl";
+import { StrategiesManagement } from "@/components/owner/StrategiesManagement";
+import { RiskManagement } from "@/components/owner/RiskManagement";
+import { UserManagement } from "@/components/owner/UserManagement";
+import { PerformanceAnalytics } from "@/components/owner/PerformanceAnalytics";
+import { LiveSignals } from "@/components/owner/LiveSignals";
 
 const OwnerDashboard = () => {
   const { user } = useAuth();
@@ -64,10 +72,22 @@ const OwnerDashboard = () => {
       case 'overview':
         return (
           <div className="space-y-6">
-            <h2 className="text-3xl font-bold tracking-tight">Dashboard Overview</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-3xl font-bold tracking-tight">Dashboard Overview</h2>
+              <div className="flex gap-2">
+                <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                  <Play className="h-4 w-4 mr-2" />
+                  Start Engine
+                </Button>
+                <Button size="sm" variant="destructive">
+                  <Pause className="h-4 w-4 mr-2" />
+                  Stop Engine
+                </Button>
+              </div>
+            </div>
             
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
+              <Card className="transition-all duration-300 hover:shadow-lg">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Users</CardTitle>
                   <Users className="h-4 w-4 text-muted-foreground" />
@@ -77,7 +97,7 @@ const OwnerDashboard = () => {
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card className="transition-all duration-300 hover:shadow-lg">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Trades</CardTitle>
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -87,7 +107,7 @@ const OwnerDashboard = () => {
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card className="transition-all duration-300 hover:shadow-lg">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Revenue</CardTitle>
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -97,7 +117,7 @@ const OwnerDashboard = () => {
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card className="transition-all duration-300 hover:shadow-lg">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">System Status</CardTitle>
                   <Activity className="h-4 w-4 text-muted-foreground" />
@@ -111,6 +131,18 @@ const OwnerDashboard = () => {
             </div>
           </div>
         );
+      case 'engine':
+        return <EngineControl />;
+      case 'signals':
+        return <LiveSignals />;
+      case 'strategies':
+        return <StrategiesManagement />;
+      case 'risk':
+        return <RiskManagement />;
+      case 'analytics':
+        return <PerformanceAnalytics />;
+      case 'users':
+        return <UserManagement />;
       default:
         return <div className="text-center text-muted-foreground">Section under development</div>;
     }
