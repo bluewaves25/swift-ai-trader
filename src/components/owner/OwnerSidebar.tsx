@@ -57,7 +57,9 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
   return (
     <div className={cn(
       "flex flex-col h-full bg-card border-r transition-all duration-300",
-      isCollapsed ? "w-16" : "w-64"
+      isCollapsed ? "w-16" : "w-64",
+      "md:relative md:translate-x-0",
+      "fixed inset-y-0 left-0 z-50 md:z-auto"
     )}>
       {/* Header */}
       <div className="p-4 border-b">

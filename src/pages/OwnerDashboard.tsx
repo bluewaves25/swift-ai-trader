@@ -24,6 +24,8 @@ import { RiskManagement } from "@/components/owner/RiskManagement";
 import { UserManagement } from "@/components/owner/UserManagement";
 import { PerformanceAnalytics } from "@/components/owner/PerformanceAnalytics";
 import { LiveSignals } from "@/components/owner/LiveSignals";
+import { TradeHistory } from "@/components/owner/TradeHistory";
+import { OwnerSettings } from "@/components/owner/OwnerSettings";
 
 const OwnerDashboard = () => {
   const { user } = useAuth();
@@ -42,23 +44,42 @@ const OwnerDashboard = () => {
 
   const fetchDashboardStats = async () => {
     try {
-      // Fetch the count of users from the users table
+      // Fetch the count of users excluding owners
       const { count: userCount, error: userError } = await supabase
         .from('users')
-        .select('id', { count: 'exact', head: true });
+        .select('id', { count: 'exact', head: true })
+        .neq('role', 'owner');
 
       // Fetch the count of trades from the trades table
       const { count: tradeCount, error: tradeError } = await supabase
         .from('trades')
         .select('id', { count: 'exact', head: true });
 
-      if (userError) throw userError;
-      if (tradeError) throw tradeError;
+      // Fetch portfolio data for revenue calculation
+      const { data: portfolioData, error: portfolioError } = await supabase
+        .from('portfolios')
+        .select('total_balance, realized_pnl');
+
+      if (userError) {
+        console.error('User count error:', userError);
+        handleError(userError);
+      }
+      if (tradeError) {
+        console.error('Trade count error:', tradeError);
+        handleError(tradeError);
+      }
+      if (portfolioError) {
+        console.error('Portfolio error:', portfolioError);
+        handleError(portfolioError);
+      }
+
+      const totalRevenue = portfolioData?.reduce((sum, portfolio) => 
+        sum + (portfolio.realized_pnl || 0), 0) || 0;
 
       setStats({
         totalUsers: userCount || 0,
         totalTrades: tradeCount || 0,
-        totalRevenue: 0,
+        totalRevenue,
         systemStatus: 'active'
       });
     } catch (error) {
@@ -143,6 +164,10 @@ const OwnerDashboard = () => {
         return <PerformanceAnalytics />;
       case 'users':
         return <UserManagement />;
+      case 'trades':
+        return <TradeHistory />;
+      case 'settings':
+        return <OwnerSettings />;
       default:
         return <div className="text-center text-muted-foreground">Section under development</div>;
     }
@@ -152,28 +177,39 @@ const OwnerDashboard = () => {
     <ErrorBoundary>
       <SidebarProvider>
         <div className="min-h-screen flex w-full bg-background">
-          <OwnerSidebar 
-            activeSection={activeSection} 
-            onSectionChange={setActiveSection}
-          />
+          <div className="hidden md:block fixed inset-y-0 z-50">
+            <OwnerSidebar 
+              activeSection={activeSection} 
+              onSectionChange={setActiveSection}
+            />
+          </div>
           
-          <div className="flex-1 flex flex-col">
-            {/* Header */}
-            <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50 p-4">
+          <div className="flex-1 flex flex-col md:pl-64">
+            {/* Mobile sidebar */}
+            <div className="md:hidden fixed inset-y-0 z-50 w-full">
+              <OwnerSidebar 
+                activeSection={activeSection} 
+                onSectionChange={setActiveSection}
+              />
+            </div>
+            
+            {/* Header - Fixed */}
+            <header className="sticky top-0 z-40 border-b bg-card/80 backdrop-blur-md supports-[backdrop-filter]:bg-card/80 p-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
+                  <SidebarTrigger className="md:hidden" />
                   <div>
-                    <h1 className="text-2xl font-bold">Owner Dashboard</h1>
-                    <p className="text-sm text-muted-foreground">
+                    <h1 className="text-xl md:text-2xl font-bold">Owner Dashboard</h1>
+                    <p className="text-xs md:text-sm text-muted-foreground">
                       System Management & Analytics
                     </p>
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-4">
-                  <Badge variant="outline" className="px-3 py-1">
-                    <Activity className="h-4 w-4 mr-1" />
-                    System Active
+                <div className="flex items-center space-x-2 md:space-x-4">
+                  <Badge variant="outline" className="px-2 py-1 text-xs md:text-sm">
+                    <Activity className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                    <span className="hidden sm:inline">System </span>Active
                   </Badge>
                   <ThemeToggle />
                 </div>
@@ -181,8 +217,10 @@ const OwnerDashboard = () => {
             </header>
 
             {/* Main Content */}
-            <main className="flex-1 p-6 overflow-auto">
-              {renderContent()}
+            <main className="flex-1 p-3 md:p-6 overflow-auto bg-background">
+              <div className="max-w-full">
+                {renderContent()}
+              </div>
             </main>
           </div>
         </div>
