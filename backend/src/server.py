@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
-from python_dotenv import load_dotenv
+from dotenv import load_dotenv
 from supabase import create_client, Client
 from redis.asyncio import Redis
 import os

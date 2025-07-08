@@ -1,4 +1,4 @@
-import ccxt.async_support as ccxt
+import ccxt
 import MetaTrader5 as mt5
 import os
 from python_dotenv import load_dotenv

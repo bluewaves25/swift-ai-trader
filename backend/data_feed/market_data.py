@@ -1,18 +1,22 @@
-import ccxt.async_support as ccxt
+import ccxt
 import MetaTrader5 as mt5
-from python_dotenv import load_dotenv
+from dotenv import load_dotenv
 import os
 import pandas as pd
+import asyncio
 
 load_dotenv()
 
 class MarketData:
     def __init__(self):
-        self.binance = ccxt.binance({"apiKey": os.getenv("BINANCE_API_KEY"), "secret": os.getenv("BINANCE_SECRET")})
+        self.binance = ccxt.binance({
+            "apiKey": os.getenv("BINANCE_API_KEY"),
+            "secret": os.getenv("BINANCE_SECRET")
+        })
         self.exness = mt5
 
     async def get_binance_data(self, symbol: str, timeframe: str = "1m"):
-        ohlcv = await self.binance.fetch_ohlcv(symbol, timeframe)
+        ohlcv = await asyncio.to_thread(self.binance.fetch_ohlcv, symbol, timeframe)
         return pd.DataFrame(ohlcv, columns=["timestamp", "open", "high", "low", "close", "volume"])
 
     async def get_exness_data(self, symbol: str, timeframe: int = mt5.TIMEFRAME_M1):

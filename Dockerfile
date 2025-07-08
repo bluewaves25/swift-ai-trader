@@ -1,8 +1,10 @@
-FROM python:3.9-slim
+FROM python:3.13.3-slim
 
 WORKDIR /app
-COPY backend/requirements.txt .
+
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY backend/ ./backend
-EXPOSE 3000
+
+COPY backend/ ./backend/
+
 CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "backend.src.server:app", "--bind", "0.0.0.0:3000"]

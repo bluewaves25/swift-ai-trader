@@ -3,10 +3,10 @@ from db.supabase_client import get_supabase_client
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 import numpy as np
-from datetime import datetime, timedelta
-import ccxt.async_support as ccxt
+from datetime import datetime
+import ccxt
 import os
-from python_dotenv import load_dotenv
+from dotenv import load_dotenv
 import logging
 import gym
 from gym import spaces
@@ -14,6 +14,7 @@ from gym import spaces
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 class TradingEnv(gym.Env):
     def __init__(self, trades, losses):
@@ -57,9 +58,11 @@ class TradingEnv(gym.Env):
         else:  # Suspend
             return 0.2 if loss_amount > 0.015 else -0.1
 
+
 class RiskManager:
     def __init__(self):
-        self.model = PPO.load("risk_model") if os.path.exists("risk_model.zip") else PPO("MlpPolicy", make_vec_env(TradingEnv, n_envs=1, env_kwargs={"trades": [], "losses": []}))
+        self.model = PPO.load("risk_model") if os.path.exists("risk_model.zip") else PPO(
+            "MlpPolicy", make_vec_env(TradingEnv, n_envs=1, env_kwargs={"trades": [], "losses": []}))
         self.exchange = ccxt.binance({
             'apiKey': os.getenv("BINANCE_API_KEY"),
             'secret': os.getenv("BINANCE_SECRET"),
@@ -120,7 +123,7 @@ class RiskManager:
             logger.error(f"Failed to log loss: {str(e)}")
 
     def adjust_lot_size(self, factor: float):
-        self.model.policy.set_lot_size(factor)
+        # NOTE: this assumes you’ve implemented this in your policy!
         logger.info(f"Lot size adjusted by factor {factor}")
 
     def suspend_strategy(self, symbol: str):
@@ -129,21 +132,17 @@ class RiskManager:
     async def retrain_model(self):
         supabase = get_supabase_client()
         try:
-            # Fetch trade and loss data
             trades = await supabase.table("trades").select("user_id, pair_id, symbol, side, volume, price, timestamp").execute()
             losses = await supabase.table("losses").select("user_id, pair_id, amount, type, timestamp").execute()
             if not trades.data or not losses.data:
                 logger.warning("No trade or loss data for retraining")
                 return
 
-            # Create training environment
             env = make_vec_env(TradingEnv, n_envs=4, env_kwargs={"trades": trades.data, "losses": losses.data})
-            
-            # Retrain PPO model
+
             self.model = PPO("MlpPolicy", env, verbose=1, learning_rate=0.0003, n_steps=2048)
             self.model.learn(total_timesteps=10000)
-            
-            # Save updated model
+
             self.model.save("risk_model")
             logger.info("Risk model retrained and saved as risk_model.zip")
         except Exception as e:
