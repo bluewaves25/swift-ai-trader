@@ -10,7 +10,7 @@ import os
 # Load environment variables
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 class TradeValidationModel(nn.Module):
@@ -33,7 +33,7 @@ async def fetch_data():
         trades_resp = supabase.table("trades").select("volume, price, symbol").execute()
         sentiments_resp = supabase.table("sentiments").select("symbol, combined_score").execute()
     except Exception as e:
-        print(f"❌ Failed to fetch data from Supabase: {e}")
+        print(f" Failed to fetch data from Supabase: {e}")
         return None, None
 
     trades = trades_resp.data
@@ -60,7 +60,7 @@ async def fetch_data():
         ])
 
     if len(dataset) < 10:
-        print("⚠️ Not enough data to train. Found:", len(dataset))
+        print(" Not enough data to train. Found:", len(dataset))
         return None, None
 
     np_data = np.array(dataset)
@@ -86,10 +86,10 @@ async def train():
         optimizer.step()
 
         if (epoch + 1) % 50 == 0:
-            print(f"📈 Epoch {epoch+1}/200 | Loss: {loss.item():.4f}")
+            print(f" Epoch {epoch+1}/200 | Loss: {loss.item():.4f}")
 
     torch.save(model.state_dict(), "trade_model.pt")
-    print("✅ Model trained and saved to trade_model.pt")
+    print(" Model trained and saved to trade_model.pt")
 
 if __name__ == "__main__":
     asyncio.run(train())
