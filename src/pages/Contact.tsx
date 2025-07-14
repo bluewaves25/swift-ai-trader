@@ -172,7 +172,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <h4 className="font-medium">Phone</h4>
-                    <p className="text-muted-foreground">+1 (555) 123-4567</p>
+                    <p className="text-muted-foreground">+233 (500) 33-4946</p>
                     <p className="text-sm text-muted-foreground">Mon-Fri, 9AM-6PM EST</p>
                   </div>
                 </div>
@@ -184,9 +184,9 @@ const Contact = () => {
                   <div>
                     <h4 className="font-medium">Office</h4>
                     <p className="text-muted-foreground">
-                      123 Financial District<br />
-                      New York, NY 10004<br />
-                      United States
+                      Opposite Valley View University<br />
+                      Techiman, Site<br />
+                      Ghana
                     </p>
                   </div>
                 </div>
@@ -198,7 +198,7 @@ const Contact = () => {
                   <div>
                     <h4 className="font-medium">Business Hours</h4>
                     <p className="text-muted-foreground">
-                      Monday - Friday: 9:00 AM - 6:00 PM EST<br />
+                      Monday - Friday: 9:00 AM - 6:00 PM UTC<br />
                       Saturday - Sunday: Closed
                     </p>
                   </div>

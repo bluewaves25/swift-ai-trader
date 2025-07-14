@@ -1,0 +1,29 @@
+from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Enum as SqlEnum
+from sqlalchemy.sql import func
+from core.database import Base
+import enum
+
+class TransactionType(enum.Enum):
+    DEPOSIT = "deposit"
+    WITHDRAWAL = "withdrawal"
+
+class TransactionStatus(enum.Enum):
+    PENDING = "pending"
+    SUCCESS = "success"
+    FAILED = "failed"
+
+class Transaction(Base):
+    __tablename__ = "transactions"
+
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+
+    # Use SqlEnum and set native_enum=False for better cross-database compatibility
+    type = Column(SqlEnum(TransactionType, native_enum=False), nullable=False)
+    amount = Column(Float, nullable=False)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    status = Column(SqlEnum(TransactionStatus, native_enum=False), default=TransactionStatus.PENDING)
+
+    # Optional: Add these if needed for deposit/withdraw tracking
+    reference = Column(String, unique=True, nullable=True)
+    description = Column(String, nullable=True)

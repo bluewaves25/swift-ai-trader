@@ -25,7 +25,9 @@ dist-ssr
 
 
 # Ignore all virtual environments
-venv/
-ai-env/
+
+
 *.pyc
 __pycache__/
+waves_quant_agi/env_310/
+waves_quant_agi/env_main/

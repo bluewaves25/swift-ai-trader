@@ -224,8 +224,8 @@ const Terms = () => {
               </p>
               <ul className="list-none mt-4">
                 <li>Email: legal@wavesquant.com</li>
-                <li>Phone: +1 (555) 123-4567</li>
-                <li>Address: 123 Financial District, New York, NY 10004</li>
+                <li>Phone: +233 (500) 33-4946</li>
+                <li>Address: Opposite Valley View University, Techiman, Site, Ghana</li>
               </ul>
             </CardContent>
           </Card>
