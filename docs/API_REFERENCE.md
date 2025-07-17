@@ -251,6 +251,43 @@ Content-Type: application/json
 }
 ```
 
+### GET /api/investor/trades
+
+Returns the trade history for the current user.
+
+**Response:**
+- 200 OK: Array of Trade objects
+
+**Trade object:**
+- id: string
+- user_id: string
+- symbol: string
+- side: string (buy/sell)
+- volume: float
+- price: float
+- pnl: float
+- strategy: string | null
+- timestamp: datetime
+- status: string (open/closed/cancelled)
+
+Example:
+```json
+[
+  {
+    "id": "...",
+    "user_id": "...",
+    "symbol": "BTCUSD",
+    "side": "buy",
+    "volume": 0.5,
+    "price": 42000.0,
+    "pnl": 120.5,
+    "strategy": "Breakout",
+    "timestamp": "2024-07-08T12:34:56Z",
+    "status": "closed"
+  }
+]
+```
+
 ### Portfolio Management
 
 #### Get User Portfolio
@@ -471,6 +508,83 @@ const portfolioSubscription = supabase
     }
   )
   .subscribe();
+```
+
+## Owner/Admin Endpoints
+
+### POST /api/owner/engine/start
+Start the AGI engine.
+
+### POST /api/owner/engine/stop
+Stop the AGI engine.
+
+### POST /api/owner/engine/restart
+Restart the AGI engine.
+
+### POST /api/owner/engine/emergency-kill
+Emergency kill: stops all trades immediately.
+
+### GET /api/owner/health/system
+Get system health (CPU, RAM, network, errors).
+
+Sample response:
+```json
+{
+  "cpu": "12%",
+  "ram": "3.2GB/16GB",
+  "network": "stable",
+  "errors": []
+}
+```
+
+### GET /api/owner/strategies
+List all strategies and their status/performance.
+
+### POST /api/owner/strategies/{strategy_id}/disable
+Disable a strategy.
+
+### POST /api/owner/strategies/{strategy_id}/retrain
+Retrain a strategy.
+
+### DELETE /api/owner/strategies/{strategy_id}/delete
+Delete a strategy.
+
+### GET /api/owner/investors/overview
+Get AUM, inflows, top investors, and performance.
+
+Sample response:
+```json
+{
+  "aum": 1200000.0,
+  "inflows": 50000.0,
+  "top_investors": [
+    {"id": "user1", "name": "Alice", "aum": 300000.0},
+    {"id": "user2", "name": "Bob", "aum": 250000.0}
+  ],
+  "performance": 0.18
+}
+```
+
+### POST /api/owner/manual-signal
+Submit a manual trade signal.
+
+### GET /api/owner/wallet/overview
+Get total platform balance, Paystack funds, and pending withdrawals.
+
+### GET /api/owner/automl/status
+Get current Auto-ML status (evolving/validated models).
+
+### GET /api/owner/logs
+Fetch recent logs, API calls, and webhook actions.
+
+Sample response:
+```json
+{
+  "logs": [
+    {"timestamp": "2024-07-08T12:00:00Z", "event": "Engine started"},
+    {"timestamp": "2024-07-08T12:05:00Z", "event": "Strategy retrained"}
+  ]
+}
 ```
 
 ## Data Models

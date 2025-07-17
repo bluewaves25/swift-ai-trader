@@ -1,3 +1,5 @@
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,88 +8,76 @@ import { Switch } from "@/components/ui/switch";
 import { Play, Pause, Brain, TrendingUp, Activity, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { apiService } from '@/services/api';
+import { toast } from 'sonner';
 
 interface Strategy {
   id: string;
   name: string;
-  description: string;
-  active: boolean;
-  performance: {
-    winRate: number;
-    profit: number;
-    trades: number;
-  };
-  icon: any;
+  description?: string;
+  status: string;
+  performance: number;
+  last_retrained: string;
 }
 
 export function StrategiesManagement() {
-  const [strategies, setStrategies] = useState<Strategy[]>([
-    {
-      id: "breakout",
-      name: "Breakout Strategy",
-      description: "Identifies price breakouts from support/resistance levels",
-      active: true,
-      performance: { winRate: 68.5, profit: 2450.30, trades: 127 },
-      icon: TrendingUp
-    },
-    {
-      id: "mean_reversion", 
-      name: "Mean Reversion",
-      description: "Trades on price returning to average after extreme moves",
-      active: false,
-      performance: { winRate: 72.1, profit: 1890.75, trades: 94 },
-      icon: Activity
-    },
-    {
-      id: "scalping",
-      name: "Scalping Strategy", 
-      description: "High-frequency trades on small price movements",
-      active: true,
-      performance: { winRate: 61.3, profit: 3200.15, trades: 285 },
-      icon: Zap
-    },
-    {
-      id: "arbitrage",
-      name: "Arbitrage Strategy",
-      description: "Exploits price differences across exchanges",
-      active: false,
-      performance: { winRate: 85.2, profit: 1650.90, trades: 52 },
-      icon: Brain
-    }
-  ]);
-  const [loading, setLoading] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [strategies, setStrategies] = useState<Strategy[]>([]);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [retrainingId, setRetrainingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{type: string, id: string} | null>(null);
 
-  const toggleStrategy = async (strategyId: string) => {
-    setLoading(strategyId);
+  const fetchStrategies = async () => {
     try {
-      const strategy = strategies.find(s => s.id === strategyId);
-      const newActiveState = !strategy?.active;
+      const data = await apiService.getStrategies();
+      setStrategies(data as Strategy[]);
+    } catch (err) {
+      setError('Failed to fetch strategies');
+    }
+  };
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+  useEffect(() => {
+    fetchStrategies();
+    const interval = setInterval(fetchStrategies, 5000); // Poll for retrain progress
+    return () => clearInterval(interval);
+  }, []);
 
-      setStrategies(prev => 
-        prev.map(s => 
-          s.id === strategyId 
-            ? { ...s, active: newActiveState }
-            : s
-        )
-      );
-
-      toast({
-        title: `Strategy ${newActiveState ? 'Activated' : 'Deactivated'}`,
-        description: `${strategy?.name} has been ${newActiveState ? 'activated' : 'deactivated'}`,
-        className: "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200"
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to toggle strategy",
-        variant: "destructive"
-      });
+  const handleDisable = async (id: string) => {
+    setLoadingId(id);
+    try {
+      await apiService.disableStrategy(id);
+      toast.success('Strategy disabled');
+      fetchStrategies();
+    } catch (err) {
+      toast.error('Failed to disable strategy');
     } finally {
-      setLoading(null);
+      setLoadingId(null);
+    }
+  };
+
+  const handleRetrain = async (id: string) => {
+    setRetrainingId(id);
+    try {
+      await apiService.retrainStrategy(id);
+      toast.success('Retrain started');
+      fetchStrategies();
+    } catch (err) {
+      toast.error('Failed to retrain strategy');
+    } finally {
+      setRetrainingId(null);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setLoadingId(id);
+    try {
+      await apiService.deleteStrategy(id);
+      toast.success('Strategy deleted');
+      fetchStrategies();
+    } catch (err) {
+      toast.error('Failed to delete strategy');
+    } finally {
+      setLoadingId(null);
     }
   };
 
@@ -98,160 +88,112 @@ export function StrategiesManagement() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Strategy Management</h2>
-        <Badge variant="outline" className="px-3 py-1">
-          {strategies.filter(s => s.active).length} Active
-        </Badge>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {strategies.map((strategy) => {
-          const IconComponent = strategy.icon;
-          const isLoading = loading === strategy.id;
-          
-          return (
-            <Card 
-              key={strategy.id} 
-              className={cn(
-                "relative overflow-hidden transition-all duration-300 hover:shadow-lg transform hover:scale-[1.02]",
-                strategy.active 
-                  ? "ring-2 ring-green-200 bg-gradient-to-br from-green-50/50 to-emerald-50/50" 
-                  : "bg-gradient-to-br from-gray-50/50 to-slate-50/50"
-              )}
-            >
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "p-2 rounded-lg transition-colors",
-                      strategy.active 
-                        ? "bg-green-100 text-green-700" 
-                        : "bg-gray-100 text-gray-700"
-                    )}>
-                      <IconComponent className="h-5 w-5" />
+    <TooltipProvider>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold">Strategy Management</h2>
+          <Badge variant="outline" className="px-3 py-1">
+            {strategies.filter(s => s.status === 'active').length} Active
+          </Badge>
+        </div>
+        {error && <div className="text-red-500">{error}</div>}
+        <div className="grid gap-6 md:grid-cols-2">
+          {strategies.length === 0 ? (
+            <div className="col-span-2 flex justify-center items-center h-32">
+              <div className="w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
+              <span className="ml-2 text-muted-foreground">Loading strategies...</span>
+            </div>
+          ) : strategies.map((strategy) => {
+            const isLoading = loadingId === strategy.id;
+            const isRetraining = retrainingId === strategy.id || strategy.status === 'retraining';
+            const statusIcon = strategy.status === 'active' ? <Play className="h-4 w-4 text-green-600" /> : strategy.status === 'retraining' ? <Activity className="h-4 w-4 text-yellow-600 animate-spin" /> : <Pause className="h-4 w-4 text-gray-400" />;
+            return (
+              <Card key={strategy.id} className="relative overflow-hidden transition-all duration-300 hover:shadow-lg">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {statusIcon}
+                      <div>
+                        <CardTitle className="text-lg">{strategy.name}</CardTitle>
+                        <CardDescription className="text-sm">{strategy.description}</CardDescription>
+                      </div>
+                    </div>
+                    <Badge variant={strategy.status === 'active' ? 'default' : strategy.status === 'retraining' ? 'secondary' : 'destructive'}>{strategy.status}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                      <div className="text-xl font-bold text-blue-600">{strategy.performance.toFixed(2)}</div>
+                      <div className="text-xs text-muted-foreground">Performance</div>
                     </div>
                     <div>
-                      <CardTitle className="text-lg">{strategy.name}</CardTitle>
-                      <CardDescription className="text-sm">
-                        {strategy.description}
-                      </CardDescription>
+                      <div className="text-xs text-muted-foreground">Last Retrained</div>
+                      <div className="text-sm">{new Date(strategy.last_retrained).toLocaleString()}</div>
                     </div>
                   </div>
-                  <Switch
-                    checked={strategy.active}
-                    onCheckedChange={() => toggleStrategy(strategy.id)}
-                    disabled={isLoading}
-                    className="data-[state=checked]:bg-green-600"
-                  />
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                {/* Performance Metrics */}
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <div className={cn("text-xl font-bold", getPerformanceColor(strategy.performance.winRate))}>
-                      {strategy.performance.winRate}%
-                    </div>
-                    <div className="text-xs text-muted-foreground">Win Rate</div>
+                  <div className="flex gap-2 pt-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="sm" className="flex-1" onClick={() => setConfirmAction({type: 'disable', id: strategy.id})} disabled={isLoading || isRetraining}>
+                          Disable
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Disable this strategy</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="sm" className="flex-1" onClick={() => setConfirmAction({type: 'retrain', id: strategy.id})} disabled={isRetraining}>
+                          {isRetraining ? 'Retraining...' : 'Retrain'}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Retrain this strategy</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="destructive" size="sm" className="flex-1" onClick={() => setConfirmAction({type: 'delete', id: strategy.id})} disabled={isLoading}>
+                          Delete
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Delete this strategy</TooltipContent>
+                    </Tooltip>
                   </div>
-                  <div>
-                    <div className="text-xl font-bold text-blue-600">
-                      ${strategy.performance.profit.toLocaleString()}
+                  {isRetraining && (
+                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        Retraining...
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">Profit</div>
-                  </div>
-                  <div>
-                    <div className="text-xl font-bold text-purple-600">
-                      {strategy.performance.trades}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Trades</div>
-                  </div>
-                </div>
-
-                {/* Control Buttons */}
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 transition-all duration-200 hover:scale-105"
-                    disabled={isLoading}
-                  >
-                    {strategy.active ? (
-                      <>
-                        <Pause className="h-3 w-3 mr-1" />
-                        Pause
-                      </>
-                    ) : (
-                      <>
-                        <Play className="h-3 w-3 mr-1" />
-                        Activate
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1 transition-all duration-200 hover:scale-105"
-                  >
-                    View Details
-                  </Button>
-                </div>
-
-                {/* Loading Indicator */}
-                {isLoading && (
-                  <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                      Updating...
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+        {/* Confirmation Dialog */}
+        <Dialog open={!!confirmAction} onOpenChange={open => !open && setConfirmAction(null)}>
+          <DialogContent>
+            <DialogTitle>Confirm {confirmAction?.type?.charAt(0).toUpperCase() + confirmAction?.type?.slice(1)}</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to {confirmAction?.type} this strategy?
+            </DialogDescription>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmAction(null)}>Cancel</Button>
+              <Button variant={confirmAction?.type === 'delete' ? 'destructive' : 'default'}
+                onClick={async () => {
+                  if (!confirmAction) return;
+                  if (confirmAction.type === 'disable') await handleDisable(confirmAction.id);
+                  if (confirmAction.type === 'retrain') await handleRetrain(confirmAction.id);
+                  if (confirmAction.type === 'delete') await handleDelete(confirmAction.id);
+                  setConfirmAction(null);
+                }}>
+                Confirm
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* Strategy Performance Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Strategy Performance Overview</CardTitle>
-          <CardDescription>
-            Combined performance metrics across all strategies
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {(strategies.reduce((acc, s) => acc + s.performance.winRate, 0) / strategies.length).toFixed(1)}%
-              </div>
-              <div className="text-sm text-muted-foreground">Avg Win Rate</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                ${strategies.reduce((acc, s) => acc + s.performance.profit, 0).toLocaleString()}
-              </div>
-              <div className="text-sm text-muted-foreground">Total Profit</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {strategies.reduce((acc, s) => acc + s.performance.trades, 0)}
-              </div>
-              <div className="text-sm text-muted-foreground">Total Trades</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">
-                {strategies.filter(s => s.active).length}/{strategies.length}
-              </div>
-              <div className="text-sm text-muted-foreground">Active/Total</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    </TooltipProvider>
   );
 }

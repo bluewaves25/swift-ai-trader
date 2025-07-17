@@ -76,7 +76,6 @@ export default function TradingChart() {
       if (error) throw error;
 
       let processedData: MarketData[] = [];
-      
       if (data && data.length > 0) {
         processedData = data.map(item => ({
           id: item.id,
@@ -88,28 +87,8 @@ export default function TradingChart() {
           close: item.close || 0,
           volume: item.volume || 0
         }));
-      } else {
-        // Generate sample data if no real data exists
-        const now = new Date();
-        const basePrice = 1.2000;
-        processedData = Array.from({ length: 20 }, (_, i) => {
-          const timestamp = new Date(now.getTime() - (19 - i) * 60000);
-          const price = basePrice + (Math.random() - 0.5) * 0.01;
-          return {
-            id: `sample-${i}`,
-            symbol: selectedPair,
-            timestamp: timestamp.toISOString(),
-            open: price,
-            high: price + Math.random() * 0.005,
-            low: price - Math.random() * 0.005,
-            close: price + (Math.random() - 0.5) * 0.002,
-            volume: Math.floor(Math.random() * 1000) + 100
-          };
-        });
       }
-
       setMarketData(processedData);
-      
       if (processedData.length > 0) {
         const latest = processedData[processedData.length - 1];
         const previous = processedData[processedData.length - 2];

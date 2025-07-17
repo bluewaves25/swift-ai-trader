@@ -15,3 +15,8 @@ class Strategy(Base):
     max_drawdown = Column(Float, default=0.0)
     validated = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # Merge fields from StrategyRecord
+    status = Column(String, default="active")
+    performance = Column(Float, default=0.0)
+    last_retrained = Column(DateTime(timezone=True), server_default=func.now())
+    description = Column(String, nullable=True)

@@ -3,12 +3,16 @@
 import logging
 import os
 from typing import List
-from engine.core.schema import Signal
+from engine.core.signal import Signal
+from engine.core.schema import MarketData  
 from engine.brokers.mt5_plugin import MT5Broker
 from engine.brokers.binance_plugin import BinanceBroker
 from engine.brokers.base_broker import BaseBroker
 from dotenv import load_dotenv
 import MetaTrader5 as mt5
+from core.models.transaction import Trade, TradeStatus
+from sqlalchemy.ext.asyncio import AsyncSession
+import uuid
 
 logger = logging.getLogger(__name__)
 load_dotenv()
@@ -59,7 +63,7 @@ class ExecutionEngine:
                 continue
 
             try:
-                trade = await self._execute_order_with_broker(signal, broker)
+                trade = await self._execute_order_with_broker(signal, broker, db, user_id)
                 if trade:
                     executed_trades.append(trade)
             except Exception as e:
@@ -80,7 +84,7 @@ class ExecutionEngine:
         else:
             return None
 
-    async def _execute_order_with_broker(self, signal: Signal, broker: BaseBroker) -> dict:
+    async def _execute_order_with_broker(self, signal: Signal, broker: BaseBroker, db: AsyncSession, user_id: str) -> dict:
         logger.info(f"🚀 Executing {signal.action.upper()} {signal.symbol} x{signal.size} via {type(broker).__name__}")
 
         result = broker.place_order(
@@ -91,6 +95,7 @@ class ExecutionEngine:
             order_type="market"
         )
 
+        executed_price = await self._get_live_price(signal.symbol, broker)
         execution_result = {
             "broker": type(broker).__name__,
             "strategy": signal.strategy_name,
@@ -98,14 +103,33 @@ class ExecutionEngine:
             "action": signal.action,
             "size": signal.size,
             "confidence": signal.confidence,
-            "executed_price": await self._get_live_price(signal.symbol, broker),
+            "executed_price": executed_price,
             "timestamp": signal.timestamp.isoformat(),
             "metadata": signal.metadata,
             "order_id": result.get("order_id") if isinstance(result, dict) else None
         }
 
+        # Persist trade to DB
+        await self._save_trade_to_db(signal, executed_price, user_id, db)
+
         self.executed_orders.append(execution_result)
         return execution_result
+
+    async def _save_trade_to_db(self, signal: Signal, executed_price: float, user_id: str, db: AsyncSession):
+        trade = Trade(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            symbol=signal.symbol,
+            side=signal.action.lower(),
+            volume=signal.size,
+            price=executed_price,
+            pnl=0.0,  # Update with actual PnL if available
+            strategy=signal.strategy_name,
+            status=TradeStatus.CLOSED,
+        )
+        db.add(trade)
+        await db.commit()
+        await db.refresh(trade)
 
     async def _get_live_price(self, symbol: str, broker: BaseBroker) -> float:
         if isinstance(broker, MT5Broker):

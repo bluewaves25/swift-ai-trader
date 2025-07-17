@@ -1,5 +1,6 @@
 
 import axios from 'axios';
+import { supabase } from "@/integrations/supabase/client";
 
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
   ? 'https://your-production-domain.com/api' 
@@ -18,12 +19,12 @@ const api = axios.create({
 });
 
 api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('supabase-auth-token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  async (config) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
     }
-    
     (config as any).requestStartTime = new Date();
     console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
     return config;
@@ -69,6 +70,16 @@ export const apiService = {
 
   async updateBalance(userId: string, balance: any) {
     const response = await api.post(`/wallet/update`, { user_id: userId, ...balance });
+    return response.data;
+  },
+
+  async getPortfolio() {
+    const response = await api.get('/portfolio/me');
+    return response.data;
+  },
+
+  async getPortfolioPerformance() {
+    const response = await api.get('/portfolio/performance');
     return response.data;
   },
 
@@ -122,6 +133,29 @@ export const apiService = {
     return response.data;
   },
 
+  // Owner Engine Control
+  async startEngine() {
+    const response = await api.post('/owner/engine/start');
+    return response.data;
+  },
+  async stopEngine() {
+    const response = await api.post('/owner/engine/stop');
+    return response.data;
+  },
+  async restartEngine() {
+    const response = await api.post('/owner/engine/restart');
+    return response.data;
+  },
+  async emergencyKill() {
+    const response = await api.post('/owner/engine/emergency-kill');
+    return response.data;
+  },
+  // Owner Health Monitor
+  async getSystemHealth() {
+    const response = await api.get('/owner/health/system');
+    return response.data;
+  },
+
   // Market Data
   async getMarketData(symbol: string) {
     const response = await api.get(`/market-data/${symbol}`);
@@ -143,6 +177,56 @@ export const apiService = {
 
   async processWithdrawal(data: any) {
     const response = await api.post('/wallet/withdraw/exness/default', data);
+    return response.data;
+  },
+
+  // Transactions
+  async getTransactions() {
+    const response = await api.get('/investor/transactions');
+    return response.data;
+  },
+
+  async initiateDeposit(amount: number) {
+    const response = await api.post('/investor/deposit-initiate', { amount });
+    return response.data;
+  },
+
+  async requestWithdrawal(amount: number) {
+    const response = await api.post('/investor/withdraw-request', { amount });
+    return response.data;
+  },
+
+  // Trades
+  async getTrades() {
+    const response = await api.get('/investor/trades');
+    return response.data;
+  },
+
+  // Owner Strategies Management
+  async getStrategies() {
+    const response = await api.get('/owner/strategies');
+    return response.data;
+  },
+  async disableStrategy(strategyId: string) {
+    const response = await api.post(`/owner/strategies/${strategyId}/disable`);
+    return response.data;
+  },
+  async retrainStrategy(strategyId: string) {
+    const response = await api.post(`/owner/strategies/${strategyId}/retrain`);
+    return response.data;
+  },
+  async deleteStrategy(strategyId: string) {
+    const response = await api.delete(`/owner/strategies/${strategyId}/delete`);
+    return response.data;
+  },
+
+  // Owner Analytics
+  async getOverview() {
+    const response = await api.get('/owner/investors/overview');
+    return response.data;
+  },
+  async getLogs() {
+    const response = await api.get('/owner/logs');
     return response.data;
   },
 

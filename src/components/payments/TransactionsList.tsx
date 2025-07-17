@@ -16,6 +16,7 @@ import {
   ArrowDownCircle,
   Gift
 } from "lucide-react";
+import { apiService } from '@/services/api';
 
 interface Transaction {
   id: string;
@@ -51,9 +52,23 @@ export function TransactionsList() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [bonuses, setBonuses] = useState<Bonus[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchData();
+    const fetchTransactions = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await apiService.getTransactions();
+        setTransactions(data);
+      } catch (err) {
+        setError('Failed to fetch transactions');
+        toast.error('Failed to fetch transactions');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTransactions();
   }, []);
 
   const fetchData = async () => {
@@ -163,6 +178,14 @@ export function TransactionsList() {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
+  }
+
+  if (error) {
+    return <div className="p-6 text-red-500">{error}</div>;
+  }
+
+  if (!transactions.length) {
+    return <div className="p-6">No transactions found.</div>;
   }
 
   return (

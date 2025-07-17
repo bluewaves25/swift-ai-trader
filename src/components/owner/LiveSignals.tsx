@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Activity, Play, Square, TrendingUp, TrendingDown, Pause, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { apiService } from "@/services/apiService";
 
 interface Trade {
   id: string;
@@ -47,72 +48,11 @@ export function LiveSignals() {
 
   const fetchLiveData = async () => {
     try {
-      // Fetch live signals - simulated data
-      const mockSignals: Signal[] = [
-        {
-          id: '1',
-          symbol: 'EURUSD',
-          signal: 'buy',
-          confidence: 85.2,
-          timestamp: new Date().toISOString(),
-          source: 'Breakout Strategy'
-        },
-        {
-          id: '2',
-          symbol: 'BTCUSD',
-          signal: 'sell',
-          confidence: 72.8,
-          timestamp: new Date(Date.now() - 60000).toISOString(),
-          source: 'Mean Reversion'
-        },
-        {
-          id: '3',
-          symbol: 'GBPUSD',
-          signal: 'buy',
-          confidence: 78.5,
-          timestamp: new Date(Date.now() - 120000).toISOString(),
-          source: 'Scalping Strategy'
-        }
-      ];
-
-      // Fetch live trades - simulated data
-      const mockTrades: Trade[] = [
-        {
-          id: 't1',
-          symbol: 'EURUSD',
-          type: 'buy',
-          volume: 0.1,
-          price: 1.0952,
-          broker: 'exness',
-          timestamp: new Date().toISOString(),
-          status: 'filled',
-          profit: 25.30
-        },
-        {
-          id: 't2',
-          symbol: 'BTCUSD',
-          type: 'sell',
-          volume: 0.05,
-          price: 43250.00,
-          broker: 'binance',
-          timestamp: new Date(Date.now() - 180000).toISOString(),
-          status: 'filled',
-          profit: -15.75
-        },
-        {
-          id: 't3',
-          symbol: 'GBPUSD',
-          type: 'buy',
-          volume: 0.2,
-          price: 1.2685,
-          broker: 'exness',
-          timestamp: new Date(Date.now() - 300000).toISOString(),
-          status: 'pending'
-        }
-      ];
-
-      setSignals(mockSignals);
-      setTrades(mockTrades);
+      // Fetch real signals and trades
+      const signalsData = await apiService.getAISignals?.();
+      setSignals(signalsData || []);
+      const tradesData = await apiService.getTrades?.();
+      setTrades(tradesData || []);
     } catch (error) {
       console.error('Error fetching live data:', error);
     }

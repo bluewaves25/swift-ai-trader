@@ -44,3 +44,19 @@ class TransactionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class TradeResponse(BaseModel):
+    id: str
+    user_id: str
+    symbol: str
+    side: str
+    volume: float
+    price: float
+    pnl: float
+    strategy: Optional[str]
+    timestamp: datetime
+    status: str
+
+    class Config:
+        orm_mode = True

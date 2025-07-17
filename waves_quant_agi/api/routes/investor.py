@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from core.database import get_db
 from core.models.user import User
-from core.models.transaction import Transaction, TransactionType, TransactionStatus
-from core.schemas.transaction import DepositRequest, WithdrawRequest, TransactionResponse
+from core.models.transaction import Transaction, TransactionType, TransactionStatus, Trade
+from core.schemas.transaction import DepositRequest, WithdrawRequest, TransactionResponse, TradeResponse
 from services.payment_service import PaymentService
 from api.auth import get_current_user
 from typing import List
@@ -97,6 +97,17 @@ async def get_transactions(
     )
     transactions = result.scalars().all()
     return transactions
+
+@router.get("/trades", response_model=List[TradeResponse])
+async def get_trades(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Trade).where(Trade.user_id == current_user.id).order_by(Trade.timestamp.desc())
+    )
+    trades = result.scalars().all()
+    return trades
 
 async def update_portfolio_balance(user_id: str, amount: float):
     # TODO: Implement actual balance update logic

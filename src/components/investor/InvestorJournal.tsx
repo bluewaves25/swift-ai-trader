@@ -37,17 +37,7 @@ export default function InvestorJournal() {
         .order('timestamp', { ascending: false });
 
       if (analytics) {
-        const transformedData: JournalEntry[] = analytics.map((item, index) => ({
-          id: item.id,
-          date: new Date(item.timestamp || '').toLocaleDateString(),
-          strategy: item.strategy,
-          profit_loss: item.profit_loss || 0,
-          win_rate: item.win_rate || 0,
-          total_trades: Math.floor(Math.random() * 50) + 10,
-          winning_trades: Math.floor((item.win_rate || 0) / 100 * 30),
-          total_profit: item.profit_loss || 0
-        }));
-        setJournalEntries(transformedData);
+        setJournalEntries(analytics);
       }
     } catch (error) {
       console.error('Error fetching journal data:', error);

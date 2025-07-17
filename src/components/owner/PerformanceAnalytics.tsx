@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, TrendingDown, BarChart3, PieChart as PieChartIcon, Target, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import apiService from "@/services/apiService";
 
 interface PerformanceData {
   strategies: {
@@ -31,46 +32,24 @@ interface PerformanceData {
 export function PerformanceAnalytics() {
   const [timeframe, setTimeframe] = useState<"daily" | "weekly" | "monthly">("daily");
   const [sortBy, setSortBy] = useState<"date" | "profit" | "winRate" | "trades">("date");
-  const [data, setData] = useState<PerformanceData>({
-    strategies: [
-      { name: "Breakout", winRate: 68.5, profit: 2450.30, trades: 127, roi: 15.2 },
-      { name: "Scalping", winRate: 61.3, profit: 3200.15, trades: 285, roi: 22.8 },
-      { name: "Mean Reversion", winRate: 72.1, profit: 1890.75, trades: 94, roi: 12.1 },
-      { name: "Arbitrage", winRate: 85.2, profit: 1650.90, trades: 52, roi: 18.5 }
-    ],
-    riskAdjustments: [
-      { date: "2024-01-15", adjustment: "Reduced max risk to 2%", impact: 12.5, profit: 450.30 },
-      { date: "2024-01-20", adjustment: "Increased position size", impact: -5.2, profit: -180.75 },
-      { date: "2024-01-25", adjustment: "Added stop loss buffer", impact: 8.1, profit: 320.15 },
-      { date: "2024-01-30", adjustment: "Weekly risk limit applied", impact: 15.3, profit: 680.90 }
-    ],
-    overallEngine: {
-      daily: [
-        { date: "Jan 15", profit: 250.30, trades: 8, winRate: 75 },
-        { date: "Jan 16", profit: 180.75, trades: 6, winRate: 66.7 },
-        { date: "Jan 17", profit: 320.15, trades: 10, winRate: 80 },
-        { date: "Jan 18", profit: 420.90, trades: 12, winRate: 83.3 },
-        { date: "Jan 19", profit: 195.45, trades: 7, winRate: 71.4 },
-        { date: "Jan 20", profit: 380.60, trades: 11, winRate: 81.8 },
-        { date: "Jan 21", profit: 290.85, trades: 9, winRate: 77.8 }
-      ],
-      weekly: [
-        { week: "Week 1", profit: 1250.30, trades: 35, winRate: 74.3 },
-        { week: "Week 2", profit: 1680.75, trades: 42, winRate: 78.6 },
-        { week: "Week 3", profit: 1420.15, trades: 38, winRate: 76.3 },
-        { week: "Week 4", profit: 1890.90, trades: 45, winRate: 82.2 }
-      ],
-      monthly: [
-        { month: "Nov", profit: 4850.30, trades: 125, winRate: 76.8 },
-        { month: "Dec", profit: 5680.75, trades: 142, winRate: 79.6 },
-        { month: "Jan", profit: 6240.15, trades: 160, winRate: 78.1 }
-      ]
-    }
-  });
+  const [data, setData] = useState<PerformanceData | null>(null);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const analytics = await apiService.getPerformanceAnalytics?.();
+        setData(analytics || null);
+      } catch (error) {
+        setData(null);
+      }
+    };
+    fetchAnalytics();
+  }, []);
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
   const getCurrentData = () => {
+    if (!data) return [];
     return data.overallEngine[timeframe];
   };
 
@@ -293,7 +272,7 @@ export function PerformanceAnalytics() {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={data.strategies}
+                  data={data?.strategies || []}
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
@@ -301,7 +280,7 @@ export function PerformanceAnalytics() {
                   dataKey="profit"
                   label={({ name, profit }) => `${name}: $${profit.toFixed(0)}`}
                 >
-                  {data.strategies.map((entry, index) => (
+                  {data?.strategies?.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -324,7 +303,7 @@ export function PerformanceAnalytics() {
             </CardDescription>
           </CardHeader>
           <CardContent className="relative space-y-4">
-            {data.riskAdjustments.map((adjustment, index) => (
+            {data?.riskAdjustments?.map((adjustment, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-white/70 rounded-lg">
                 <div>
                   <div className="font-medium text-sm">{adjustment.adjustment}</div>
@@ -368,7 +347,7 @@ export function PerformanceAnalytics() {
                 </tr>
               </thead>
               <tbody>
-                {data.strategies.map((strategy, index) => (
+                {data?.strategies?.map((strategy, index) => (
                   <tr key={index} className="border-b last:border-0 hover:bg-muted/50">
                     <td className="p-2 font-medium">{strategy.name}</td>
                     <td className={cn(

@@ -22,6 +22,7 @@ import {
   XCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import apiService from "@/services/apiService";
 
 interface Trade {
   id: string;
@@ -64,76 +65,8 @@ export function TradeHistory() {
   const fetchTrades = async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      const mockTrades: Trade[] = [
-        {
-          id: '1',
-          symbol: 'BTCUSDT',
-          type: 'buy',
-          volume: 0.5,
-          openPrice: 43250.00,
-          closePrice: 44100.00,
-          status: 'closed',
-          broker: 'binance',
-          category: 'crypto',
-          profit: 425.00,
-          commission: 21.25,
-          openTime: '2024-01-15T10:30:00Z',
-          closeTime: '2024-01-15T14:45:00Z',
-          strategy: 'Breakout',
-          userId: 'user1'
-        },
-        {
-          id: '2',
-          symbol: 'EURUSD',
-          type: 'sell',
-          volume: 1.0,
-          openPrice: 1.0952,
-          closePrice: 1.0935,
-          status: 'closed',
-          broker: 'exness',
-          category: 'forex',
-          profit: 170.00,
-          commission: 8.50,
-          openTime: '2024-01-15T09:15:00Z',
-          closeTime: '2024-01-15T11:20:00Z',
-          strategy: 'Mean Reversion',
-          userId: 'user2'
-        },
-        {
-          id: '3',
-          symbol: 'XAUUSD',
-          type: 'buy',
-          volume: 0.1,
-          openPrice: 2045.50,
-          status: 'open',
-          broker: 'exness',
-          category: 'commodities',
-          commission: 10.23,
-          openTime: '2024-01-15T13:00:00Z',
-          strategy: 'Scalping',
-          userId: 'user3'
-        },
-        {
-          id: '4',
-          symbol: 'US500',
-          type: 'buy',
-          volume: 0.5,
-          openPrice: 4750.25,
-          closePrice: 4725.10,
-          status: 'closed',
-          broker: 'exness',
-          category: 'indices',
-          profit: -12.58,
-          commission: 11.88,
-          openTime: '2024-01-15T08:30:00Z',
-          closeTime: '2024-01-15T12:15:00Z',
-          strategy: 'Arbitrage',
-          userId: 'user1'
-        }
-      ];
-      
-      setTrades(mockTrades);
+      const data = await apiService.getTrades();
+      setTrades(data || []);
     } catch (error) {
       toast({
         title: "Error",

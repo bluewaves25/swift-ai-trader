@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { PaymentMethodSelector } from "./PaymentMethodSelector";
 import { PaymentReview } from "./PaymentReview";
 import { PaymentMethod } from "@/services/paymentApi";
+import { apiService } from '@/services/api';
 
 interface PaymentFormProps {
   transactionType: 'deposit' | 'withdrawal';
@@ -88,60 +89,18 @@ const PaymentForm = ({ transactionType }: PaymentFormProps) => {
 
   const handleConfirmTransaction = async () => {
     if (loading) return;
-    
     setLoading(true);
-    
     try {
-      // Update user profile if needed
-      if (userDetails.fullName || userDetails.phoneNumber) {
-        await supabase
-          .from('profiles')
-          .upsert({
-            user_id: user?.id,
-            full_name: userDetails.fullName,
-            phone_number: userDetails.phoneNumber
-          });
-      }
-
-      // Create transaction
-      const { data: transaction, error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: user?.id,
-          type: transactionType,
-          amount: parseFloat(amount),
-          currency: 'USD',
-          payment_method: selectedMethod?.name,
-          status: 'pending',
-          description: `${transactionType} via ${selectedMethod?.name}`
-        })
-        .select()
-        .single();
-
-      if (transactionError) throw transactionError;
-
-      // Create transaction steps
-      await supabase.rpc('create_transaction_steps', {
-        p_transaction_id: transaction.id,
-        p_transaction_type: transactionType
-      });
-
       if (transactionType === 'deposit') {
-        // Update portfolio balance for deposits
-        await supabase.rpc('update_portfolio_balance', {
-          p_user_id: user?.id,
-          p_amount: parseFloat(amount),
-          p_transaction_type: 'deposit'
-        });
+        await apiService.initiateDeposit(parseFloat(amount));
+        toast.success('Deposit request submitted successfully!');
+      } else if (transactionType === 'withdraw') {
+        await apiService.requestWithdrawal(parseFloat(amount));
+        toast.success('Withdrawal request submitted successfully!');
       }
-
-      toast.success(`${transactionType} request submitted successfully!`);
-      
-      // Reset form
       setStep(1);
       setSelectedMethod(null);
       setAmount("");
-      
     } catch (error) {
       console.error(`Error processing ${transactionType}:`, error);
       toast.error(`Failed to process ${transactionType}. Please try again.`);

@@ -28,6 +28,7 @@ import {
   Upload,
   Trash2
 } from "lucide-react";
+import { apiService } from "@/services/apiService";
 
 interface SystemSettings {
   // General Settings
@@ -67,42 +68,30 @@ interface SystemSettings {
 }
 
 export function OwnerSettings() {
-  const [settings, setSettings] = useState<SystemSettings>({
-    companyName: "Swift AI Trader",
-    companyEmail: "admin@swiftaitrader.com",
-    companyPhone: "+1 (555) 123-4567",
-    timezone: "UTC",
-    currency: "USD",
-    language: "en",
-    defaultRiskLevel: 2,
-    maxDrawdown: 10,
-    autoTradingEnabled: true,
-    maintenanceMode: false,
-    twoFactorRequired: true,
-    sessionTimeout: 30,
-    maxLoginAttempts: 5,
-    ipWhitelist: [],
-    emailNotifications: true,
-    smsNotifications: false,
-    webhookUrl: "",
-    rateLimiting: true,
-    apiTimeout: 30,
-    maxRequestsPerMinute: 100,
-    autoBackup: true,
-    backupFrequency: "daily",
-    retentionPeriod: 30
-  });
-  
+  const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [loading, setLoading] = useState(false);
   const [newIpAddress, setNewIpAddress] = useState("");
   const { toast } = useToast();
 
+  useEffect(() => {
+    const fetchSettings = async () => {
+      setLoading(true);
+      try {
+        const data = await apiService.getOwnerSettings?.();
+        setSettings(data || null);
+      } catch (error) {
+        setSettings(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   const handleSaveSettings = async () => {
     setLoading(true);
     try {
-      // TODO: Implement API call to save settings
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await apiService.saveOwnerSettings?.(settings);
       toast({
         title: "Settings Saved",
         description: "System settings have been updated successfully",
@@ -120,7 +109,7 @@ export function OwnerSettings() {
   };
 
   const handleAddIpAddress = () => {
-    if (newIpAddress && !settings.ipWhitelist.includes(newIpAddress)) {
+    if (newIpAddress && !settings?.ipWhitelist.includes(newIpAddress)) {
       setSettings(prev => ({
         ...prev,
         ipWhitelist: [...prev.ipWhitelist, newIpAddress]
@@ -145,6 +134,14 @@ export function OwnerSettings() {
     link.download = `system-settings-${new Date().toISOString().split('T')[0]}.json`;
     link.click();
   };
+
+  if (loading) {
+    return <div className="text-center py-8">Loading settings...</div>;
+  }
+
+  if (!settings) {
+    return <div className="text-center py-8">No settings found. Please check your connection or contact support.</div>;
+  }
 
   return (
     <div className="space-y-6">

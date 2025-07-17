@@ -112,6 +112,18 @@ Each page is a complete view with:
 
 ## API Integration
 
+- All portfolio, transaction, trade history, and analytics features now use backend API endpoints (see API_REFERENCE.md).
+- Direct Supabase queries are deprecated for these features.
+- The frontend sends the Supabase JWT access token in the Authorization header for all API calls.
+- The useAuth hook now includes automatic session refresh logic to keep the JWT valid.
+
+### Trade History Example
+
+To fetch trade history:
+```js
+const trades = await apiService.getTrades();
+```
+
 ### Service Layer
 All API calls are abstracted through service functions:
 ```typescript

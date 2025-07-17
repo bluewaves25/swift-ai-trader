@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from jose import jwt, JWTError
 from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +8,8 @@ from shared.settings import settings
 from core.models.user import User
 from core.database import get_db
 import logging
+import requests
+from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,31 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
+SUPABASE_JWKS_URL = 'https://YOUR_SUPABASE_PROJECT_ID.supabase.co/auth/v1/keys'  # <-- Replace with your actual Supabase project ID
+
+@lru_cache(maxsize=1)
+def get_supabase_jwks():
+    resp = requests.get(SUPABASE_JWKS_URL)
+    resp.raise_for_status()
+    return resp.json()['keys']
+
+def get_supabase_public_key(kid):
+    keys = get_supabase_jwks()
+    for key in keys:
+        if key['kid'] == kid:
+            return key
+    return None
+
+def verify_supabase_jwt(token):
+    try:
+        unverified_header = jwt.get_unverified_header(token)
+        key = get_supabase_public_key(unverified_header['kid'])
+        if not key:
+            raise JWTError('Public key not found for kid')
+        return jwt.decode(token, key, algorithms=[key['alg']], options={"verify_aud": False})
+    except Exception as e:
+        raise JWTError(f"Supabase JWT validation failed: {e}")
+
 async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -31,8 +58,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id: int = payload.get("sub")
+        # Try Supabase JWT validation first
+        try:
+            payload = verify_supabase_jwt(token)
+        except Exception:
+            # Fallback to legacy/local JWT validation
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
     except JWTError as e:

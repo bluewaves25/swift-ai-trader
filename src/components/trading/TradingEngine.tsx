@@ -17,40 +17,30 @@ import {
   Clock
 } from "lucide-react";
 import { toast } from "sonner";
+import apiService from "@/services/apiService";
 
 interface TradingEngineProps {
   isRunning: boolean;
 }
 
 const TradingEngine = ({ isRunning }: TradingEngineProps) => {
-  const [engineStats, setEngineStats] = useState({
-    signalsGenerated: 0,
-    tradesExecuted: 0,
-    successRate: 0,
-    avgExecutionTime: 0,
-    activePairs: 0,
-    cpuUsage: 0,
-    memoryUsage: 0
-  });
+  const [engineStats, setEngineStats] = useState<any>(null);
 
   const [autoTrading, setAutoTrading] = useState(false);
   const [riskManagement, setRiskManagement] = useState(true);
 
   useEffect(() => {
     if (isRunning) {
-      const interval = setInterval(() => {
-        // Simulate real-time engine stats
-        setEngineStats(prev => ({
-          signalsGenerated: prev.signalsGenerated + Math.floor(Math.random() * 3),
-          tradesExecuted: prev.tradesExecuted + Math.floor(Math.random() * 2),
-          successRate: 65 + Math.random() * 20,
-          avgExecutionTime: 150 + Math.random() * 100,
-          activePairs: 8 + Math.floor(Math.random() * 3),
-          cpuUsage: 20 + Math.random() * 30,
-          memoryUsage: 40 + Math.random() * 20
-        }));
-      }, 2000);
-
+      const fetchStats = async () => {
+        try {
+          const stats = await apiService.getEngineStats?.();
+          setEngineStats(stats || null);
+        } catch (error) {
+          setEngineStats(null);
+        }
+      };
+      fetchStats();
+      const interval = setInterval(fetchStats, 2000);
       return () => clearInterval(interval);
     }
   }, [isRunning]);
@@ -64,6 +54,32 @@ const TradingEngine = ({ isRunning }: TradingEngineProps) => {
     setRiskManagement(enabled);
     toast.success(enabled ? 'Risk management enabled' : 'Risk management disabled');
   };
+
+  if (!engineStats) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Cpu className="h-5 w-5" />
+            <span>Trading Engine Status</span>
+            <Badge variant={isRunning ? "default" : "secondary"} className="ml-2">
+              {isRunning ? "Running" : "Stopped"}
+            </Badge>
+          </CardTitle>
+          <CardDescription>
+            Real-time engine performance and configuration
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="text-center py-4">
+            <p className="text-muted-foreground mb-4">
+              Loading engine statistics...
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

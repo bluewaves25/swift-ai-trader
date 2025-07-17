@@ -90,10 +90,27 @@ Authorization: Bearer <your-token>
 }
 ```
 
-#### Get Trade History
-- **GET** `/api/trade/history?symbol=EURUSD`
-- **Parameters**: 
-  - `symbol` (optional): Filter by trading pair
+## Trade Model
+
+A new Trade model is added to persist executed trades:
+- id: string
+- user_id: string
+- symbol: string
+- side: string (buy/sell)
+- volume: float
+- price: float
+- pnl: float
+- strategy: string | null
+- timestamp: datetime
+- status: string (open/closed/cancelled)
+
+## Trade History Endpoint
+
+- **GET /api/investor/trades**: Returns all trades for the current user, ordered by timestamp descending.
+
+## Execution Engine
+
+- The execution engine now saves each executed trade to the database using the Trade model.
 
 ### Wallet Operations
 

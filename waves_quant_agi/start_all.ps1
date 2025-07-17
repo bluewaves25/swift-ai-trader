@@ -5,7 +5,7 @@ Start-Sleep -Seconds 1
 # === START AGI Engine (Python 3.10 env_310) ===
 Start-Process -NoNewWindow -WorkingDirectory "$PSScriptRoot" -FilePath "powershell.exe" -ArgumentList @"
 -Command "& {
-    & 'C:\Users\BLUE WAVES\Documents\GitHub\swift-ai-trader\waves_quant_agi\env_310\Scripts\Activate.ps1';
+    & '$PSScriptRoot\env_310\Scripts\Activate.ps1';
     python engine/run_engine_api.py
 }"
 "@
@@ -13,8 +13,9 @@ Start-Process -NoNewWindow -WorkingDirectory "$PSScriptRoot" -FilePath "powershe
 # === START Main Backend (Python 3.12 env_main) ===
 Start-Process -NoNewWindow -WorkingDirectory "$PSScriptRoot" -FilePath "powershell.exe" -ArgumentList @"
 -Command "& {
-    & 'C:\Users\BLUE WAVES\Documents\GitHub\swift-ai-trader\waves_quant_agi\env_main\Scripts\Activate.ps1';
-    python server.py
+    & '$PSScriptRoot\env_main\Scripts\Activate.ps1';
+    $env:PYTHONPATH = "$PSScriptRoot";
+    uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 }"
 "@
 
@@ -22,7 +23,7 @@ Start-Process -NoNewWindow -WorkingDirectory "$PSScriptRoot" -FilePath "powershe
 Start-Sleep -Seconds 4
 Start-Process -NoNewWindow -WorkingDirectory "$PSScriptRoot" -FilePath "powershell.exe" -ArgumentList @"
 -Command "& {
-    & 'C:\Users\BLUE WAVES\Documents\GitHub\swift-ai-trader\waves_quant_agi\env_310\Scripts\Activate.ps1';
-    python -c `"import redis, json; from datetime import datetime; r=redis.Redis(host='localhost', port=6379, decode_responses=True); r.lpush('market-data', json.dumps([{'timestamp': datetime.now().isoformat(), 'symbol': 'AAPL', 'open': 150.0, 'high': 155.0, 'low': 149.0, 'close': 154.0, 'volume': 1000000}]))`"
+    & '$PSScriptRoot\env_310\Scripts\Activate.ps1';
+    python -c \"import redis, json; from datetime import datetime; r=redis.Redis(host='localhost', port=6379, decode_responses=True); r.lpush('market-data', json.dumps([{'timestamp': datetime.now().isoformat(), 'symbol': 'AAPL', 'open': 150.0, 'high': 155.0, 'low': 149.0, 'close': 154.0, 'volume': 1000000}]))\"
 }"
 "@

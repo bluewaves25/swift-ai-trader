@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,34 +11,49 @@ import { useNavigate } from "react-router-dom";
 const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
-  const { signIn, signUp, resetPassword } = useAuth();
+  const { signIn, signUp, resetPassword, user, loading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    // Only redirect if loading is false and user is present
+    if (!loading && user) {
+      // Try to get role from user metadata if available
+      const role = (user as any)?.role || (user as any)?.user_metadata?.role;
+      if (role === 'owner') {
+        navigate('/owner-dashboard', { replace: true });
+      } else {
+        navigate('/investor-dashboard', { replace: true });
+      }
+    }
+    // Do NOT redirect if user is null (just signed out)
+  }, [user, loading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setFormLoading(true);
     try {
       await signIn(email, password);
     } catch (error) {
       // Error is already handled in AuthContext
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setFormLoading(true);
     try {
       await signUp(email, password);
     } catch (error) {
       // Error is already handled in AuthContext
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
@@ -131,8 +146,8 @@ const AuthPage = () => {
                       Forgot password?
                     </button>
                   </div>
-                  <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" disabled={loading}>
-                    {loading ? "Signing in..." : "Sign In"}
+                  <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" disabled={formLoading}>
+                    {formLoading ? "Signing in..." : "Sign In"}
                   </Button>
                 </form>
                 {showReset && (
@@ -191,8 +206,8 @@ const AuthPage = () => {
                       Track performance, manage deposits/withdrawals
                     </p>
                   </div>
-                  <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" disabled={loading}>
-                    {loading ? "Creating account..." : "Create Investor Account"}
+                  <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" disabled={formLoading}>
+                    {formLoading ? "Creating account..." : "Create Investor Account"}
                   </Button>
                 </form>
               </TabsContent>

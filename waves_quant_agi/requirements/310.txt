@@ -65,3 +65,8 @@ pytz
 joblib
 
 MetaTrader5
+
+sqlalchemy[asyncio] 
+
+pydantic>=2.6
+pydantic-settings>=2.2

@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar, TrendingUp, TrendingDown, Filter, Search } from "lucide-react";
+import { apiService } from '@/services/api';
+import { toast } from 'sonner';
 
 interface Trade {
   id: string;
@@ -31,53 +33,30 @@ export default function TradeHistory() {
   const { user } = useAuth();
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    if (user) {
-      fetchTrades();
-    }
-  }, [user]);
+    const fetchTrades = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await apiService.getTrades();
+        setTrades(Array.isArray(data) ? (data as Trade[]) : []);
+      } catch (err) {
+        setError('Failed to fetch trade history');
+        toast.error('Failed to fetch trade history');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTrades();
+  }, []);
 
-  const fetchTrades = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('trades')
-        .select(`
-          *,
-          trading_pairs (
-            symbol,
-            base_asset,
-            quote_asset
-          )
-        `)
-        .eq('user_id', user?.id)
-        .order('timestamp', { ascending: false });
-
-      if (error) throw error;
-
-      const transformedTrades: Trade[] = (data || []).map(trade => ({
-        id: trade.id,
-        symbol: trade.symbol,
-        trade_type: trade.side || 'buy',
-        amount: trade.volume || 0,
-        entry_price: trade.price || 0,
-        exit_price: trade.price || 0,
-        profit_loss: (Math.random() - 0.5) * 100,
-        status: trade.status || 'pending',
-        timestamp: trade.timestamp || new Date().toISOString(),
-        strategy: 'Breakout',
-        trading_pairs: trade.trading_pairs
-      }));
-
-      setTrades(transformedTrades);
-    } catch (error) {
-      console.error('Error fetching trades:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (loading) return <div className="p-6">Loading trade history...</div>;
+  if (error) return <div className="p-6 text-red-500">{error}</div>;
+  if (!trades.length) return <div className="p-6">No trades found.</div>;
 
   const filteredTrades = trades.filter(trade => {
     const matchesStatus = filterStatus === 'all' || trade.status === filterStatus;
@@ -86,15 +65,26 @@ export default function TradeHistory() {
     return matchesStatus && matchesSearch;
   });
 
-  if (loading) {
-    return <div className="p-6">Loading trade history...</div>;
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Trade History</h2>
-        <Button onClick={fetchTrades} variant="outline">
+        <Button onClick={() => {
+          const fetchTrades = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+              const data = await apiService.getTrades();
+              setTrades(Array.isArray(data) ? (data as Trade[]) : []);
+            } catch (err) {
+              setError('Failed to fetch trade history');
+              toast.error('Failed to fetch trade history');
+            } finally {
+              setLoading(false);
+            }
+          };
+          fetchTrades();
+        }} variant="outline">
           Refresh
         </Button>
       </div>

@@ -1,6 +1,5 @@
-# config/settings.py
-
 from pydantic_settings import BaseSettings
+from pydantic import Extra
 from typing import Optional
 import os
 
@@ -53,5 +52,6 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        extra = Extra.allow  # ✅ Allow unknown keys from .env
 
 settings = Settings()
