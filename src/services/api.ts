@@ -1,87 +1,75 @@
 
-import axios, { AxiosResponse } from 'axios';
+import axios from 'axios';
 import { supabase } from '@/integrations/supabase/client';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = 'http://localhost:8000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 10000,
 });
 
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  async (config) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      config.headers.Authorization = `Bearer ${session.access_token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+// Add auth interceptor
+api.interceptors.request.use(async (config) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    config.headers.Authorization = `Bearer ${session.access_token}`;
   }
-);
-
-// Response interceptor for error handling
-api.interceptors.response.use(
-  (response: AxiosResponse) => response,
-  (error) => {
-    console.error('API Error:', error);
-    return Promise.reject(error);
-  }
-);
+  return config;
+});
 
 export const apiService = {
-  // User management
-  getBalance: (userId: string) => api.get(`/api/users/${userId}/balance`),
-  updateBalance: (userId: string, balance: any) => api.put(`/api/users/${userId}/balance`, { balance }),
-  
-  // Portfolio
-  getPortfolio: () => api.get('/api/portfolio'),
-  getPortfolioPerformance: () => api.get('/api/portfolio/performance'),
-  
-  // Trading
-  getTrades: () => api.get('/api/trades'),
-  createTrade: (trade: any) => api.post('/api/trades', trade),
-  closeTrade: (tradeId: string) => api.post(`/api/trades/${tradeId}/close`),
-  
-  // Signals
-  getLiveSignals: () => api.get('/api/signals/live'),
-  getSignalHistory: () => api.get('/api/signals/history'),
-  
-  // Engine
-  getEngineStatus: () => api.get('/api/engine/status'),
-  startEngine: () => api.post('/api/engine/start'),
-  stopEngine: () => api.post('/api/engine/stop'),
-  getEngineStats: () => api.get('/api/engine/stats'),
-  
-  // Strategies
-  getStrategies: () => api.get('/api/strategies'),
-  createStrategy: (strategy: any) => api.post('/api/strategies', strategy),
-  updateStrategy: (id: string, strategy: any) => api.put(`/api/strategies/${id}`, strategy),
-  deleteStrategy: (id: string) => api.delete(`/api/strategies/${id}`),
-  
-  // Risk Management
-  getRiskParams: () => api.get('/api/risk/params'),
-  updateRiskParams: (params: any) => api.put('/api/risk/params', params),
-  
-  // Analytics
-  getPerformanceAnalytics: () => api.get('/api/analytics/performance'),
-  getAumHistory: () => api.get('/api/analytics/aum-history'),
-  
-  // Owner specific
-  getUserCount: () => api.get('/api/admin/users/count'),
-  getOwnerDashboard: () => api.get('/api/admin/dashboard'),
-  getOwnerSettings: () => api.get('/api/admin/settings'),
-  saveOwnerSettings: (settings: any) => api.put('/api/admin/settings', settings),
-  
-  // Payments
-  getTransactions: () => api.get('/api/payments/transactions'),
-  processPayment: (payment: any) => api.post('/api/payments/process', payment),
-  
-  // Health check
-  healthCheck: () => api.get('/api/health'),
-};
+  // Balance operations
+  getBalance: (userId: string) => api.get(`/balance/${userId}`),
+  updateBalance: (userId: string, balance: number) => api.put(`/balance/${userId}`, { balance }),
 
-export default api;
+  // Portfolio operations
+  getPortfolio: () => api.get('/portfolio'),
+  updatePortfolio: (data: any) => api.put('/portfolio', data),
+
+  // Trading operations
+  getTrades: () => api.get('/trades'),
+  createTrade: (data: any) => api.post('/trades', data),
+  getLiveSignals: () => api.get('/signals/live'),
+  getAISignals: () => api.get('/signals/ai'),
+
+  // Strategy operations
+  getStrategies: () => api.get('/strategies'),
+  createStrategy: (data: any) => api.post('/strategies', data),
+  updateStrategy: (id: string, data: any) => api.put(`/strategies/${id}`, data),
+  deleteStrategy: (id: string) => api.delete(`/strategies/${id}`),
+  disableStrategy: (id: string) => api.put(`/strategies/${id}/disable`),
+  retrainStrategy: (id: string) => api.post(`/strategies/${id}/retrain`),
+
+  // Engine operations
+  startEngine: () => api.post('/engine/start'),
+  stopEngine: () => api.post('/engine/stop'),
+  getEngineStatus: () => api.get('/engine/status'),
+  getEngineMetrics: () => api.get('/engine/metrics'),
+
+  // System operations
+  getSystemHealth: () => api.get('/system/health'),
+  getOverview: () => api.get('/system/overview'),
+  getLogs: () => api.get('/system/logs'),
+  getAumHistory: () => api.get('/system/aum-history'),
+
+  // User operations
+  getUsers: () => api.get('/users'),
+  createUser: (data: any) => api.post('/users', data),
+  updateUser: (id: string, data: any) => api.put(`/users/${id}`, data),
+  deleteUser: (id: string) => api.delete(`/users/${id}`),
+
+  // Analytics
+  getPerformanceData: () => api.get('/analytics/performance'),
+  getRiskMetrics: () => api.get('/analytics/risk'),
+
+  // Market data
+  getMarketData: () => api.get('/market/data'),
+
+  // Transactions
+  getTransactions: () => api.get('/transactions'),
+  createTransaction: (data: any) => api.post('/transactions', data),
+
+  // Health check
+  healthCheck: () => api.get('/health'),
+};

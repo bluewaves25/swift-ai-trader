@@ -21,7 +21,6 @@ import {
   TrendingUp, 
   History, 
   BookOpen, 
-  CreditCard, 
   Settings, 
   User,
   Brain,
@@ -31,7 +30,8 @@ import {
   MinusCircle,
   List,
   LogOut,
-  ChevronLeft
+  ChevronLeft,
+  CreditCard
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -59,58 +59,58 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
   const [paymentsOpen, setPaymentsOpen] = useState(false);
 
   const paymentItems = [
-    { id: 'deposit', label: 'Deposit', icon: PlusCircle, color: 'text-green-600' },
-    { id: 'withdraw', label: 'Withdraw', icon: MinusCircle, color: 'text-red-600' },
-    { id: 'transactions', label: 'Transactions', icon: List, color: 'text-blue-600' },
+    { id: 'deposit', label: 'Deposit', icon: PlusCircle, color: 'text-green-600', gradient: 'from-green-500 to-emerald-600' },
+    { id: 'withdraw', label: 'Withdraw', icon: MinusCircle, color: 'text-red-600', gradient: 'from-red-500 to-rose-600' },
+    { id: 'transactions', label: 'History', icon: List, color: 'text-blue-600', gradient: 'from-blue-500 to-indigo-600' },
   ];
 
   const NavItem = ({ item, isActive = false }: { item: any; isActive?: boolean }) => (
     <SidebarMenuButton
       onClick={() => onSectionChange(item.id)}
       className={cn(
-        "w-full justify-start h-10 md:h-12 mb-1 transition-all duration-300 group relative",
+        "w-full justify-start h-9 md:h-11 mb-1 transition-all duration-300 group relative rounded-lg",
         isCollapsed ? "px-2 md:px-3" : "px-3 md:px-4",
-        isActive && "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-700 dark:text-blue-400 border-r-2 border-blue-500",
-        !isActive && "hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105"
+        isActive && "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-700 dark:text-blue-400 border-r-2 border-blue-500 shadow-md",
+        !isActive && "hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-[1.02] hover:shadow-sm"
       )}
     >
       <item.icon className={cn(
-        "h-4 w-4 md:h-5 md:w-5 transition-colors duration-300",
+        "h-4 w-4 md:h-5 md:w-5 transition-colors duration-300 flex-shrink-0",
         isCollapsed ? "mx-auto" : "mr-2 md:mr-3",
         isActive ? item.color : "text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
       )} />
       {!isCollapsed && (
-        <span className="font-medium transition-all duration-300 text-sm md:text-base">{item.label}</span>
+        <span className="font-medium transition-all duration-300 text-xs md:text-sm truncate">{item.label}</span>
       )}
       {isActive && !isCollapsed && (
-        <div className="absolute right-2 w-2 h-2 rounded-full bg-blue-500"></div>
+        <div className="absolute right-2 w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-500 animate-pulse"></div>
       )}
     </SidebarMenuButton>
   );
 
   return (
     <div className={cn(
-      "flex flex-col h-full bg-card border-r transition-all duration-300 relative",
+      "flex flex-col h-full bg-card border-r transition-all duration-300 relative overflow-hidden",
       isCollapsed ? "w-12 md:w-16" : "w-56 md:w-64",
       "md:relative md:translate-x-0",
       "fixed inset-y-0 left-0 z-50 md:z-auto",
       isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
     )}>
       {/* Header */}
-      <SidebarHeader>
+      <SidebarHeader className="flex-shrink-0">
         <div className="p-2 md:p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
           <div className="flex items-center justify-between">
             {!isCollapsed && (
-              <div className="flex items-center space-x-2 md:space-x-3">
-                <div className="p-1 md:p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg">
+              <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
+                <div className="p-1 md:p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg flex-shrink-0">
                   <Brain className="h-4 w-4 md:h-6 md:w-6 text-white" />
                 </div>
-                <div>
-                  <span className="font-bold text-sm md:text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <div className="min-w-0">
+                  <span className="font-bold text-sm md:text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent block truncate">
                     Investor
                   </span>
                   <div className="flex items-center space-x-1 md:space-x-2 mt-1">
-                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-green-500"></div>
+                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0"></div>
                     <span className="text-xs text-muted-foreground">Online</span>
                   </div>
                 </div>
@@ -120,7 +120,7 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
               variant="ghost"
               size="sm"
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="h-6 w-6 md:h-8 md:w-8 p-0 hidden md:flex hover:bg-white/50 dark:hover:bg-gray-800/50"
+              className="h-6 w-6 md:h-8 md:w-8 p-0 hidden md:flex hover:bg-white/50 dark:hover:bg-gray-800/50 flex-shrink-0"
             >
               {isCollapsed ? (
                 <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
@@ -134,9 +134,9 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
 
       {/* User Info */}
       {!isCollapsed && (
-        <div className="p-2 md:p-4 border-b bg-gray-50 dark:bg-gray-800/50">
+        <div className="p-2 md:p-4 border-b bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
           <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs md:text-sm">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs md:text-sm flex-shrink-0">
               {user?.email?.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
@@ -172,42 +172,59 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
         <div className={cn("space-y-1", !isCollapsed && "px-1 md:px-2")}>
           {!isCollapsed && (
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 md:mb-3 px-1 md:px-2">
-              Payments
+              Financial Hub
             </p>
           )}
           <Collapsible open={paymentsOpen} onOpenChange={setPaymentsOpen}>
             <CollapsibleTrigger asChild>
               <SidebarMenuButton
                 className={cn(
-                  "w-full justify-start h-10 md:h-12 mb-1 transition-all duration-300",
+                  "w-full justify-start h-9 md:h-11 mb-1 transition-all duration-300 rounded-lg group",
                   isCollapsed ? "px-2 md:px-3" : "px-3 md:px-4",
                   (activeSection === 'deposit' || activeSection === 'withdraw' || activeSection === 'transactions') && 
-                  "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-700 dark:text-blue-400"
+                  "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-700 dark:text-blue-400 shadow-md"
                 )}
               >
-                <CreditCard className={cn("h-4 w-4 md:h-5 md:w-5", isCollapsed ? "mx-auto" : "mr-2 md:mr-3")} />
+                <CreditCard className={cn(
+                  "h-4 w-4 md:h-5 md:w-5 flex-shrink-0",
+                  isCollapsed ? "mx-auto" : "mr-2 md:mr-3"
+                )} />
                 {!isCollapsed && (
                   <>
-                    <span className="text-sm md:text-base">Payments</span>
-                    {paymentsOpen ? <ChevronDown className="h-3 w-3 md:h-4 md:w-4 ml-auto" /> : <ChevronRight className="h-3 w-3 md:h-4 md:w-4 ml-auto" />}
+                    <span className="text-xs md:text-sm font-medium">Payments</span>
+                    {paymentsOpen ? 
+                      <ChevronDown className="h-3 w-3 md:h-4 md:w-4 ml-auto transition-transform duration-200" /> : 
+                      <ChevronRight className="h-3 w-3 md:h-4 md:w-4 ml-auto transition-transform duration-200" />
+                    }
                   </>
                 )}
               </SidebarMenuButton>
             </CollapsibleTrigger>
             {!isCollapsed && (
-              <CollapsibleContent>
+              <CollapsibleContent className="space-y-1">
                 <SidebarMenuSub>
                   {paymentItems.map((item) => (
                     <SidebarMenuSubItem key={item.id}>
                       <SidebarMenuSubButton
                         onClick={() => onSectionChange(item.id)}
                         className={cn(
-                          "transition-all duration-300",
-                          activeSection === item.id && "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-700 dark:text-blue-400"
+                          "transition-all duration-300 group hover:scale-[1.02] rounded-lg relative",
+                          activeSection === item.id && "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-700 dark:text-blue-400 shadow-sm"
                         )}
                       >
-                        <item.icon className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
-                        <span className="text-xs md:text-sm">{item.label}</span>
+                        <div className={cn(
+                          "w-6 h-6 rounded-full flex items-center justify-center mr-2 transition-all duration-300",
+                          activeSection === item.id ? `bg-gradient-to-r ${item.gradient} shadow-md` : "bg-gray-100 dark:bg-gray-700 group-hover:bg-gray-200 dark:group-hover:bg-gray-600"
+                        )}>
+                          <item.icon className={cn(
+                            "h-3 w-3",
+                            activeSection === item.id ? "text-white" : item.color
+                          )} />
+                        </div>
+                        <span className="text-xs md:text-sm font-medium">{item.label}</span>
+                        {activeSection === item.id && (
+                          <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
+                        )}
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   ))}
@@ -237,17 +254,17 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
       </SidebarContent>
 
       {/* Sign Out Button */}
-      <div className="p-1 md:p-2 border-t bg-gray-50 dark:bg-gray-800/50">
+      <div className="p-1 md:p-2 border-t bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
         <Button
           variant="ghost"
           className={cn(
-            "w-full justify-start h-10 md:h-12 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-300",
+            "w-full justify-start h-9 md:h-11 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-300 rounded-lg",
             isCollapsed ? "px-2 md:px-3" : "px-3 md:px-4"
           )}
           onClick={signOut}
         >
           <LogOut className={cn("h-4 w-4 md:h-5 md:w-5", isCollapsed ? "mx-auto" : "mr-2 md:mr-3")} />
-          {!isCollapsed && <span className="font-medium text-sm md:text-base">Sign Out</span>}
+          {!isCollapsed && <span className="font-medium text-xs md:text-sm">Sign Out</span>}
         </Button>
       </div>
     </div>

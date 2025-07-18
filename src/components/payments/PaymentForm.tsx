@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Card,
@@ -77,7 +78,9 @@ export function PaymentForm({ transactionType }: PaymentFormProps) {
       if (user) {
         try {
           const response = await apiService.getBalance(user.id);
-          setBalance(response.data.balance);
+          if (response.data && typeof response.data === 'object' && 'balance' in response.data) {
+            setBalance((response.data as any).balance);
+          }
         } catch (error) {
           console.error("Failed to fetch balance:", error);
           toast.error("Failed to fetch balance");
@@ -109,7 +112,7 @@ export function PaymentForm({ transactionType }: PaymentFormProps) {
         type: transactionType,
         amount: amount,
         method: paymentMethod,
-        details: {}, // Add payment details here based on the selected method
+        details: {},
       };
 
       // Simulate payment processing
