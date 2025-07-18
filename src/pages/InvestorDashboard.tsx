@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,8 @@ import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { 
   Activity, 
-  X
+  X,
+  Menu
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { useNavigate } from "react-router-dom";
@@ -30,8 +32,8 @@ const InvestorSettings = lazy(() => import("@/components/investor/InvestorSettin
 const InvestorProfile = lazy(() => import("@/components/investor/InvestorProfile"));
 
 const LoadingSpinner = () => (
-  <div className="flex items-center justify-center h-64">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  <div className="flex items-center justify-center h-32 md:h-64">
+    <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-primary"></div>
   </div>
 );
 
@@ -40,6 +42,7 @@ const InvestorDashboard = () => {
   const navigate = useNavigate();
   const { handleError } = useErrorHandler();
   const [activeSection, setActiveSection] = useState('overview');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const renderContent = () => {
     const contentMap = {
@@ -58,7 +61,7 @@ const InvestorDashboard = () => {
     const Component = contentMap[activeSection as keyof typeof contentMap];
     
     if (!Component) {
-      return <div className="text-center text-muted-foreground">Section not found</div>;
+      return <div className="text-center text-muted-foreground text-sm">Section not found</div>;
     }
 
     return (
@@ -71,29 +74,54 @@ const InvestorDashboard = () => {
   return (
     <ErrorBoundary>
       <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-background overflow-hidden">
+        <div className="min-h-screen flex w-full bg-background">
+          {/* Mobile Overlay */}
+          {isMobileSidebarOpen && (
+            <div 
+              className="fixed inset-0 bg-black/50 z-40 md:hidden" 
+              onClick={() => setIsMobileSidebarOpen(false)} 
+            />
+          )}
+
           <InvestorSidebar 
             activeSection={activeSection} 
-            onSectionChange={setActiveSection}
+            onSectionChange={(section) => {
+              setActiveSection(section);
+              setIsMobileSidebarOpen(false);
+            }}
+            isMobileOpen={isMobileSidebarOpen}
+            onMobileToggle={setIsMobileSidebarOpen}
           />
           
-          <div className="flex-1 flex flex-col max-w-full max-h-screen overflow-hidden">
-            {/* Header */}
-            <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50 p-4">
+          <div className="flex-1 flex flex-col min-w-0 max-w-full">
+            {/* Fixed Header */}
+            <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 p-2 md:p-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div>
-                    <h1 className="text-2xl font-bold">Waves Quant Engine</h1>
-                    <p className="text-sm text-muted-foreground">
+                {/* Mobile Menu Button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="md:hidden h-8 w-8 p-0"
+                  onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+                >
+                  {isMobileSidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+                </Button>
+
+                <div className="flex items-center space-x-2 md:space-x-4 min-w-0 flex-1 md:flex-initial">
+                  <div className="min-w-0">
+                    <h1 className="text-sm md:text-xl lg:text-2xl font-bold truncate bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                      Waves Quant Engine
+                    </h1>
+                    <p className="text-xs md:text-sm text-muted-foreground truncate">
                       Multi-Asset Trading Platform - Investor Dashboard
                     </p>
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-4">
-                  <Badge variant="outline" className="px-3 py-1">
-                    <Activity className="h-4 w-4 mr-1" />
-                    Live Trading
+                <div className="flex items-center space-x-1 md:space-x-4 flex-shrink-0">
+                  <Badge variant="outline" className="px-1 md:px-3 py-1 text-xs border-green-200 text-green-700 bg-green-50 dark:border-green-800 dark:text-green-400 dark:bg-green-900/20">
+                    <Activity className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                    <span className="hidden sm:inline">Live </span>Trading
                   </Badge>
                   <ThemeToggle />
                 </div>
@@ -101,8 +129,10 @@ const InvestorDashboard = () => {
             </header>
 
             {/* Main Content */}
-            <main className="flex-1 p-6 overflow-auto max-w-full max-h-full">
-              {renderContent()}
+            <main className="flex-1 p-2 md:p-4 lg:p-6 overflow-auto bg-background">
+              <div className="max-w-full mx-auto animate-fade-in">
+                {renderContent()}
+              </div>
             </main>
           </div>
 
