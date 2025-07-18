@@ -1,240 +1,87 @@
 
-import axios from 'axios';
-import { supabase } from "@/integrations/supabase/client";
+import axios, { AxiosResponse } from 'axios';
+import { supabase } from '@/integrations/supabase/client';
 
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-production-domain.com/api' 
-  : 'http://localhost:3000/api';
-
-interface RequestConfig {
-  startTime?: Date;
-}
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
+// Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
     const { data: { session } } = await supabase.auth.getSession();
-    const accessToken = session?.access_token;
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
+    if (session?.access_token) {
+      config.headers.Authorization = `Bearer ${session.access_token}`;
     }
-    (config as any).requestStartTime = new Date();
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
   (error) => {
-    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
+// Response interceptor for error handling
 api.interceptors.response.use(
-  (response) => {
-    const endTime = new Date();
-    const startTime = (response.config as any).requestStartTime;
-    const duration = startTime ? endTime.getTime() - startTime.getTime() : 0;
-    console.log(`API Response: ${response.config.url} (${duration}ms)`);
-    return response;
-  },
+  (response: AxiosResponse) => response,
   (error) => {
-    const message = error.response?.data?.message || error.message || 'Network Error';
-    console.error('API Error:', {
-      url: error.config?.url,
-      status: error.response?.status,
-      message,
-      data: error.response?.data
-    });
-    
-    if (error.response?.status === 401) {
-      localStorage.removeItem('supabase-auth-token');
-      window.location.href = '/auth';
-    }
-    
+    console.error('API Error:', error);
     return Promise.reject(error);
   }
 );
 
 export const apiService = {
-  // Portfolio & Balance
-  async getBalance(userId: string) {
-    const response = await api.get(`/wallet/balance/exness/default`);
-    return response.data;
-  },
-
-  async updateBalance(userId: string, balance: any) {
-    const response = await api.post(`/wallet/update`, { user_id: userId, ...balance });
-    return response.data;
-  },
-
-  async getPortfolio() {
-    const response = await api.get('/portfolio/me');
-    return response.data;
-  },
-
-  async getPortfolioPerformance() {
-    const response = await api.get('/portfolio/performance');
-    return response.data;
-  },
-
-  // Trading Operations
-  async executeTrade(symbol: string, tradeType: string, amount: number) {
-    const response = await api.post('/trade/execute', {
-      symbol,
-      trade_type: tradeType,
-      amount
-    });
-    return response.data;
-  },
-
-  async getTradeHistory(symbol?: string) {
-    const params = symbol ? { symbol } : {};
-    const response = await api.get('/trade/history', { params });
-    return response.data;
-  },
-
-  // AI Strategies & Signals
-  async getAISignals(symbol?: string) {
-    const params = symbol ? { symbol } : {};
-    const response = await api.get('/strategies/signals', { params });
-    return response.data;
-  },
-
-  async getStrategyPerformance(symbol?: string) {
-    const params = symbol ? { symbol } : {};
-    const response = await api.get('/strategies/performance', { params });
-    return response.data;
-  },
-
-  async updateRiskParams(params: any) {
-    const response = await api.post('/strategies/risk', params);
-    return response.data;
-  },
-
-  // Trading Engine Control
-  async startTradingEngine() {
-    const response = await api.post('/engine/start');
-    return response.data;
-  },
-
-  async stopTradingEngine() {
-    const response = await api.post('/engine/stop');
-    return response.data;
-  },
-
-  async emergencyStop() {
-    const response = await api.post('/engine/emergency-stop');
-    return response.data;
-  },
-
-  // Owner Engine Control
-  async startEngine() {
-    const response = await api.post('/owner/engine/start');
-    return response.data;
-  },
-  async stopEngine() {
-    const response = await api.post('/owner/engine/stop');
-    return response.data;
-  },
-  async restartEngine() {
-    const response = await api.post('/owner/engine/restart');
-    return response.data;
-  },
-  async emergencyKill() {
-    const response = await api.post('/owner/engine/emergency-kill');
-    return response.data;
-  },
-  // Owner Health Monitor
-  async getSystemHealth() {
-    const response = await api.get('/owner/health/system');
-    return response.data;
-  },
-
-  // Market Data
-  async getMarketData(symbol: string) {
-    const response = await api.get(`/market-data/${symbol}`);
-    return response.data;
-  },
-
-  async getHistoricalData(symbol: string, timeframe: string = '1h', limit: number = 100) {
-    const response = await api.get(`/historical-data/${symbol}/${timeframe}`, {
-      params: { limit }
-    });
-    return response.data;
-  },
-
-  // Payments & Transactions
-  async processDeposit(data: any) {
-    const response = await api.post('/wallet/deposit/exness/default', data);
-    return response.data;
-  },
-
-  async processWithdrawal(data: any) {
-    const response = await api.post('/wallet/withdraw/exness/default', data);
-    return response.data;
-  },
-
-  // Transactions
-  async getTransactions() {
-    const response = await api.get('/investor/transactions');
-    return response.data;
-  },
-
-  async initiateDeposit(amount: number) {
-    const response = await api.post('/investor/deposit-initiate', { amount });
-    return response.data;
-  },
-
-  async requestWithdrawal(amount: number) {
-    const response = await api.post('/investor/withdraw-request', { amount });
-    return response.data;
-  },
-
-  // Trades
-  async getTrades() {
-    const response = await api.get('/investor/trades');
-    return response.data;
-  },
-
-  // Owner Strategies Management
-  async getStrategies() {
-    const response = await api.get('/owner/strategies');
-    return response.data;
-  },
-  async disableStrategy(strategyId: string) {
-    const response = await api.post(`/owner/strategies/${strategyId}/disable`);
-    return response.data;
-  },
-  async retrainStrategy(strategyId: string) {
-    const response = await api.post(`/owner/strategies/${strategyId}/retrain`);
-    return response.data;
-  },
-  async deleteStrategy(strategyId: string) {
-    const response = await api.delete(`/owner/strategies/${strategyId}/delete`);
-    return response.data;
-  },
-
-  // Owner Analytics
-  async getOverview() {
-    const response = await api.get('/owner/investors/overview');
-    return response.data;
-  },
-  async getLogs() {
-    const response = await api.get('/owner/logs');
-    return response.data;
-  },
-
-  // System Health
-  async healthCheck() {
-    const response = await api.get('/health');
-    return response.data;
-  }
+  // User management
+  getBalance: (userId: string) => api.get(`/api/users/${userId}/balance`),
+  updateBalance: (userId: string, balance: any) => api.put(`/api/users/${userId}/balance`, { balance }),
+  
+  // Portfolio
+  getPortfolio: () => api.get('/api/portfolio'),
+  getPortfolioPerformance: () => api.get('/api/portfolio/performance'),
+  
+  // Trading
+  getTrades: () => api.get('/api/trades'),
+  createTrade: (trade: any) => api.post('/api/trades', trade),
+  closeTrade: (tradeId: string) => api.post(`/api/trades/${tradeId}/close`),
+  
+  // Signals
+  getLiveSignals: () => api.get('/api/signals/live'),
+  getSignalHistory: () => api.get('/api/signals/history'),
+  
+  // Engine
+  getEngineStatus: () => api.get('/api/engine/status'),
+  startEngine: () => api.post('/api/engine/start'),
+  stopEngine: () => api.post('/api/engine/stop'),
+  getEngineStats: () => api.get('/api/engine/stats'),
+  
+  // Strategies
+  getStrategies: () => api.get('/api/strategies'),
+  createStrategy: (strategy: any) => api.post('/api/strategies', strategy),
+  updateStrategy: (id: string, strategy: any) => api.put(`/api/strategies/${id}`, strategy),
+  deleteStrategy: (id: string) => api.delete(`/api/strategies/${id}`),
+  
+  // Risk Management
+  getRiskParams: () => api.get('/api/risk/params'),
+  updateRiskParams: (params: any) => api.put('/api/risk/params', params),
+  
+  // Analytics
+  getPerformanceAnalytics: () => api.get('/api/analytics/performance'),
+  getAumHistory: () => api.get('/api/analytics/aum-history'),
+  
+  // Owner specific
+  getUserCount: () => api.get('/api/admin/users/count'),
+  getOwnerDashboard: () => api.get('/api/admin/dashboard'),
+  getOwnerSettings: () => api.get('/api/admin/settings'),
+  saveOwnerSettings: (settings: any) => api.put('/api/admin/settings', settings),
+  
+  // Payments
+  getTransactions: () => api.get('/api/payments/transactions'),
+  processPayment: (payment: any) => api.post('/api/payments/process', payment),
+  
+  // Health check
+  healthCheck: () => api.get('/api/health'),
 };
 
-export default apiService;
+export default api;
