@@ -356,6 +356,27 @@ export type Database = {
           },
         ]
       }
+      sentiments: {
+        Row: {
+          combined_score: number
+          created_at: string | null
+          id: number
+          symbol: string
+        }
+        Insert: {
+          combined_score: number
+          created_at?: string | null
+          id?: number
+          symbol: string
+        }
+        Update: {
+          combined_score?: number
+          created_at?: string | null
+          id?: number
+          symbol?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           created_at: string | null

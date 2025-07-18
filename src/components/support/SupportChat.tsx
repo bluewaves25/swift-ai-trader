@@ -3,8 +3,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { MessageCircle, X, Send, User, Bot } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { MessageCircle, X, Send, User, Bot, Clock, CheckCircle, MessageSquare, History } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -12,23 +14,104 @@ import { toast } from "sonner";
 interface Message {
   id: string;
   text: string;
-  sender: 'user' | 'bot';
+  sender: 'user' | 'bot' | 'support';
   timestamp: Date;
+  status?: 'sending' | 'sent' | 'read';
 }
+
+interface ChatSession {
+  id: string;
+  title: string;
+  lastMessage: string;
+  timestamp: Date;
+  status: 'active' | 'resolved' | 'pending';
+  unreadCount: number;
+}
+
+const commonQuestions = [
+  {
+    question: "How do I deposit funds?",
+    answer: "To deposit funds, go to your dashboard and click on 'Deposit' in the payments section. You can deposit via bank transfer, card, or crypto."
+  },
+  {
+    question: "What are the trading fees?",
+    answer: "Our trading fees are competitive: 0.1% for spot trading and 0.05% for futures. There are no deposit fees, and withdrawal fees vary by payment method."
+  },
+  {
+    question: "How does the AI trading work?",
+    answer: "Our AI analyzes market patterns using advanced machine learning algorithms. It executes trades based on proven strategies while managing risk automatically."
+  },
+  {
+    question: "Can I withdraw my funds anytime?",
+    answer: "Yes, you can request withdrawals 24/7. Processing times vary: crypto (5-30 mins), bank transfer (1-3 business days)."
+  },
+  {
+    question: "Is my investment safe?",
+    answer: "We use bank-level security, cold storage for crypto, and regulated brokers. Your funds are segregated and protected by insurance."
+  }
+];
 
 export function SupportChat() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("chat");
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Hi! How can I help you today?',
+      text: 'Hello! I\'m your AI assistant. I can help you with common questions about trading, deposits, withdrawals, and platform features. How can I help you today?',
       sender: 'bot',
-      timestamp: new Date()
+      timestamp: new Date(),
+      status: 'sent'
+    }
+  ]);
+  const [chatSessions] = useState<ChatSession[]>([
+    {
+      id: '1',
+      title: 'General Inquiry',
+      lastMessage: 'Thank you for your help!',
+      timestamp: new Date(Date.now() - 3600000),
+      status: 'resolved',
+      unreadCount: 0
+    },
+    {
+      id: '2',
+      title: 'Deposit Issue',
+      lastMessage: 'I\'ll check on that for you',
+      timestamp: new Date(Date.now() - 7200000),
+      status: 'pending',
+      unreadCount: 2
     }
   ]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const getBotResponse = (userMessage: string): string => {
+    const message = userMessage.toLowerCase();
+    
+    // Check for common questions
+    for (const qa of commonQuestions) {
+      if (qa.question.toLowerCase().includes(message) || 
+          message.includes(qa.question.toLowerCase().split(' ')[0]) ||
+          (message.includes('deposit') && qa.question.toLowerCase().includes('deposit')) ||
+          (message.includes('fee') && qa.question.toLowerCase().includes('fee')) ||
+          (message.includes('withdraw') && qa.question.toLowerCase().includes('withdraw')) ||
+          (message.includes('ai') && qa.question.toLowerCase().includes('ai')) ||
+          (message.includes('safe') && qa.question.toLowerCase().includes('safe'))) {
+        return qa.answer + "\n\nIs there anything else I can help you with? If you need further assistance, I can connect you with our support team.";
+      }
+    }
+    
+    // Default responses
+    if (message.includes('hello') || message.includes('hi')) {
+      return "Hello! I'm here to help you with any questions about our trading platform. What would you like to know?";
+    }
+    
+    if (message.includes('human') || message.includes('support') || message.includes('agent')) {
+      return "I'll connect you with our support team right away. They'll be able to provide more detailed assistance. Please hold on while I create a support ticket for you.";
+    }
+    
+    return "I understand you're asking about: \"" + userMessage + "\". While I don't have specific information about that, I can connect you with our support team who will be able to help you better. Would you like me to create a support ticket?";
+  };
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
@@ -42,36 +125,62 @@ export function SupportChat() {
       id: Date.now().toString(),
       text: newMessage,
       sender: 'user',
-      timestamp: new Date()
+      timestamp: new Date(),
+      status: 'sending'
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentMessage = newMessage;
     setNewMessage("");
     setLoading(true);
 
     try {
-      // Submit support ticket
-      const { error } = await supabase
-        .from('support_tickets')
-        .insert({
-          user_id: user.id,
-          subject: 'Chat Support',
-          description: newMessage,
-          status: 'open'
-        });
+      // Update message status to sent
+      setMessages(prev => prev.map(msg => 
+        msg.id === userMessage.id ? { ...msg, status: 'sent' } : msg
+      ));
 
-      if (error) throw error;
-
-      // Simulate bot response
+      // Get bot response
       setTimeout(() => {
-        const botResponse: Message = {
+        const botResponse = getBotResponse(currentMessage);
+        const botMessage: Message = {
           id: (Date.now() + 1).toString(),
-          text: "Thank you for your message! Our support team will review your request and get back to you soon. Is there anything else I can help you with?",
+          text: botResponse,
           sender: 'bot',
-          timestamp: new Date()
+          timestamp: new Date(),
+          status: 'sent'
         };
-        setMessages(prev => [...prev, botResponse]);
+        setMessages(prev => [...prev, botMessage]);
         setLoading(false);
+
+        // If bot suggests human support, create ticket
+        if (botResponse.includes('support team') || botResponse.includes('support ticket')) {
+          setTimeout(async () => {
+            try {
+              const { error } = await supabase
+                .from('support_tickets')
+                .insert({
+                  user_id: user.id,
+                  subject: 'Chat Support Request',
+                  description: `User message: ${currentMessage}\n\nBot response: ${botResponse}`,
+                  status: 'open'
+                });
+
+              if (!error) {
+                const ticketMessage: Message = {
+                  id: (Date.now() + 2).toString(),
+                  text: "✅ I've created a support ticket for you. Our team will respond within 24 hours. You'll receive updates via email.",
+                  sender: 'bot',
+                  timestamp: new Date(),
+                  status: 'sent'
+                };
+                setMessages(prev => [...prev, ticketMessage]);
+              }
+            } catch (error) {
+              console.error('Error creating support ticket:', error);
+            }
+          }, 1000);
+        }
       }, 1000);
 
     } catch (error) {
@@ -88,28 +197,43 @@ export function SupportChat() {
     }
   };
 
+  const handleQuickQuestion = (question: string) => {
+    setNewMessage(question);
+    setTimeout(() => handleSendMessage(), 100);
+  };
+
   return (
     <>
       {/* Support Chat Button */}
       <div className="fixed bottom-6 right-6 z-50">
         <Button
           onClick={() => setIsOpen(true)}
-          className="h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-0"
+          className="h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-0 relative"
         >
           <MessageCircle className="h-6 w-6 text-white" />
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
         </Button>
       </div>
 
-      {/* Support Chat Modal - Instagram Style */}
+      {/* Enhanced Support Chat Modal */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-end p-4 sm:items-center sm:justify-center">
           <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
           
-          <Card className="relative w-full max-w-md h-[32rem] sm:h-96 flex flex-col bg-white dark:bg-gray-900 shadow-2xl">
+          <Card className="relative w-full max-w-md h-[90vh] sm:h-[600px] flex flex-col bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-2xl border-white/20">
             {/* Header */}
             <CardHeader className="flex-shrink-0 pb-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-lg">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold">Support Chat</CardTitle>
+                <div className="flex items-center space-x-3">
+                  <div className="relative">
+                    <Bot className="h-8 w-8 p-1.5 bg-white/20 rounded-full" />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-semibold">AI Support</CardTitle>
+                    <p className="text-xs opacity-90">Usually responds instantly</p>
+                  </div>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -119,88 +243,158 @@ export function SupportChat() {
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="h-2 w-2 rounded-full bg-green-400"></div>
-                <span className="text-sm opacity-90">Online</span>
-              </div>
             </CardHeader>
 
-            {/* Messages */}
-            <CardContent className="flex-1 p-4 overflow-y-auto bg-gray-50 dark:bg-gray-800">
-              <div className="space-y-4">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className={`flex items-start space-x-2 max-w-[80%] ${message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                        message.sender === 'user' 
-                          ? 'bg-blue-500' 
-                          : 'bg-purple-500'
-                      }`}>
-                        {message.sender === 'user' ? (
-                          <User className="h-4 w-4 text-white" />
-                        ) : (
-                          <Bot className="h-4 w-4 text-white" />
-                        )}
-                      </div>
-                      <div className={`rounded-2xl px-4 py-2 ${
-                        message.sender === 'user'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white border'
-                      }`}>
-                        <p className="text-sm">{message.text}</p>
-                        <p className={`text-xs mt-1 ${
-                          message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
-                        }`}>
-                          {message.timestamp.toLocaleTimeString('en-US', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </p>
-                      </div>
+            {/* Content Tabs */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+                <TabsList className="grid w-full grid-cols-2 bg-white/50 dark:bg-gray-800/50 m-2 rounded-lg">
+                  <TabsTrigger value="chat" className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Chat
+                  </TabsTrigger>
+                  <TabsTrigger value="history" className="flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    History
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="chat" className="flex-1 flex flex-col mt-0">
+                  {/* Quick Questions */}
+                  <div className="p-3 border-b bg-white/50 dark:bg-gray-800/50">
+                    <p className="text-xs font-medium mb-2">Quick questions:</p>
+                    <div className="flex gap-1 flex-wrap">
+                      {commonQuestions.slice(0, 3).map((qa, i) => (
+                        <Button
+                          key={i}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-6 px-2"
+                          onClick={() => handleQuickQuestion(qa.question)}
+                        >
+                          {qa.question}
+                        </Button>
+                      ))}
                     </div>
                   </div>
-                ))}
-                {loading && (
-                  <div className="flex justify-start">
-                    <div className="flex items-start space-x-2">
-                      <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center">
-                        <Bot className="h-4 w-4 text-white" />
-                      </div>
-                      <div className="bg-white dark:bg-gray-700 rounded-2xl px-4 py-2 border">
-                        <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-100"></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-200"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
 
-            {/* Input */}
-            <div className="flex-shrink-0 p-4 border-t bg-white dark:bg-gray-900">
-              <div className="flex space-x-2">
-                <Input
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type a message..."
-                  className="flex-1 rounded-full border-gray-300 focus:border-blue-500"
-                  disabled={loading}
-                />
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={loading || !newMessage.trim()}
-                  className="rounded-full w-10 h-10 p-0 bg-blue-500 hover:bg-blue-600"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
+                  {/* Messages */}
+                  <ScrollArea className="flex-1 p-4">
+                    <div className="space-y-4">
+                      {messages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div className={`flex items-start space-x-2 max-w-[85%] ${message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                              message.sender === 'user' 
+                                ? 'bg-blue-500' 
+                                : message.sender === 'bot' 
+                                ? 'bg-purple-500' 
+                                : 'bg-green-500'
+                            }`}>
+                              {message.sender === 'user' ? (
+                                <User className="h-4 w-4 text-white" />
+                              ) : message.sender === 'bot' ? (
+                                <Bot className="h-4 w-4 text-white" />
+                              ) : (
+                                <MessageCircle className="h-4 w-4 text-white" />
+                              )}
+                            </div>
+                            <div className={`rounded-2xl px-4 py-2 ${
+                              message.sender === 'user'
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white border shadow-sm'
+                            }`}>
+                              <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                              <div className={`flex items-center justify-between mt-1 ${
+                                message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
+                              }`}>
+                                <p className="text-xs">
+                                  {message.timestamp.toLocaleTimeString('en-US', { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit' 
+                                  })}
+                                </p>
+                                {message.sender === 'user' && (
+                                  <div className="flex items-center space-x-1">
+                                    {message.status === 'sending' && <Clock className="h-3 w-3" />}
+                                    {message.status === 'sent' && <CheckCircle className="h-3 w-3" />}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {loading && (
+                        <div className="flex justify-start">
+                          <div className="flex items-start space-x-2">
+                            <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center">
+                              <Bot className="h-4 w-4 text-white" />
+                            </div>
+                            <div className="bg-white dark:bg-gray-700 rounded-2xl px-4 py-2 border shadow-sm">
+                              <div className="flex space-x-1">
+                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-100"></div>
+                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-200"></div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+
+                  {/* Input */}
+                  <div className="flex-shrink-0 p-4 border-t bg-white/50 dark:bg-gray-800/50">
+                    <div className="flex space-x-2">
+                      <Input
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        placeholder="Type your message..."
+                        className="flex-1 rounded-full border-gray-300 focus:border-blue-500 bg-white dark:bg-gray-700"
+                        disabled={loading}
+                      />
+                      <Button
+                        onClick={handleSendMessage}
+                        disabled={loading || !newMessage.trim()}
+                        className="rounded-full w-10 h-10 p-0 bg-blue-500 hover:bg-blue-600"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="history" className="flex-1 mt-0">
+                  <ScrollArea className="h-full p-4">
+                    <div className="space-y-3">
+                      {chatSessions.map((session) => (
+                        <div key={session.id} className="p-3 rounded-lg border bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium text-sm">{session.title}</h4>
+                            <div className="flex items-center space-x-2">
+                              <Badge variant={session.status === 'active' ? 'default' : session.status === 'resolved' ? 'secondary' : 'destructive'} className="text-xs">
+                                {session.status}
+                              </Badge>
+                              {session.unreadCount > 0 && (
+                                <Badge variant="destructive" className="text-xs">
+                                  {session.unreadCount}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">{session.lastMessage}</p>
+                          <p className="text-xs text-gray-500">{session.timestamp.toLocaleDateString()}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+              </Tabs>
             </div>
           </Card>
         </div>
