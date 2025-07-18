@@ -3,34 +3,19 @@ import { useState, useEffect } from 'react';
 import { apiService } from '@/services/api';
 import { toast } from 'sonner';
 
-export function useApi<T>(
-  apiCall: () => Promise<T>,
-  dependencies: any[] = [],
-  options: {
-    immediate?: boolean;
-    onSuccess?: (data: T) => void;
-    onError?: (error: any) => void;
-  } = {}
-) {
-  const [data, setData] = useState<T | null>(null);
+export const useApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { immediate = true, onSuccess, onError } = options;
-
-  const execute = async () => {
+  const executeRequest = async (requestFn: () => Promise<any>) => {
     setLoading(true);
     setError(null);
-    
     try {
-      const result = await apiCall();
-      setData(result);
-      onSuccess?.(result);
-      return result;
+      const response = await requestFn();
+      return response.data;
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'An error occurred';
       setError(errorMessage);
-      onError?.(err);
       toast.error(errorMessage);
       throw err;
     } finally {
@@ -38,41 +23,24 @@ export function useApi<T>(
     }
   };
 
-  useEffect(() => {
-    if (immediate) {
-      execute();
-    }
-  }, dependencies);
+  const getBalance = async (userId: string) => {
+    return executeRequest(() => apiService.getBalance(userId));
+  };
+
+  const updateBalance = async (userId: string, balance: number) => {
+    return executeRequest(() => apiService.updateBalance(userId, balance));
+  };
+
+  const getPortfolio = async () => {
+    return executeRequest(() => apiService.getPortfolio());
+  };
 
   return {
-    data,
     loading,
     error,
-    execute,
-    refetch: execute
+    getBalance,
+    updateBalance,
+    getPortfolio,
+    executeRequest
   };
-}
-
-// Specific hooks for common operations
-export function useBalance(userId: string) {
-  return useApi(
-    () => apiService.getBalance(userId),
-    [userId],
-    { immediate: !!userId }
-  );
-}
-
-export function useMarketData(symbol: string) {
-  return useApi(
-    () => apiService.getMarketData(symbol),
-    [symbol],
-    { immediate: !!symbol }
-  );
-}
-
-export function useAISignals(symbol?: string) {
-  return useApi(
-    () => apiService.getAISignals(symbol),
-    [symbol]
-  );
-}
+};

@@ -1,240 +1,169 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { Brain, ArrowLeft, FileText } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Terms = () => {
-  const navigate = useNavigate();
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4">
+    <div className="min-h-screen dark bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Header with glassmorphism */}
+      <div className="sticky top-0 z-20 border-b border-white/10 bg-white/10 backdrop-blur-xl supports-[backdrop-filter]:bg-white/5">
+        <div className="container mx-auto px-2 md:px-4 py-2 md:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/')}
-                className="flex items-center space-x-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span>Back to Home</span>
+            <div className="flex items-center space-x-2">
+              <Brain className="h-6 w-6 md:h-8 md:w-8 text-white" />
+              <span className="text-lg md:text-2xl font-bold text-white">Waves Quant Engine</span>
+            </div>
+            <Link to="/">
+              <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
+                <ArrowLeft className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                <span className="text-xs md:text-sm">Back</span>
               </Button>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Terms of Service
-              </h1>
-            </div>
-            <div className="flex items-center space-x-6">
-              <Link to="/about" className="text-foreground hover:text-primary transition-colors">About</Link>
-              <Link to="/contact" className="text-foreground hover:text-primary transition-colors">Contact</Link>
-              <Link to="/terms" className="text-foreground hover:text-primary transition-colors">Terms</Link>
-              <Link to="/auth" className="text-foreground hover:text-primary transition-colors">Sign In</Link>
-            </div>
+            </Link>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12">
-        <div className="text-center mb-8">
-          <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Terms of Service
-          </h2>
-          <p className="text-muted-foreground">
-            Last updated: {new Date().toLocaleDateString()}
+      <div className="container mx-auto px-2 md:px-4 py-4 md:py-12">
+        {/* Hero Section */}
+        <div className="text-center mb-6 md:mb-16">
+          <Badge variant="secondary" className="mb-3 md:mb-6 bg-white/20 text-white border-white/30 backdrop-blur-sm text-xs md:text-sm">
+            <FileText className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+            Legal Information
+          </Badge>
+          
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-8 leading-tight text-white">
+            Terms & Conditions
+          </h1>
+          
+          <p className="text-sm md:text-xl lg:text-2xl mb-6 md:mb-12 text-white/95 max-w-3xl mx-auto leading-relaxed font-medium">
+            Please read these terms and conditions carefully before using our AI trading platform.
           </p>
         </div>
 
-        <div className="max-w-4xl mx-auto space-y-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>1. Agreement to Terms</CardTitle>
+        <div className="max-w-4xl mx-auto">
+          <Card className="bg-white/10 backdrop-blur-md border-white/20 text-white">
+            <CardHeader className="p-3 md:p-6">
+              <CardTitle className="text-lg md:text-2xl">Terms of Service</CardTitle>
+              <CardDescription className="text-xs md:text-base text-white/90">
+                Last updated: {new Date().toLocaleDateString()}
+              </CardDescription>
             </CardHeader>
-            <CardContent className="prose dark:prose-invert max-w-none">
-              <p>
-                By accessing and using Waves Quant Engine ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. 
-                If you do not agree to abide by the above, please do not use this service.
-              </p>
+            <CardContent className="p-3 md:p-6 space-y-4 md:space-y-6">
+              <section>
+                <h2 className="text-base md:text-xl font-semibold mb-2 md:mb-3 text-white">1. Acceptance of Terms</h2>
+                <p className="text-xs md:text-sm text-white/90 leading-relaxed">
+                  By accessing and using Waves Quant Engine ("the Platform"), you accept and agree to be bound by the terms 
+                  and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+                </p>
+              </section>
+
+              <section>
+                <h2 className="text-base md:text-xl font-semibold mb-2 md:mb-3 text-white">2. Description of Service</h2>
+                <p className="text-xs md:text-sm text-white/90 leading-relaxed mb-2">
+                  Waves Quant Engine provides an AI-powered trading platform that offers:
+                </p>
+                <ul className="list-disc list-inside text-xs md:text-sm text-white/90 space-y-1 ml-3 md:ml-4">
+                  <li>Automated trading algorithms and strategies</li>
+                  <li>Real-time market analysis and signals</li>
+                  <li>Portfolio management and risk assessment tools</li>
+                  <li>Performance analytics and reporting</li>
+                </ul>
+              </section>
+
+              <section>
+                <h2 className="text-base md:text-xl font-semibold mb-2 md:mb-3 text-white">3. User Responsibilities</h2>
+                <p className="text-xs md:text-sm text-white/90 leading-relaxed mb-2">
+                  As a user of our platform, you agree to:
+                </p>
+                <ul className="list-disc list-inside text-xs md:text-sm text-white/90 space-y-1 ml-3 md:ml-4">
+                  <li>Provide accurate and complete information during registration</li>
+                  <li>Maintain the confidentiality of your account credentials</li>
+                  <li>Use the platform in compliance with all applicable laws and regulations</li>
+                  <li>Not attempt to interfere with or disrupt the platform's operation</li>
+                  <li>Accept full responsibility for all trading decisions and their outcomes</li>
+                </ul>
+              </section>
+
+              <section>
+                <h2 className="text-base md:text-xl font-semibold mb-2 md:mb-3 text-white">4. Risk Disclosure</h2>
+                <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-2 md:p-4">
+                  <p className="text-xs md:text-sm text-white/95 leading-relaxed font-medium">
+                    <strong>IMPORTANT RISK WARNING:</strong> Trading in financial markets involves substantial risk of loss. 
+                    Past performance does not guarantee future results. You should only trade with money you can afford to lose. 
+                    Our AI algorithms, while sophisticated, cannot guarantee profits or prevent losses.
+                  </p>
+                </div>
+              </section>
+
+              <section>
+                <h2 className="text-base md:text-xl font-semibold mb-2 md:mb-3 text-white">5. Privacy Policy</h2>
+                <p className="text-xs md:text-sm text-white/90 leading-relaxed">
+                  We are committed to protecting your privacy. Our Privacy Policy explains how we collect, use, and protect 
+                  your information when you use our platform. By using our service, you agree to the collection and use of 
+                  information in accordance with our Privacy Policy.
+                </p>
+              </section>
+
+              <section>
+                <h2 className="text-base md:text-xl font-semibold mb-2 md:mb-3 text-white">6. Intellectual Property</h2>
+                <p className="text-xs md:text-sm text-white/90 leading-relaxed">
+                  All content, algorithms, software, and intellectual property on the Waves Quant Engine platform are owned by 
+                  or licensed to us. You may not copy, modify, distribute, or create derivative works based on our proprietary 
+                  technology without explicit written permission.
+                </p>
+              </section>
+
+              <section>
+                <h2 className="text-base md:text-xl font-semibold mb-2 md:mb-3 text-white">7. Limitation of Liability</h2>
+                <p className="text-xs md:text-sm text-white/90 leading-relaxed">
+                  In no event shall Waves Quant Engine, its officers, directors, employees, or agents be liable for any indirect, 
+                  incidental, special, consequential, or punitive damages, including but not limited to loss of profits, trading 
+                  losses, or loss of data, arising out of or in connection with your use of the platform.
+                </p>
+              </section>
+
+              <section>
+                <h2 className="text-base md:text-xl font-semibold mb-2 md:mb-3 text-white">8. Termination</h2>
+                <p className="text-xs md:text-sm text-white/90 leading-relaxed">
+                  We reserve the right to terminate or suspend your account and access to the platform at our sole discretion, 
+                  without notice, for conduct that we believe violates these Terms of Service or is harmful to other users, 
+                  us, or third parties.
+                </p>
+              </section>
+
+              <section>
+                <h2 className="text-base md:text-xl font-semibold mb-2 md:mb-3 text-white">9. Changes to Terms</h2>
+                <p className="text-xs md:text-sm text-white/90 leading-relaxed">
+                  We reserve the right to modify these terms at any time. Changes will be effective immediately upon posting to 
+                  the platform. Your continued use of the platform after changes are posted constitutes your acceptance of the 
+                  modified terms.
+                </p>
+              </section>
+
+              <section>
+                <h2 className="text-base md:text-xl font-semibold mb-2 md:mb-3 text-white">10. Contact Information</h2>
+                <p className="text-xs md:text-sm text-white/90 leading-relaxed">
+                  If you have any questions about these Terms of Service, please contact us at:
+                </p>
+                <div className="mt-2 md:mt-3 text-xs md:text-sm text-white/90">
+                  <p>Email: legal@wavesquant.com</p>
+                  <p>Phone: +1 (555) 123-4567</p>
+                  <p>Address: 123 Financial District, New York, NY 10001</p>
+                </div>
+              </section>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>2. Use License</CardTitle>
-            </CardHeader>
-            <CardContent className="prose dark:prose-invert max-w-none">
-              <p>
-                Permission is granted to temporarily download one copy of the materials on Waves Quant Engine's website for personal, 
-                non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:
-              </p>
-              <ul className="list-disc pl-6 mt-4">
-                <li>modify or copy the materials</li>
-                <li>use the materials for any commercial purpose or for any public display</li>
-                <li>attempt to reverse engineer any software contained on the website</li>
-                <li>remove any copyright or other proprietary notations from the materials</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>3. Investment Risks</CardTitle>
-            </CardHeader>
-            <CardContent className="prose dark:prose-invert max-w-none">
-              <p>
-                Trading and investment involve substantial risk of loss and are not suitable for every investor. 
-                The valuation of currencies, securities, and other financial instruments may fluctuate, and as a result, 
-                clients may lose more than their original investment.
-              </p>
-              <p className="mt-4">
-                <strong>Important Risk Disclosures:</strong>
-              </p>
-              <ul className="list-disc pl-6 mt-2">
-                <li>Past performance is not indicative of future results</li>
-                <li>All investments carry the risk of losses</li>
-                <li>You should only invest money you can afford to lose</li>
-                <li>AI trading systems may malfunction or produce unexpected results</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>4. Account Responsibilities</CardTitle>
-            </CardHeader>
-            <CardContent className="prose dark:prose-invert max-w-none">
-              <p>
-                You are responsible for maintaining the confidentiality of your account information and password. 
-                You accept responsibility for all activities that occur under your account.
-              </p>
-              <ul className="list-disc pl-6 mt-4">
-                <li>Provide accurate and complete registration information</li>
-                <li>Maintain the security of your login credentials</li>
-                <li>Notify us immediately of any unauthorized account use</li>
-                <li>Comply with all applicable laws and regulations</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>5. Deposits and Withdrawals</CardTitle>
-            </CardHeader>
-            <CardContent className="prose dark:prose-invert max-w-none">
-              <p>
-                All deposits and withdrawals are processed according to our standard procedures:
-              </p>
-              <ul className="list-disc pl-6 mt-4">
-                <li>Minimum deposit: $100 USD</li>
-                <li>Deposits are typically processed within 24 hours</li>
-                <li>Withdrawals require a minimum 2-week investment period</li>
-                <li>Withdrawal requests are subject to review and approval</li>
-                <li>We reserve the right to cancel transactions suspected of fraud or money laundering</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>6. Fees and Charges</CardTitle>
-            </CardHeader>
-            <CardContent className="prose dark:prose-invert max-w-none">
-              <p>
-                Our fee structure is transparent and competitive:
-              </p>
-              <ul className="list-disc pl-6 mt-4">
-                <li>Performance fee: 20% of profits above $10 daily profit threshold</li>
-                <li>No management fees for standard accounts</li>
-                <li>Payment processing fees may apply for certain deposit/withdrawal methods</li>
-                <li>Fees are automatically deducted from your account balance</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>7. Prohibited Activities</CardTitle>
-            </CardHeader>
-            <CardContent className="prose dark:prose-invert max-w-none">
-              <p>
-                The following activities are strictly prohibited:
-              </p>
-              <ul className="list-disc pl-6 mt-4">
-                <li>Market manipulation or insider trading</li>
-                <li>Money laundering or funding of illegal activities</li>
-                <li>Attempting to hack or compromise our systems</li>
-                <li>Creating multiple accounts to circumvent limits</li>
-                <li>Providing false or misleading information</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>8. Limitation of Liability</CardTitle>
-            </CardHeader>
-            <CardContent className="prose dark:prose-invert max-w-none">
-              <p>
-                In no event shall Waves Quant Engine or its suppliers be liable for any damages (including, without limitation, 
-                damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use 
-                the materials on our website, even if we or our authorized representative has been notified orally or in writing 
-                of the possibility of such damage.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>9. Privacy Policy</CardTitle>
-            </CardHeader>
-            <CardContent className="prose dark:prose-invert max-w-none">
-              <p>
-                Your privacy is important to us. We collect and use your personal information in accordance with our Privacy Policy, 
-                which includes:
-              </p>
-              <ul className="list-disc pl-6 mt-4">
-                <li>Personal identification information for account verification</li>
-                <li>Trading activity data for performance analysis</li>
-                <li>Communication preferences and support interactions</li>
-                <li>We do not sell your personal information to third parties</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>10. Modifications</CardTitle>
-            </CardHeader>
-            <CardContent className="prose dark:prose-invert max-w-none">
-              <p>
-                Waves Quant Engine may revise these terms of service for its website at any time without notice. 
-                By using this website, you are agreeing to be bound by the then current version of these terms of service.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>11. Contact Information</CardTitle>
-            </CardHeader>
-            <CardContent className="prose dark:prose-invert max-w-none">
-              <p>
-                If you have any questions about these Terms of Service, please contact us:
-              </p>
-              <ul className="list-none mt-4">
-                <li>Email: legal@wavesquant.com</li>
-                <li>Phone: +233 (500) 33-4946</li>
-                <li>Address: Opposite Valley View University, Techiman, Site, Ghana</li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="text-center mt-12">
-          <Button onClick={() => navigate('/auth')}>
-            I Agree - Sign Up Now
-          </Button>
+          <div className="text-center mt-6 md:mt-8">
+            <Link to="/auth">
+              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold text-sm md:text-base">
+                I Agree - Get Started
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

@@ -23,39 +23,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        
+        console.log('[Auth] Initial session:', session?.user?.id);
         setUser(session?.user ?? null);
-        setLoading(false);
-        console.log('[Auth] Initial session:', session?.user);
-      })
-      .catch((err) => {
+      } catch (error) {
+        console.error('[Auth] getSession error:', error);
         setUser(null);
+      } finally {
         setLoading(false);
-        console.error('[Auth] getSession error:', err);
-      });
+      }
+    };
+
+    getInitialSession();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('[Auth] Auth event:', event, session?.user?.id);
         setUser(session?.user ?? null);
+        setLoading(false);
         
-        try {
-          if (event === 'SIGNED_IN' && session?.user) {
-            // Check if user exists in our users table, if not create them
-            let existingUser, fetchError;
-            try {
-              const res = await supabase
-                .from('users')
-                .select('role')
-                .eq('id', session.user.id)
-                .single();
-              existingUser = res.data;
-              fetchError = res.error;
-            } catch (e) {
-              fetchError = e;
-            }
+        if (event === 'SIGNED_IN' && session?.user) {
+          try {
+            // Check if user exists in our users table
+            const { data: existingUser, error: fetchError } = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', session.user.id)
+              .single();
             
             if (fetchError && fetchError.code === 'PGRST116') {
               // User doesn't exist, create them
@@ -66,9 +65,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   email: session.user.email!,
                   role: 'investor'
                 });
+              
               if (createError) {
                 console.error('Error creating user:', createError);
-                toast.error('Failed to create user profile.');
               }
               navigate('/investor-dashboard');
               toast.success('Account created successfully!');
@@ -83,18 +82,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               navigate('/investor-dashboard');
               toast.success('Successfully logged in!');
             }
+          } catch (error) {
+            console.error('Error in auth state change:', error);
+            navigate('/investor-dashboard');
+            toast.success('Successfully logged in!');
           }
-          
-          if (event === 'SIGNED_OUT') {
-            navigate('/', { replace: true });
-            toast.success('Successfully logged out!');
-          }
-        } catch (error) {
-          console.error('Error in auth state change:', error);
-          navigate('/investor-dashboard');
-          toast.success('Successfully logged in!');
-        } finally {
-          setLoading(false);
+        }
+        
+        if (event === 'SIGNED_OUT') {
+          navigate('/', { replace: true });
+          toast.success('Successfully logged out!');
         }
       }
     );
@@ -151,7 +148,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       localStorage.removeItem("token");
       
-      // Force navigation to landing page
       setUser(null);
       navigate('/', { replace: true });
       toast.success('Successfully logged out!');

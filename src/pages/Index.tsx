@@ -56,7 +56,7 @@ const Index = () => {
           backgroundBlendMode: 'overlay, normal'
         }}
       >
-        {/* Removed blur overlay, replaced with a semi-transparent dark overlay for text clarity */}
+        {/* Dark overlay for text clarity */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <div
             className="w-full h-full"
@@ -75,21 +75,22 @@ const Index = () => {
 
         {/* Header - Sticky with glassmorphism */}
         <div className="sticky top-0 z-20 border-b border-white/10 bg-white/10 backdrop-blur-xl supports-[backdrop-filter]:bg-white/5">
-          <div className="container mx-auto px-4 py-4">
+          <div className="container mx-auto px-2 md:px-4 py-2 md:py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Brain className="h-8 w-8 text-white" />
-                <span className="text-2xl font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">Waves Quant Engine</span>
+                <Brain className="h-6 w-6 md:h-8 md:w-8 text-white" />
+                <span className="text-lg md:text-2xl font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">Waves Quant Engine</span>
               </div>
-              <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-2 md:space-x-6">
                 <div className="hidden md:flex items-center space-x-6">
-                  <Link to="/about" className="text-white/90 hover:text-white transition-colors font-medium">About</Link>
-                  <Link to="/contact" className="text-white/90 hover:text-white transition-colors font-medium">Contact</Link>
-                  <Link to="/terms" className="text-white/90 hover:text-white transition-colors font-medium">Terms</Link>
+                  <Link to="/about" className="text-white/90 hover:text-white transition-colors font-medium text-sm">About</Link>
+                  <Link to="/contact" className="text-white/90 hover:text-white transition-colors font-medium text-sm">Contact</Link>
+                  <Link to="/terms" className="text-white/90 hover:text-white transition-colors font-medium text-sm">Terms</Link>
                 </div>
                 <Button 
                   onClick={() => navigate('/auth')} 
-                  className="bg-white/90 text-blue-600 hover:bg-white font-semibold"
+                  size="sm"
+                  className="bg-white/90 text-blue-600 hover:bg-white font-semibold text-xs md:text-sm"
                 >
                   Sign In
                 </Button>
@@ -100,71 +101,71 @@ const Index = () => {
 
         {/* Hero Content */}
         <div className="relative z-20 flex items-center min-h-[calc(100vh-80px)]">
-          <div className="container mx-auto px-4 py-20">
+          <div className="container mx-auto px-2 md:px-4 py-8 md:py-20">
             <div className="text-center text-white">
-              <Badge variant="secondary" className="mb-6 bg-white/20 text-white border-white/30 backdrop-blur-sm drop-shadow-lg">
-                <Zap className="h-4 w-4 mr-2" />
+              <Badge variant="secondary" className="mb-3 md:mb-6 bg-white/20 text-white border-white/30 backdrop-blur-sm drop-shadow-lg text-xs md:text-sm">
+                <Zap className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
                 AI-Powered Trading Platform
               </Badge>
               
-              <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
+              <h1 className="text-3xl md:text-5xl lg:text-7xl font-bold mb-4 md:mb-8 leading-tight text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
                 <span className="text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">Trade Smarter with</span>
                 <span className="block bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
                   AI Precision
                 </span>
               </h1>
               
-              <p className="text-xl md:text-2xl mb-12 text-white/95 max-w-3xl mx-auto leading-relaxed font-semibold drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+              <p className="text-sm md:text-xl lg:text-2xl mb-6 md:mb-12 text-white/95 max-w-3xl mx-auto leading-relaxed font-semibold drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                 Experience the future of trading with our advanced AI algorithms that analyze market patterns, 
                 execute precise trades, and maximize your investment potential 24/7.
               </p>
 
               {/* Live Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12 max-w-4xl mx-auto">
-                <div className="bg-white/15 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                  <div className="flex items-center justify-center mb-2">
-                    <Users className="h-5 w-5 text-blue-300" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-6 mb-6 md:mb-12 max-w-4xl mx-auto">
+                <div className="bg-white/15 backdrop-blur-md rounded-xl p-2 md:p-4 border border-white/20">
+                  <div className="flex items-center justify-center mb-1 md:mb-2">
+                    <Users className="h-3 w-3 md:h-5 md:w-5 text-blue-300" />
                   </div>
-                  <div className="text-2xl font-bold text-white">{stats.totalUsers.toLocaleString()}</div>
-                  <div className="text-sm text-white/80 font-medium">Active Traders</div>
+                  <div className="text-lg md:text-2xl font-bold text-white">{stats.totalUsers.toLocaleString()}</div>
+                  <div className="text-xs md:text-sm text-white/80 font-medium">Active Traders</div>
                 </div>
-                <div className="bg-white/15 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                  <div className="flex items-center justify-center mb-2">
-                    <Activity className="h-5 w-5 text-green-300" />
+                <div className="bg-white/15 backdrop-blur-md rounded-xl p-2 md:p-4 border border-white/20">
+                  <div className="flex items-center justify-center mb-1 md:mb-2">
+                    <Activity className="h-3 w-3 md:h-5 md:w-5 text-green-300" />
                   </div>
-                  <div className="text-2xl font-bold text-white">{stats.totalTrades.toLocaleString()}</div>
-                  <div className="text-sm text-white/80 font-medium">Trades Executed</div>
+                  <div className="text-lg md:text-2xl font-bold text-white">{stats.totalTrades.toLocaleString()}</div>
+                  <div className="text-xs md:text-sm text-white/80 font-medium">Trades Executed</div>
                 </div>
-                <div className="bg-white/15 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                  <div className="flex items-center justify-center mb-2">
-                    <Target className="h-5 w-5 text-purple-300" />
+                <div className="bg-white/15 backdrop-blur-md rounded-xl p-2 md:p-4 border border-white/20">
+                  <div className="flex items-center justify-center mb-1 md:mb-2">
+                    <Target className="h-3 w-3 md:h-5 md:w-5 text-purple-300" />
                   </div>
-                  <div className="text-2xl font-bold text-white">{stats.successRate.toFixed(1)}%</div>
-                  <div className="text-sm text-white/80 font-medium">Success Rate</div>
+                  <div className="text-lg md:text-2xl font-bold text-white">{stats.successRate.toFixed(1)}%</div>
+                  <div className="text-xs md:text-sm text-white/80 font-medium">Success Rate</div>
                 </div>
-                <div className="bg-white/15 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                  <div className="flex items-center justify-center mb-2">
-                    <DollarSign className="h-5 w-5 text-yellow-300" />
+                <div className="bg-white/15 backdrop-blur-md rounded-xl p-2 md:p-4 border border-white/20">
+                  <div className="flex items-center justify-center mb-1 md:mb-2">
+                    <DollarSign className="h-3 w-3 md:h-5 md:w-5 text-yellow-300" />
                   </div>
-                  <div className="text-2xl font-bold text-white">${(stats.totalProfit / 1000000).toFixed(1)}M</div>
-                  <div className="text-sm text-white/80 font-medium">Total Profits</div>
+                  <div className="text-lg md:text-2xl font-bold text-white">${(stats.totalProfit / 1000000).toFixed(1)}M</div>
+                  <div className="text-xs md:text-sm text-white/80 font-medium">Total Profits</div>
                 </div>
               </div>
               
-              <div className="flex flex-col sm:flex-row gap-6 justify-center">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-6 justify-center">
                 <Button 
                   size="lg" 
                   onClick={() => navigate('/auth')}
-                  className="bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold"
+                  className="bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold text-sm md:text-base"
                 >
                   Start Trading Now
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-1 md:ml-2 h-3 w-3 md:h-5 md:w-5" />
                 </Button>
                 <Button 
                   size="lg" 
                   variant="outline"
                   onClick={() => navigate('/about')}
-                  className="border-white/40 text-white hover:bg-white/15 backdrop-blur-sm bg-white/10 font-semibold"
+                  className="border-white/40 text-white hover:bg-white/15 backdrop-blur-sm bg-white/10 font-semibold text-sm md:text-base"
                 >
                   Learn More
                 </Button>

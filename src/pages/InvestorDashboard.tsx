@@ -8,8 +8,8 @@ import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { Activity, Menu, X } from "lucide-react";
 import DashboardOverview from "@/components/investor/DashboardOverview";
 import InvestorPortfolio from "@/components/investor/InvestorPortfolio";
-import { LiveSignals } from "@/components/trading/LiveSignals";
-import { TradeHistory } from "@/components/trading/TradeHistory";
+import LiveSignals from "@/components/trading/LiveSignals";
+import TradeHistory from "@/components/trading/TradeHistory";
 import InvestorJournal from "@/components/investor/InvestorJournal";
 import InvestorSettings from "@/components/investor/InvestorSettings";
 import InvestorProfile from "@/components/investor/InvestorProfile";
@@ -67,10 +67,10 @@ const InvestorDashboard = () => {
           <Button
             variant="outline"
             size="icon"
-            className="fixed top-2 left-2 z-50 md:hidden h-7 w-7"
+            className="fixed top-1 left-1 z-50 md:hidden h-6 w-6 text-xs"
             onClick={() => setIsMobileOpen(!isMobileOpen)}
           >
-            {isMobileOpen ? <X className="h-3 w-3" /> : <Menu className="h-3 w-3" />}
+            {isMobileOpen ? <X className="h-2.5 w-2.5" /> : <Menu className="h-2.5 w-2.5" />}
           </Button>
 
           {/* Mobile Overlay */}
@@ -87,23 +87,23 @@ const InvestorDashboard = () => {
           
           <div className="flex-1 flex flex-col min-w-0 max-w-full">
             {/* Fixed Header */}
-            <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 p-2 md:p-3 shadow-sm flex-shrink-0">
-              <div className="flex items-center justify-between ml-8 md:ml-0">
-                <div className="flex items-center space-x-2 min-w-0">
+            <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95 p-1 md:p-2 shadow-sm flex-shrink-0">
+              <div className="flex items-center justify-between ml-6 md:ml-0">
+                <div className="flex items-center space-x-1 min-w-0">
                   <div className="min-w-0">
-                    <h1 className="text-sm md:text-lg lg:text-xl font-bold truncate bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    <h1 className="text-xs md:text-base lg:text-lg font-bold truncate bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                       Trading Dashboard
                     </h1>
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-xs text-muted-foreground truncate hidden sm:block">
                       Investment Management Platform
                     </p>
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-1 md:space-x-2 flex-shrink-0">
-                  <Badge variant="outline" className="px-1 md:px-2 py-0.5 text-xs border-green-200 text-green-700 bg-green-50 dark:border-green-800 dark:text-green-400 dark:bg-green-900/20">
-                    <Activity className="h-2 w-2 md:h-3 md:w-3 mr-1" />
-                    <span className="hidden sm:inline text-xs">Trading </span>Active
+                <div className="flex items-center space-x-1 flex-shrink-0">
+                  <Badge variant="outline" className="px-1 py-0 text-xs border-green-200 text-green-700 bg-green-50 dark:border-green-800 dark:text-green-400 dark:bg-green-900/20">
+                    <Activity className="h-2 w-2 mr-0.5" />
+                    <span className="hidden sm:inline text-xs">Active</span>
                   </Badge>
                   <ThemeToggle />
                 </div>
@@ -111,7 +111,7 @@ const InvestorDashboard = () => {
             </header>
 
             {/* Main Content */}
-            <main className="flex-1 p-2 md:p-3 lg:p-4 overflow-auto bg-background">
+            <main className="flex-1 p-1 md:p-2 lg:p-3 overflow-auto bg-background">
               <div className="max-w-full mx-auto">
                 {renderContent()}
               </div>
