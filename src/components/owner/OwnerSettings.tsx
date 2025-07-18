@@ -28,7 +28,7 @@ import {
   Upload,
   Trash2
 } from "lucide-react";
-import { apiService } from "@/services/apiService";
+import { apiService } from "@/services/api";
 
 interface SystemSettings {
   // General Settings

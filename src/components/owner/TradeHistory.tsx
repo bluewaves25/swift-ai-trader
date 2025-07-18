@@ -22,7 +22,7 @@ import {
   XCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import apiService from "@/services/apiService";
+import { apiService } from "@/services/api";
 
 interface Trade {
   id: string;

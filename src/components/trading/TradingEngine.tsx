@@ -17,7 +17,7 @@ import {
   Clock
 } from "lucide-react";
 import { toast } from "sonner";
-import apiService from "@/services/apiService";
+import { apiService } from "@/services/api";
 
 interface TradingEngineProps {
   isRunning: boolean;

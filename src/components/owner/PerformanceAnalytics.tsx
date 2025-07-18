@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, TrendingDown, BarChart3, PieChart as PieChartIcon, Target, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
-import apiService from "@/services/apiService";
+import { apiService } from "@/services/api";
 
 interface PerformanceData {
   strategies: {
