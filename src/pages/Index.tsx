@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,40 +44,19 @@ const Index = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Don't redirect authenticated users automatically - let them navigate manually if needed
-  const handleGetStarted = () => {
-    if (user) {
-      // User is already authenticated, navigate to appropriate dashboard
-      navigate('/investor-dashboard');
-    } else {
-      // User is not authenticated, navigate to auth page
-      navigate('/auth');
-    }
-  };
-
-  const handleSignIn = () => {
-    if (user) {
-      // User is already authenticated, navigate to appropriate dashboard
-      navigate('/investor-dashboard');
-    } else {
-      // User is not authenticated, navigate to auth page
-      navigate('/auth');
-    }
-  };
-
   return (
     <div className="min-h-screen dark">
       {/* Hero Section with Background Image */}
       <div 
         className="relative min-h-screen overflow-hidden"
         style={{
-          backgroundImage: `linear-gradient(135deg, rgba(59, 130, 246, 0.85) 0%, rgba(139, 92, 246, 0.85) 50%, rgba(79, 70, 229, 0.85) 100%), url('/placeholder.svg')`,
+          backgroundImage: `linear-gradient(135deg, rgba(59, 130, 246, 0.85) 0%, rgba(139, 92, 246, 0.85) 50%, rgba(79, 70, 229, 0.85) 100%), url('/landing_background_1.png')`,
           backgroundSize: 'cover, cover',
           backgroundPosition: 'center, center',
           backgroundBlendMode: 'overlay, normal'
         }}
       >
-        {/* Dark overlay for text clarity */}
+        {/* Removed blur overlay, replaced with a semi-transparent dark overlay for text clarity */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <div
             className="w-full h-full"
@@ -110,10 +88,10 @@ const Index = () => {
                   <Link to="/terms" className="text-white/90 hover:text-white transition-colors font-medium">Terms</Link>
                 </div>
                 <Button 
-                  onClick={handleSignIn}
+                  onClick={() => navigate('/auth')} 
                   className="bg-white/90 text-blue-600 hover:bg-white font-semibold"
                 >
-                  {user ? 'Dashboard' : 'Sign In'}
+                  Sign In
                 </Button>
               </div>
             </div>
@@ -176,10 +154,10 @@ const Index = () => {
               <div className="flex flex-col sm:flex-row gap-6 justify-center">
                 <Button 
                   size="lg" 
-                  onClick={handleGetStarted}
+                  onClick={() => navigate('/auth')}
                   className="bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold"
                 >
-                  {user ? 'Go to Dashboard' : 'Start Trading Now'}
+                  Start Trading Now
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
                 <Button 
