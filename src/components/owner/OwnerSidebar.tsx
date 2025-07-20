@@ -42,6 +42,7 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
     { id: 'risk', label: 'Risk Management', icon: Shield, color: 'text-red-600' },
     { id: 'analytics', label: 'Performance', icon: BarChart3, color: 'text-indigo-600' },
     { id: 'users', label: 'User Management', icon: Users, color: 'text-pink-600' },
+    { id: 'subscription', label: 'Subscription/Billing', icon: Target, color: 'text-yellow-600' },
     { id: 'settings', label: 'Settings', icon: Settings, color: 'text-gray-600' },
   ];
 

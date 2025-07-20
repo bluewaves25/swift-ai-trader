@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from core.database import get_db
-from core.models.user import User
-from core.models.transaction import Transaction, TransactionType, TransactionStatus, Trade
-from core.schemas.transaction import DepositRequest, WithdrawRequest, TransactionResponse, TradeResponse
-from services.payment_service import PaymentService
-from api.auth import get_current_user
+from waves_quant_agi.core.database import get_db
+from waves_quant_agi.core.models.user import User
+from waves_quant_agi.core.models.transaction import Transaction, TransactionType, TransactionStatus, Trade
+from waves_quant_agi.core.schemas.transaction import DepositRequest, WithdrawRequest, TransactionResponse, TradeResponse
+from waves_quant_agi.services.payment_service import PaymentService
+from waves_quant_agi.api.auth import get_current_user
 from typing import List
 import uuid
 

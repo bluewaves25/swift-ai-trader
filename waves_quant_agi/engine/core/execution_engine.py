@@ -3,14 +3,14 @@
 import logging
 import os
 from typing import List
-from engine.core.signal import Signal
-from engine.core.schema import MarketData  
-from engine.brokers.mt5_plugin import MT5Broker
-from engine.brokers.binance_plugin import BinanceBroker
-from engine.brokers.base_broker import BaseBroker
+from waves_quant_agi.engine.core.signal import Signal
+from waves_quant_agi.engine.core.schema import MarketData  
+from waves_quant_agi.engine.brokers.mt5_plugin import MT5Broker
+from waves_quant_agi.engine.brokers.binance_plugin import BinanceBroker
+from waves_quant_agi.engine.brokers.base_broker import BaseBroker
 from dotenv import load_dotenv
 import MetaTrader5 as mt5
-from core.models.transaction import Trade, TradeStatus
+from waves_quant_agi.core.models.transaction import Trade, TradeStatus
 from sqlalchemy.ext.asyncio import AsyncSession
 import uuid
 

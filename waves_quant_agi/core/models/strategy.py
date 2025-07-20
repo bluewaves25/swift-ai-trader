@@ -2,7 +2,7 @@
 
 from sqlalchemy import Column, String, Float, Boolean, DateTime
 from sqlalchemy.sql import func
-from core.database import Base
+from waves_quant_agi.core.database import Base
 
 class Strategy(Base):
     __tablename__ = "strategies"

@@ -27,8 +27,12 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!user) {
-    // Redirect to login page with return URL
-    return <Navigate to="/auth" state={{ from: location.pathname }} replace />;
+    // Redirect to auth page with return URL, but only if not already on auth page
+    if (location.pathname !== '/auth') {
+      return <Navigate to="/auth" state={{ from: location.pathname }} replace />;
+    }
+    // If already on auth page, don't redirect
+    return null;
   }
 
   // User is authenticated, render the protected content

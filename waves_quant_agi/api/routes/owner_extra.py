@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from api.auth import get_current_admin
+from waves_quant_agi.api.auth import get_current_admin
 
 router = APIRouter()
 

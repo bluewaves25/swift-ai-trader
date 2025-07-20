@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ProtectedRoute } from "@/components/common/ProtectedRoute";
+import { SignOutTest } from "@/components/common/SignOutTest";
 
 // Lazy load pages for better performance
 const Index = lazy(() => import("./pages/Index"));
@@ -69,6 +70,7 @@ function App() {
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
+                <SignOutTest />
                 <Toaster />
               </AuthProvider>
             </BrowserRouter>

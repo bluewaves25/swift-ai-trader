@@ -1,10 +1,10 @@
-from engine.validation.drawdown_checker import check_drawdown
-from engine.validation.alpha_decay_monitor import check_alpha_decay
-from engine.validation.walk_forward_validator import walk_forward_analysis
-from engine.validation.latency_simulator import LatencySimulator  # ✅ Correct
-from engine.validation.regime_stability_tester import test_regime_stability
-from engine.validation.monte_carlo_simulator import MonteCarloValidator
-from engine.validation.regime_stability_tester import test_regime_stability
+from waves_quant_agi.engine.validation.drawdown_checker import check_drawdown
+from waves_quant_agi.engine.validation.alpha_decay_monitor import check_alpha_decay
+from waves_quant_agi.engine.validation.walk_forward_validator import walk_forward_analysis
+from waves_quant_agi.engine.validation.latency_simulator import LatencySimulator  # ✅ Correct
+from waves_quant_agi.engine.validation.regime_stability_tester import test_regime_stability
+from waves_quant_agi.engine.validation.monte_carlo_simulator import MonteCarloValidator
+from waves_quant_agi.engine.validation.regime_stability_tester import test_regime_stability
 
 class StrategyValidator:
     """

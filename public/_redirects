@@ -1,0 +1,5 @@
+# SPA Fallback - Redirect all routes to index.html
+/*    /index.html   200
+
+# API proxy (if needed)
+/api/*  http://your-backend-url.com/api/:splat  200 

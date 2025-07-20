@@ -1,7 +1,7 @@
 # engine/brokers/mt5_plugin.py
 
 import MetaTrader5 as mt5
-from engine.brokers.base_broker import BaseBroker
+from waves_quant_agi.engine.brokers.base_broker import BaseBroker
 import time
 
 class MT5Broker(BaseBroker):

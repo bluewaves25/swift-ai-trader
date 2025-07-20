@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.tsa.stattools import adfuller
 from pykalman import KalmanFilter
-
-from engine.strategies.base_strategy import BaseStrategy
+from waves_quant_agi.engine.strategies.base_strategy import BaseStrategy
 
 class StatisticalArbitrage(BaseStrategy):
     def __init__(self):

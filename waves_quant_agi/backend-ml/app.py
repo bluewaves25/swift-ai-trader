@@ -7,6 +7,13 @@ from datetime import datetime
 import logging
 import numpy as np
 import pandas as pd
+import redis
+import threading
+import json
+import time
+import asyncio
+import subprocess
+import sys
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -27,6 +34,41 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+redis_client = redis.Redis.from_url(REDIS_URL)
+
+logger.info("[ML ENGINE WORKER] Starting ML job listener on 'ml:jobs' queue.")
+
+async def ml_worker_async():
+    loop = asyncio.get_event_loop()
+    while True:
+        job = await loop.run_in_executor(None, lambda: redis_client.blpop("ml:jobs", timeout=5))
+        if job:
+            _, job_data = job
+            job_data = json.loads(job_data)
+            job_id = job_data["job_id"]
+            payload = job_data["payload"]
+            # Here you would run your ML prediction logic
+            result = {"job_id": job_id, "result": payload, "status": "done", "timestamp": datetime.utcnow().isoformat()}
+            redis_client.set(f"ml:results:{job_id}", json.dumps(result), ex=60)
+        else:
+            await asyncio.sleep(1)
+
+async def start_trading_engine_worker():
+    logger.info("[TRADING ENGINE WORKER] Launching run_engine_api.py as subprocess.")
+    subprocess.Popen(["python", "waves_quant_agi/engine/run_engine_api.py"])  # Assumes cwd is project root
+
+@app.on_event("startup")
+async def startup_event():
+    # Start ML worker
+    asyncio.create_task(ml_worker_async())
+    # Start Trading Engine worker with correct PYTHONPATH
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.getcwd()
+    subprocess.Popen([
+        sys.executable, "waves_quant_agi/engine/run_engine_api.py"
+    ], env=env)
 
 @app.get("/")
 async def root():

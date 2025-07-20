@@ -1,5 +1,5 @@
 from transformers import pipeline
-from engine.strategies.base_strategy import BaseStrategy
+from waves_quant_agi.engine.strategies.base_strategy import BaseStrategy
 
 class NewsReactionBot(BaseStrategy):
     def __init__(self):

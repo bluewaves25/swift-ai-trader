@@ -14,8 +14,11 @@ import { PerformanceAnalytics } from "@/components/owner/PerformanceAnalytics";
 import { RiskManagement } from "@/components/owner/RiskManagement";
 import { StrategiesManagement } from "@/components/owner/StrategiesManagement";
 import { OwnerSettings } from "@/components/owner/OwnerSettings";
-import LiveSignals from "@/components/owner/LiveSignals";
-import TradeHistory from "@/components/owner/TradeHistory";
+import { LiveSignals } from "@/components/owner/LiveSignals";
+import { TradeHistory } from "@/components/owner/TradeHistory";
+import SubscriptionManagement from '@/components/owner/SubscriptionManagement';
+import apiService from '@/services/api';
+import axios from 'axios';
 
 const OwnerDashboard = () => {
   const [activeSection, setActiveSection] = useState('overview');
@@ -27,6 +30,7 @@ const OwnerDashboard = () => {
     activeStrategies: 0
   });
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
 
   useEffect(() => {
     // Mock data for demo
@@ -42,7 +46,10 @@ const OwnerDashboard = () => {
       { id: 2, timestamp: new Date().toISOString(), level: 'warning', message: 'High volatility detected in EUR/USD' },
       { id: 3, timestamp: new Date().toISOString(), level: 'info', message: 'New user registered' }
     ]);
+    axios.get('/api/v1/billing/status', { params: { user_id: 'me' } }).then(res => setSubscriptionStatus(res.data));
   }, []);
+
+  const isPremium = subscriptionStatus?.status === 'active' || subscriptionStatus?.trial;
 
   const renderContent = () => {
     switch (activeSection) {
@@ -121,8 +128,10 @@ const OwnerDashboard = () => {
             </Card>
           </div>
         );
+      case 'subscription':
+        return <SubscriptionManagement />;
       case 'engine':
-        return <EngineControl />;
+        return isPremium ? <EngineControl /> : <div className="text-red-500">Upgrade your subscription to access the Trading Engine.</div>;
       case 'users':
         return <UserManagement />;
       case 'performance':
@@ -130,7 +139,7 @@ const OwnerDashboard = () => {
       case 'risk':
         return <RiskManagement />;
       case 'strategies':
-        return <StrategiesManagement />;
+        return isPremium ? <StrategiesManagement /> : <div className="text-red-500">Upgrade your subscription to access Strategies Management.</div>;
       case 'signals':
         return <LiveSignals />;
       case 'trades':
@@ -164,8 +173,6 @@ const OwnerDashboard = () => {
           <OwnerSidebar 
             activeSection={activeSection} 
             onSectionChange={setActiveSection}
-            isMobileOpen={isMobileOpen}
-            onMobileToggle={setIsMobileOpen}
           />
           
           <div className="flex-1 flex flex-col min-w-0 max-w-full">

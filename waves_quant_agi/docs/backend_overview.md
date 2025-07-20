@@ -1,27 +1,28 @@
-🧾 docs/backend_overview.md – What the backend is and what it does
+# Backend Overview – Waves Quant Engine
 
-📘 Plain English Explanation:
-This document gives a general introduction to what the backend is doing. Think of the backend as the brain and memory of your AGI trading system.
+## What the Backend Does
+- Handles all API requests from frontend (investor, owner, admin)
+- Manages users, portfolios, payments, strategies, analytics, and more
+- Integrates with Paystack, Redis, PostgreSQL, and external brokers (MT5, Binance)
+- Runs the AI/ML engine for strategy execution and analytics
+- Exposes all revenue features: subscriptions, performance fees, marketplace, affiliate
 
-It controls:
+## Main Components
+- **FastAPI**: API layer for all user and admin actions
+- **Engine (backend-ml)**: AI/ML, strategy execution, market data processing
+- **Database**: PostgreSQL/TimescaleDB (via Supabase)
+- **Payments**: Paystack integration for subscriptions and fees
+- **Realtime**: Redis for job queues, engine heartbeat, and inter-service communication
 
-All AI strategies that decide what to trade
+## Communication Flow
+- Frontend → FastAPI (backend-main) → Engine (backend-ml) via Redis
+- All premium features are gated by subscription status
+- Marketplace and affiliate endpoints are available for investors
 
-Who owns what (portfolios, money, strategies)
+## Revenue Features
+- Subscriptions, performance fees, marketplace, affiliate, analytics, B2B
 
-Payments and connections to platforms like Binance or MT5
-
-Talking to databases, processing trades, logging actions, etc.
-
-Main Components:
-FastAPI → Like a receptionist; takes requests from the frontend
-
-PostgreSQL + TimescaleDB → Memory bank that remembers trades, users, and results
-
-Supabase → Like a customer login manager
-
-Redis → Super-fast notepad for real-time stuff
-
-RabbitMQ → A queue that makes sure tasks don’t crash into each other
-
-Docker → Packages and isolates all tools so they don’t fight
+## See also:
+- `backend_architecture.md` for folder structure
+- `env_README.md` for environment setup
+- Main README for full feature list

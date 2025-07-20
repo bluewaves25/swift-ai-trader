@@ -1,6 +1,6 @@
 from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
-from engine.strategies.base_strategy import BaseStrategy
+from waves_quant_agi.engine.strategies.base_strategy import BaseStrategy
 
 class MetaLearner(BaseStrategy):
     def __init__(self):

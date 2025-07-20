@@ -2,7 +2,7 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
-from core.database import get_db
+from waves_quant_agi.core.database import get_db
 
 # Common dependencies placeholder for shared logic or reuse.
 

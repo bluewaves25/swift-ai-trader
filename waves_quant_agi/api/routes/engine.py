@@ -2,9 +2,9 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from core.database import get_db
-from api.auth import get_current_user
-from core.models.user import User
+from waves_quant_agi.core.database import get_db
+from waves_quant_agi.api.auth import get_current_user
+from waves_quant_agi.core.models.user import User
 from typing import List
 from datetime import datetime
 from pydantic import BaseModel

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
   Sidebar,
@@ -31,7 +31,10 @@ import {
   List,
   LogOut,
   ChevronLeft,
-  CreditCard
+  CreditCard,
+  DollarSign,
+  Users,
+  ChevronUp
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -49,6 +52,10 @@ const sidebarItems = [
   { id: 'signals', label: 'Live Signals', icon: TrendingUp, color: 'text-purple-600' },
   { id: 'trades', label: 'Trade History', icon: History, color: 'text-orange-600' },
   { id: 'journal', label: 'Journal', icon: BookOpen, color: 'text-emerald-600' },
+  { id: 'marketplace', label: 'Marketplace', icon: Brain, color: 'text-indigo-600' },
+  { id: 'affiliate', label: 'Affiliate', icon: Users, color: 'text-pink-600' },
+  { id: 'subscription', label: 'Subscription/Billing', icon: CreditCard, color: 'text-yellow-600' },
+  { id: 'fees', label: 'Performance Fees', icon: DollarSign, color: 'text-indigo-600' },
   { id: 'settings', label: 'Settings', icon: Settings, color: 'text-gray-600' },
   { id: 'profile', label: 'Profile', icon: User, color: 'text-pink-600' },
 ];
@@ -57,12 +64,52 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
   const { signOut, user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [paymentsOpen, setPaymentsOpen] = useState(false);
+  const [showScrollUp, setShowScrollUp] = useState(false);
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const sidebarContentRef = useRef<HTMLDivElement>(null);
 
   const paymentItems = [
     { id: 'deposit', label: 'Deposit', icon: PlusCircle, color: 'text-green-600', gradient: 'from-green-500 to-emerald-600' },
     { id: 'withdraw', label: 'Withdraw', icon: MinusCircle, color: 'text-red-600', gradient: 'from-red-500 to-rose-600' },
     { id: 'transactions', label: 'History', icon: List, color: 'text-blue-600', gradient: 'from-blue-500 to-indigo-600' },
   ];
+
+  // Check scroll position and show/hide scroll buttons
+  useEffect(() => {
+    const checkScroll = () => {
+      if (sidebarContentRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = sidebarContentRef.current;
+        setShowScrollUp(scrollTop > 20);
+        setShowScrollDown(scrollTop < scrollHeight - clientHeight - 20);
+      }
+    };
+
+    const contentElement = sidebarContentRef.current;
+    if (contentElement) {
+      contentElement.addEventListener('scroll', checkScroll);
+      checkScroll(); // Check initial state
+      
+      return () => contentElement.removeEventListener('scroll', checkScroll);
+    }
+  }, [isCollapsed, paymentsOpen]);
+
+  const scrollToTop = () => {
+    if (sidebarContentRef.current) {
+      sidebarContentRef.current.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const scrollToBottom = () => {
+    if (sidebarContentRef.current) {
+      sidebarContentRef.current.scrollTo({
+        top: sidebarContentRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   const NavItem = ({ item, isActive = false }: { item: any; isActive?: boolean }) => (
     <SidebarMenuButton
@@ -149,8 +196,25 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
         </div>
       )}
 
+      {/* Scroll Up Button */}
+      {showScrollUp && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={scrollToTop}
+            className="h-6 w-6 p-0 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg hover:bg-white dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
+          >
+            <ChevronUp className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
+
       {/* Main Navigation */}
-      <SidebarContent className="flex-1 p-1 md:p-2 space-y-1 overflow-y-auto">
+      <SidebarContent 
+        ref={sidebarContentRef}
+        className="flex-1 p-1 md:p-2 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent"
+      >
         <div className={cn("space-y-1", !isCollapsed && "px-1 md:px-2")}>
           {!isCollapsed && (
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 md:mb-3 px-1 md:px-2">
@@ -252,6 +316,20 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
           ))}
         </div>
       </SidebarContent>
+
+      {/* Scroll Down Button */}
+      {showScrollDown && (
+        <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-10">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={scrollToBottom}
+            className="h-6 w-6 p-0 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg hover:bg-white dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
+          >
+            <ChevronDown className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
 
       {/* Sign Out Button */}
       <div className="p-1 md:p-2 border-t bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">

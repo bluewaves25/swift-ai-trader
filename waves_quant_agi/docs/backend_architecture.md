@@ -1,23 +1,28 @@
-🏗 docs/backend_architecture.md – How the system is structured (folders and logic)
+# Backend Architecture – Waves Quant Engine
 
-📘 Plain English Explanation:
-This document describes the folder layout and logic behind each folder.
+## Folder Structure
 
-Think of this as the blueprint or house plan of your project.
+- **api/**: Entry gate; handles all requests from outside (routes, middleware)
+- **backend-main/**: Main FastAPI backend (API, billing, admin, investor, owner)
+- **backend-ml/**: AI/ML engine (strategy execution, analytics)
+- **config/**: Settings, logging, environment variables
+- **core/**: Database models, schemas, and core logic
+- **docs/**: Documentation for backend, setup, and architecture
+- **engine/**: Trading engine, strategies, intelligence, validation
+- **requirements/**: Requirements for each Python environment
+- **scripts/**: Setup, run, and deploy scripts
+- **services/**: External integrations (payment, notification, portfolio, websocket)
+- **shared/**: Shared settings and config
+- **tests/**: Automated tests for API, engine, and services
+- **utils/**: Helper files, reusable checks
 
-Folder Roles:
-api/ → Entry gate; handles all requests from outside
+## Key Files
+- `app.py` (backend-main): Main FastAPI entrypoint
+- `app.py` (backend-ml): ML/AI engine entrypoint
+- `run_engine_api.py`: Trading engine worker (market data, strategy execution)
+- `requirements.txt`: Python dependencies for each environment
 
-engine/ → The smart trading brain (strategies, intelligence, validators)
-
-core/ → Database models (who owns what, how much, etc.)
-
-services/ → External tools like payment, messages, websocket
-
-utils/ → Helper files, reusable checks
-
-scripts/ → Setup scripts for launching or resetting stuff
-
-config/ → Settings, logging, environment variables
-
-tests/ → Where automated tests will live
+## See also:
+- `backend_overview.md` for backend logic
+- `env_README.md` for environment setup
+- Main README for full feature list

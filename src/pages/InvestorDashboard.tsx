@@ -1,5 +1,5 @@
 
-import { useState, Suspense, lazy } from "react";
+import { useState, Suspense, lazy, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -15,7 +15,11 @@ import InvestorSettings from "@/components/investor/InvestorSettings";
 import InvestorProfile from "@/components/investor/InvestorProfile";
 import InvestorPayments from "@/components/investor/InvestorPayments";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-
+import SubscriptionManagement from '@/components/owner/SubscriptionManagement';
+import PerformanceFees from '@/components/owner/PerformanceFees';
+import axios from 'axios';
+import StrategyMarketplace from '@/components/investor/StrategyMarketplace';
+import AffiliateDashboard from '@/components/investor/AffiliateDashboard';
 // Lazy load payment components
 const LazyPaymentForm = lazy(() => import("@/components/payments/PaymentForm").then(module => ({ default: module.PaymentForm })));
 const LazyWithdrawForm = lazy(() => import("@/components/payments/PaymentForm").then(module => ({ default: module.PaymentForm })));
@@ -23,6 +27,13 @@ const LazyWithdrawForm = lazy(() => import("@/components/payments/PaymentForm").
 const InvestorDashboard = () => {
   const [activeSection, setActiveSection] = useState('overview');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
+
+  useEffect(() => {
+    axios.get('/api/v1/billing/status', { params: { user_id: 'me' } }).then(res => setSubscriptionStatus(res.data));
+  }, []);
+
+  const isPremium = subscriptionStatus?.status === 'active' || subscriptionStatus?.trial;
 
   const renderContent = () => {
     switch (activeSection) {
@@ -31,11 +42,11 @@ const InvestorDashboard = () => {
       case 'portfolio':
         return <InvestorPortfolio />;
       case 'signals':
-        return <LiveSignals />;
+        return isPremium ? <LiveSignals /> : <div className="text-red-500">Upgrade your subscription to access Live Signals.</div>;
       case 'trades':
-        return <TradeHistory />;
+        return isPremium ? <TradeHistory /> : <div className="text-red-500">Upgrade your subscription to access Trade History.</div>;
       case 'journal':
-        return <InvestorJournal />;
+        return isPremium ? <InvestorJournal /> : <div className="text-red-500">Upgrade your subscription to access the Journal.</div>;
       case 'deposit':
         return (
           <Suspense fallback={<div className="animate-pulse bg-gray-200 rounded h-64"></div>}>
@@ -50,10 +61,18 @@ const InvestorDashboard = () => {
         );
       case 'transactions':
         return <InvestorPayments />;
+      case 'subscription':
+        return <SubscriptionManagement />;
+      case 'fees':
+        return <PerformanceFees />;
       case 'settings':
         return <InvestorSettings />;
       case 'profile':
         return <InvestorProfile />;
+      case 'marketplace':
+        return isPremium ? <StrategyMarketplace isPremium={isPremium} /> : <div className="text-red-500">Upgrade your subscription to access the AI Strategy Marketplace.</div>;
+      case 'affiliate':
+        return <AffiliateDashboard />;
       default:
         return <div className="text-center text-muted-foreground text-xs md:text-sm">Section under development</div>;
     }

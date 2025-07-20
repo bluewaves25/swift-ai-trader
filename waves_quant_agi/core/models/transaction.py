@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Enum as SqlEnum
 from sqlalchemy.sql import func
-from core.database import Base
+from waves_quant_agi.core.database import Base
 import enum
 
 class TransactionType(enum.Enum):

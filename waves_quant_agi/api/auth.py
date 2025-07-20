@@ -4,9 +4,9 @@ from jose import jwt, JWTError
 from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from shared.settings import settings
-from core.models.user import User
-from core.database import get_db
+from waves_quant_agi.shared.settings import settings
+from waves_quant_agi.core.models.user import User
+from waves_quant_agi.core.database import get_db
 import logging
 import requests
 from functools import lru_cache

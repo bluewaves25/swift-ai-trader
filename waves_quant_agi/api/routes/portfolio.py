@@ -3,11 +3,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from core.database import get_db
-from core.models.portfolio import InvestorPortfolio
-from core.schemas.portfolio import PortfolioResponse
-from api.auth import get_current_user
-from core.models.user import User
+from waves_quant_agi.core.database import get_db
+from waves_quant_agi.core.models.portfolio import InvestorPortfolio
+from waves_quant_agi.core.schemas.portfolio import PortfolioResponse
+from waves_quant_agi.api.auth import get_current_user
+from waves_quant_agi.core.models.user import User
 
 router = APIRouter()
 

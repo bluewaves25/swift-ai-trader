@@ -3,10 +3,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from core.database import get_db
-from core.models.user import User
-from core.schemas.user import UserResponse
-from api.auth import get_current_admin
+from waves_quant_agi.core.database import get_db
+from waves_quant_agi.core.models.user import User
+from waves_quant_agi.core.schemas.user import UserResponse
+from waves_quant_agi.api.auth import get_current_admin
 from typing import List
 
 router = APIRouter()

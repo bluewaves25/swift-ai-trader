@@ -5,7 +5,7 @@ import requests
 import hmac
 import hashlib
 from urllib.parse import urlencode
-from engine.brokers.base_broker import BaseBroker
+from waves_quant_agi.engine.brokers.base_broker import BaseBroker
 
 class BinanceBroker(BaseBroker):
     """

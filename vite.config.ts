@@ -11,6 +11,8 @@ export default defineConfig(({ mode }) => ({
     proxy: {
       '/api': 'http://127.0.0.1:8000',
     },
+    // Add SPA fallback for development
+    historyApiFallback: true,
   },
   plugins: [
     react(),
@@ -22,4 +24,17 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Add build configuration for production SPA fallback
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+        },
+      },
+    },
+  },
+  // Ensure proper base path for production
+  base: '/',
 }));

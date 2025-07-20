@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from engine.strategies.base_strategy import BaseStrategy
+from waves_quant_agi.engine.strategies.base_strategy import BaseStrategy
 
 # PPO-style RL Agent for swing trading signals
 class SwingRLAgent(BaseStrategy):

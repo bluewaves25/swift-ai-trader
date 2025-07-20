@@ -169,6 +169,15 @@ const Index = () => {
                 >
                   Learn More
                 </Button>
+                <Button 
+                  size="lg" 
+                  variant="secondary"
+                  onClick={() => navigate('/investor-dashboard?section=subscription')}
+                  className="bg-white/80 text-blue-700 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold text-sm md:text-base"
+                >
+                  View Plans & Start Free Trial
+                  <Star className="ml-1 md:ml-2 h-3 w-3 md:h-5 md:w-5 text-yellow-500" />
+                </Button>
               </div>
             </div>
           </div>
@@ -342,6 +351,109 @@ const Index = () => {
               <CheckCircle className="h-4 w-4 text-green-400" />
               <span>Secure & Regulated</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Revenue Features Section */}
+      <div className="py-20 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <Badge variant="outline" className="mb-4">
+              Unlock More with Premium
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              Revenue Features for Every Investor
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Waves Quant Engine offers a full suite of revenue-generating features for both individual and institutional investors.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <Card className="group hover:shadow-lg transition-all duration-300 border-0 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <CardHeader>
+                <div className="p-3 rounded-lg w-fit bg-yellow-100 dark:bg-yellow-900/20 group-hover:scale-110 transition-transform duration-300">
+                  <Star className="h-6 w-6 text-yellow-600" />
+                </div>
+                <CardTitle className="text-xl">Subscription Plans</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-base">
+                  Flexible monthly and annual plans for every trader. Start with a free trial and unlock premium analytics, signals, and more.
+                </CardDescription>
+                <Button size="sm" className="mt-3" onClick={() => navigate('/investor-dashboard?section=subscription')}>See Plans</Button>
+              </CardContent>
+            </Card>
+            <Card className="group hover:shadow-lg transition-all duration-300 border-0 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <CardHeader>
+                <div className="p-3 rounded-lg w-fit bg-green-100 dark:bg-green-900/20 group-hover:scale-110 transition-transform duration-300">
+                  <DollarSign className="h-6 w-6 text-green-600" />
+                </div>
+                <CardTitle className="text-xl">Performance Fees</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-base">
+                  Only pay when you profit. Our transparent performance fee model aligns our success with yours.
+                </CardDescription>
+                <Button size="sm" className="mt-3" onClick={() => navigate('/investor-dashboard?section=fees')}>Learn More</Button>
+              </CardContent>
+            </Card>
+            <Card className="group hover:shadow-lg transition-all duration-300 border-0 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <CardHeader>
+                <div className="p-3 rounded-lg w-fit bg-indigo-100 dark:bg-indigo-900/20 group-hover:scale-110 transition-transform duration-300">
+                  <Brain className="h-6 w-6 text-indigo-600" />
+                </div>
+                <CardTitle className="text-xl">AI Strategy Marketplace</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-base">
+                  Buy, sell, and rate trading strategies. Earn revenue as a creator or discover top-performing AI strategies.
+                </CardDescription>
+                <Button size="sm" className="mt-3" onClick={() => navigate('/investor-dashboard?section=marketplace')}>Explore Marketplace</Button>
+              </CardContent>
+            </Card>
+            <Card className="group hover:shadow-lg transition-all duration-300 border-0 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <CardHeader>
+                <div className="p-3 rounded-lg w-fit bg-pink-100 dark:bg-pink-900/20 group-hover:scale-110 transition-transform duration-300">
+                  <Users className="h-6 w-6 text-pink-600" />
+                </div>
+                <CardTitle className="text-xl">Affiliate Program</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-base">
+                  Share your referral link, grow the community, and earn commissions for every new subscriber you bring.
+                </CardDescription>
+                <Button size="sm" className="mt-3" onClick={() => navigate('/investor-dashboard?section=affiliate')}>Affiliate Dashboard</Button>
+              </CardContent>
+            </Card>
+            <Card className="group hover:shadow-lg transition-all duration-300 border-0 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <CardHeader>
+                <div className="p-3 rounded-lg w-fit bg-purple-100 dark:bg-purple-900/20 group-hover:scale-110 transition-transform duration-300">
+                  <BarChart3 className="h-6 w-6 text-purple-600" />
+                </div>
+                <CardTitle className="text-xl">Premium Analytics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-base">
+                  Access real-time analytics, advanced dashboards, and actionable insights to maximize your trading performance.
+                </CardDescription>
+                <Button size="sm" className="mt-3" onClick={() => navigate('/investor-dashboard?section=overview')}>See Analytics</Button>
+              </CardContent>
+            </Card>
+            <Card className="group hover:shadow-lg transition-all duration-300 border-0 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <CardHeader>
+                <div className="p-3 rounded-lg w-fit bg-gray-100 dark:bg-gray-900/20 group-hover:scale-110 transition-transform duration-300">
+                  <Target className="h-6 w-6 text-gray-600" />
+                </div>
+                <CardTitle className="text-xl">B2B & White-Label</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-base">
+                  Financial advisors, trading groups, and fintechs can license our platform or request custom integrations.
+                </CardDescription>
+                <Button size="sm" className="mt-3" onClick={() => navigate('/contact')}>Contact Sales</Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

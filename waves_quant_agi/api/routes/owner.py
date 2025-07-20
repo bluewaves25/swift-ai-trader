@@ -4,12 +4,12 @@ import signal
 import psutil
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from core.database import get_db
-from core.models.user import User
-from api.auth import get_current_admin
+from waves_quant_agi.core.database import get_db
+from waves_quant_agi.core.models.user import User
+from waves_quant_agi.api.auth import get_current_admin
 from typing import List, Dict, Any
-from core.models.strategy import Strategy
-from core.schemas.strategy import StrategyRecordResponse
+from waves_quant_agi.core.models.strategy import Strategy
+from waves_quant_agi.core.schemas.strategy import StrategyRecordResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi import BackgroundTasks

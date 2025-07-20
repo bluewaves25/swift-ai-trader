@@ -30,39 +30,39 @@ api.interceptors.response.use(
 
 export const apiService = {
   // Balance operations
-  getBalance: (userId: string) => api.get(`/api/balance/${userId}`),
-  updateBalance: (userId: string, balance: number) => api.post(`/api/balance/${userId}`, { balance }),
+  getBalance: (userId: string) => api.get(`/api/v1/investor/balance/${userId}`),
+  updateBalance: (userId: string, balance: number) => api.post(`/api/v1/investor/balance/${userId}`, { balance }),
   
   // Portfolio operations
-  getPortfolio: () => api.get('/api/portfolio'),
-  getPortfolioPerformance: () => api.get('/api/portfolio/performance'),
+  getPortfolio: () => api.get('/api/v1/portfolio'),
+  getPortfolioPerformance: () => api.get('/api/v1/portfolio/performance'),
   
   // Trading operations
-  getLiveSignals: () => api.get('/api/signals/live'),
-  getTradeHistory: () => api.get('/api/trades/history'),
+  getLiveSignals: () => api.get('/api/v1/engine-feed/signals/live'),
+  getTradeHistory: () => api.get('/api/v1/investor/trades/history'),
   
   // Performance data
-  getPerformanceData: () => api.get('/api/performance'),
+  getPerformanceData: () => api.get('/api/v1/investor/performance'),
   
   // Engine operations
-  getEngineStatus: () => api.get('/api/engine/status'),
+  getEngineStatus: () => api.get('/api/v1/engine-status'),
   
   // Strategies
-  getStrategies: () => api.get('/api/strategies'),
+  getStrategies: () => api.get('/api/v1/owner/strategies'),
   
   // Transactions
-  getTransactions: () => api.get('/api/transactions'),
+  getTransactions: () => api.get('/api/v1/investor/transactions'),
   
   // Owner operations
-  getOwnerStats: () => api.get('/api/owner/stats'),
-  getOwnerSettings: () => api.get('/api/owner/settings'),
-  saveOwnerSettings: (settings: any) => api.post('/api/owner/settings', settings),
+  getOwnerStats: () => api.get('/api/v1/owner/stats'),
+  getOwnerSettings: () => api.get('/api/v1/owner/settings'),
+  saveOwnerSettings: (settings: any) => api.post('/api/v1/owner/settings', settings),
   
   // Journal operations
-  getJournalEntries: () => api.get('/api/journal'),
+  getJournalEntries: () => api.get('/api/v1/investor/journal'),
   
   // Health check
-  healthCheck: () => api.get('/api/health'),
+  healthCheck: () => api.get('/api/v1/health'),
 };
 
 export default apiService;

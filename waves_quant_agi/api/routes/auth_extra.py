@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from api.auth import get_current_user
-from core.models.user import User
+from waves_quant_agi.api.auth import get_current_user
+from waves_quant_agi.core.models.user import User
 from pydantic import BaseModel, EmailStr
 
 router = APIRouter()

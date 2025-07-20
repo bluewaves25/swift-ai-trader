@@ -1,6 +1,6 @@
 import logging
 from typing import List
-from engine.core.signal import Signal
+from waves_quant_agi.engine.core.signal import Signal
 
 logger = logging.getLogger(__name__)
 

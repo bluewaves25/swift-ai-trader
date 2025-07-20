@@ -15,8 +15,8 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 # ✅ Now all internal modules will load properly
-from engine.core.agi_engine import AGIEngine
-from engine.core.schema import MarketData
+from waves_quant_agi.engine.core.agi_engine import AGIEngine
+from waves_quant_agi.engine.core.schema import MarketData
 
 # 🔌 Redis connection
 r = redis.Redis(host="localhost", port=6379, decode_responses=True)
@@ -24,6 +24,7 @@ r = redis.Redis(host="localhost", port=6379, decode_responses=True)
 # 🚀 Start the engine
 engine = AGIEngine()
 print("🚀 AGI Engine is live (via Redis queue)")
+print("[TRADING ENGINE WORKER] Listening for trading jobs on 'market-data' queue.")
 
 def parse_market_data(raw: list) -> list:
     return [

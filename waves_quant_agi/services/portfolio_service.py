@@ -2,8 +2,8 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from core.models.portfolio import InvestorPortfolio
-from core.models.user import User
+from waves_quant_agi.core.models.portfolio import InvestorPortfolio
+from waves_quant_agi.core.models.user import User
 import logging
 
 logger = logging.getLogger(__name__)

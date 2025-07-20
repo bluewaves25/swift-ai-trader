@@ -1,5 +1,5 @@
 import random
-from engine.strategies.base_strategy import BaseStrategy
+from waves_quant_agi.engine.strategies.base_strategy import BaseStrategy
 
 class StrategyEvolver(BaseStrategy):
     def __init__(self):

@@ -2,7 +2,7 @@
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
-from shared.settings import settings
+from waves_quant_agi.shared.settings import settings
 
 # Base class for ORM models
 Base = declarative_base()

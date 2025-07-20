@@ -2,7 +2,7 @@
 
 import httpx
 import os
-from shared.settings import settings
+from waves_quant_agi.shared.settings import settings
 
 
 class PaymentService:

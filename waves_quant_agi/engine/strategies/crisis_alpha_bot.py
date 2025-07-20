@@ -1,5 +1,5 @@
 import numpy as np
-from engine.strategies.base_strategy import BaseStrategy
+from waves_quant_agi.engine.strategies.base_strategy import BaseStrategy
 
 class CrisisAlphaBot(BaseStrategy):
     def __init__(self):

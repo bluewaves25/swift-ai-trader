@@ -2,7 +2,7 @@
 
 from sqlalchemy import Column, String, Float, ForeignKey
 from sqlalchemy.orm import relationship
-from core.database import Base
+from waves_quant_agi.core.database import Base
 
 class InvestorPortfolio(Base):
     __tablename__ = "investor_portfolios"
