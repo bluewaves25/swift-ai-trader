@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { 
@@ -17,7 +17,9 @@ import {
   Cpu,
   Target,
   Menu,
-  X
+  X,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +34,36 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { signOut, user } = useAuth();
+  const [showScrollUp, setShowScrollUp] = useState(false);
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const navRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const checkScroll = () => {
+      if (navRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = navRef.current;
+        setShowScrollUp(scrollTop > 8);
+        setShowScrollDown(scrollTop < scrollHeight - clientHeight - 8);
+      }
+    };
+    const navElement = navRef.current;
+    if (navElement) {
+      navElement.addEventListener('scroll', checkScroll);
+      checkScroll();
+      return () => navElement.removeEventListener('scroll', checkScroll);
+    }
+  }, [isCollapsed]);
+
+  const scrollToTop = () => {
+    if (navRef.current) {
+      navRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+  const scrollToBottom = () => {
+    if (navRef.current) {
+      navRef.current.scrollTo({ top: navRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  };
 
   const mainNavItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, color: 'text-blue-600' },
@@ -93,7 +125,7 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
 
       {/* Sidebar */}
       <div className={cn(
-        "flex flex-col h-full bg-card border-r transition-all duration-300 relative",
+        "flex flex-col h-screen max-h-screen overflow-hidden bg-card border-r transition-all duration-300 relative",
         isCollapsed ? "w-16" : "w-64",
         "md:relative md:translate-x-0",
         "fixed inset-y-0 left-0 z-50 md:z-auto",
@@ -151,7 +183,15 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
         )}
 
         {/* Main Navigation */}
-        <div className="flex-1 p-2 space-y-1 overflow-y-auto">
+        {/* Scroll Up Button */}
+        {showScrollUp && (
+          <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-10">
+            <Button size="sm" variant="secondary" onClick={scrollToTop} className="h-6 w-6 p-0 rounded-full shadow-lg">
+              <ChevronUp className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+        <div ref={navRef} className="flex-1 min-h-0 overflow-auto p-2 space-y-1 relative">
           <div className={cn("space-y-1", !isCollapsed && "px-2")}>
             {!isCollapsed && (
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">
@@ -184,6 +224,14 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
             ))}
           </div>
         </div>
+        {/* Scroll Down Button */}
+        {showScrollDown && (
+          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-10">
+            <Button size="sm" variant="secondary" onClick={scrollToBottom} className="h-6 w-6 p-0 rounded-full shadow-lg">
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
 
         {/* Sign Out Button */}
         <div className="p-2 border-t bg-gray-50 dark:bg-gray-800/50">

@@ -60,6 +60,29 @@ class MT5Broker(BaseBroker):
 
         return [pos._asdict() for pos in positions]
 
+    def symbol_exists(self, symbol: str) -> bool:
+        """Checks if a symbol is available in the MT5 terminal."""
+        if not self.connected:
+            self.connect()
+        return mt5.symbol_info(symbol) is not None
+
+    def get_market_data(self, symbol: str, timeframe=mt5.TIMEFRAME_M1, count=100) -> list | None:
+        """Fetch historical market data for a symbol."""
+        if not self.connected:
+            self.connect()
+        
+        rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
+        if rates is None:
+            return None
+        return rates
+
+    def get_all_symbols(self) -> list[str]:
+        """Get all available symbols from the broker."""
+        if not self.connected:
+            self.connect()
+        symbols = mt5.symbols_get()
+        return [s.name for s in symbols] if symbols else []
+
     def place_order(self, symbol: str, side: str, volume: float, price: float = 0.0, order_type: str = "market") -> dict:
         """
         Place a new order (market or limit) with MT5.

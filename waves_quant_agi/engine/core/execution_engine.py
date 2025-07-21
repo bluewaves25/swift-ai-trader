@@ -13,6 +13,8 @@ import MetaTrader5 as mt5
 from waves_quant_agi.core.models.transaction import Trade, TradeStatus
 from sqlalchemy.ext.asyncio import AsyncSession
 import uuid
+from waves_quant_agi.engine.core.risk_manager import RiskManager
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 load_dotenv()
@@ -24,8 +26,10 @@ class ExecutionEngine:
     - Binance handles: spot crypto.
     """
 
-    def __init__(self):
+    def __init__(self, db_session: Session, risk_manager: RiskManager):
         self.executed_orders = []
+        self.db = db_session
+        self.risk_manager = risk_manager
 
         self.mt5_broker = None
         self.binance_broker = None
@@ -56,14 +60,28 @@ class ExecutionEngine:
         executed_trades = []
 
         for signal in signals:
-            broker = self._select_broker(signal.symbol)
+            broker, symbol_to_trade = self._select_broker(signal.symbol)
 
             if broker is None:
                 logger.warning(f"⚠️ No broker assigned for {signal.symbol}")
                 continue
+            
+            # 1. Get approval from Risk Manager
+            if not self.risk_manager.approve_trade(signal):
+                logger.info(f"🚫 Trade for {signal.symbol} rejected by Risk Manager.")
+                continue
+
+            # 2. Get dynamic risk parameters
+            current_price = self.get_live_price(symbol_to_trade, broker)
+            risk_params = self.risk_manager.get_risk_parameters(current_price, signal.action)
 
             try:
-                trade = await self._execute_order_with_broker(signal, broker, db, user_id)
+                trade = await self._execute_order_with_broker(
+                    signal, 
+                    broker, 
+                    symbol_to_trade,
+                    risk_params
+                )
                 if trade:
                     executed_trades.append(trade)
             except Exception as e:
@@ -71,31 +89,51 @@ class ExecutionEngine:
 
         return executed_trades
 
-    def _select_broker(self, symbol: str) -> BaseBroker | None:
+    def _select_broker(self, symbol: str) -> (BaseBroker | None, str | None):
         """
         Select broker based on asset class inferred from symbol.
+        Handles standard symbols and Exness 'm' suffix.
         """
-        symbol = symbol.upper()
+        symbol_upper = symbol.upper().replace('M', '')  # Normalize by removing 'm' suffix
 
-        if symbol.endswith("USD") or symbol in ["XAUUSD", "XAGUSD", "WTI", "BRENT", "US500", "NAS100", "GER30"]:
-            return self.mt5_broker if self.mt5_broker else None
-        elif symbol.endswith("USDT") or symbol.endswith("BTC") or symbol in ["BTCUSDT", "ETHUSDT", "BNBUSDT"]:
-            return self.binance_broker if self.binance_broker else None
-        else:
-            return None
+        # Standard Forex, Metals, and Indices mapping
+        forex_indices_metals = ["USD", "XAU", "XAG", "WTI", "BRENT", "US500", "NAS100", "GER30"]
+        
+        is_mt5_asset = any(item in symbol_upper for item in forex_indices_metals) or \
+                      any(symbol_upper.startswith(p) for p in ["EUR", "GBP", "AUD", "NZD", "JPY"])
 
-    async def _execute_order_with_broker(self, signal: Signal, broker: BaseBroker, db: AsyncSession, user_id: str) -> dict:
+        if is_mt5_asset and self.mt5_broker:
+            # Check for suffixed symbol first
+            if self.mt5_broker.symbol_exists(f"{symbol}m"):
+                return self.mt5_broker, f"{symbol}m"
+            elif self.mt5_broker.symbol_exists(symbol):
+                return self.mt5_broker, symbol
+            else:
+                return None, None # Neither symbol exists
+        
+        # Crypto mapping
+        crypto_suffixes = ["USDT", "BTC", "ETH", "BNB"]
+        is_binance_asset = any(symbol_upper.endswith(s) for s in crypto_suffixes)
+
+        if is_binance_asset and self.binance_broker:
+            return self.binance_broker, symbol
+
+        return None, None
+
+    async def _execute_order_with_broker(self, signal: Signal, broker: BaseBroker, symbol_to_trade: str, risk_params: dict) -> dict:
         logger.info(f"🚀 Executing {signal.action.upper()} {signal.symbol} x{signal.size} via {type(broker).__name__}")
 
         result = broker.place_order(
-            symbol=signal.symbol,
+            symbol=symbol_to_trade,
             side=signal.action.lower(),
-            volume=signal.size,
-            price=0.0,
+            volume=risk_params['position_size'],
+            price=0.0, # Market order
+            sl=risk_params['stop_loss'],
+            tp=risk_params['take_profit'],
             order_type="market"
         )
 
-        executed_price = await self._get_live_price(signal.symbol, broker)
+        executed_price = await self._get_live_price(symbol_to_trade, broker)
         execution_result = {
             "broker": type(broker).__name__,
             "strategy": signal.strategy_name,
@@ -110,7 +148,11 @@ class ExecutionEngine:
         }
 
         # Persist trade to DB
-        await self._save_trade_to_db(signal, executed_price, user_id, db)
+        new_trade = await self._save_trade_to_db(signal, executed_price, user_id)
+        
+        # Pass the executed trade to the online learner
+        if self.online_learner:
+            self.online_learner.update_weights([new_trade], self.strategy_manager.strategy_weights)
 
         self.executed_orders.append(execution_result)
         return execution_result

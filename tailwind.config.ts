@@ -54,6 +54,122 @@ export default {
           "5": "hsl(var(--chart-5))",
         },
       },
+      fontSize: {
+        body: [
+          '14px',
+          {
+            lineHeight: '1.6',
+            letterSpacing: '0',
+          },
+        ],
+        'body-md': [
+          '16px',
+          {
+            lineHeight: '1.7',
+            letterSpacing: '0',
+          },
+        ],
+        'body-lg': [
+          '18px',
+          {
+            lineHeight: '1.7',
+            letterSpacing: '0',
+          },
+        ],
+        h1: [
+          '24px',
+          {
+            lineHeight: '1.2',
+            letterSpacing: '-0.01em',
+          },
+        ],
+        'h1-md': [
+          '32px',
+          {
+            lineHeight: '1.15',
+            letterSpacing: '-0.01em',
+          },
+        ],
+        'h1-lg': [
+          '40px',
+          {
+            lineHeight: '1.1',
+            letterSpacing: '-0.01em',
+          },
+        ],
+        h2: [
+          '20px',
+          {
+            lineHeight: '1.25',
+            letterSpacing: '-0.01em',
+          },
+        ],
+        'h2-md': [
+          '24px',
+          {
+            lineHeight: '1.2',
+            letterSpacing: '-0.01em',
+          },
+        ],
+        'h2-lg': [
+          '32px',
+          {
+            lineHeight: '1.15',
+            letterSpacing: '-0.01em',
+          },
+        ],
+        h3: [
+          '18px',
+          {
+            lineHeight: '1.3',
+            letterSpacing: '-0.01em',
+          },
+        ],
+        'h3-md': [
+          '20px',
+          {
+            lineHeight: '1.25',
+            letterSpacing: '-0.01em',
+          },
+        ],
+        'h3-lg': [
+          '24px',
+          {
+            lineHeight: '1.2',
+            letterSpacing: '-0.01em',
+          },
+        ],
+        button: [
+          '14px',
+          {
+            lineHeight: '1.5',
+            letterSpacing: '0',
+            fontWeight: '500',
+          },
+        ],
+        'button-md': [
+          '16px',
+          {
+            lineHeight: '1.5',
+            letterSpacing: '0',
+            fontWeight: '500',
+          },
+        ],
+        caption: [
+          '12px',
+          {
+            lineHeight: '1.4',
+            letterSpacing: '0',
+          },
+        ],
+        'caption-md': [
+          '14px',
+          {
+            lineHeight: '1.4',
+            letterSpacing: '0',
+          },
+        ],
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

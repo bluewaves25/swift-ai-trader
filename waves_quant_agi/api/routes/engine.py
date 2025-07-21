@@ -84,16 +84,39 @@ async def get_engine_status():
 
 @router.post("/start")
 async def start_engine():
-    """Start the trading engine"""
+    """
+    Start the trading engine and fetch active pairs from MT5.
+    """
     global ENGINE_STATUS
-    from datetime import datetime
-    
+    import os
+    from waves_quant_agi.engine.brokers.mt5_plugin import MT5Broker
+
+    active_pairs = []
+    try:
+        mt5_login = int(os.getenv("MT5_LOGIN"))
+        mt5_password = os.getenv("MT5_PASSWORD")
+        mt5_server = os.getenv("MT5_SERVER")
+        
+        if mt5_login and mt5_password and mt5_server:
+            mt5_broker = MT5Broker(login=mt5_login, password=mt5_password, server=mt5_server)
+            mt5_broker.connect()
+            all_symbols = mt5_broker.get_all_symbols()
+            # Filter for common forex pairs and gold, especially with 'm' suffix for Exness
+            desired_pairs = ["XAUUSD", "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD"]
+            active_pairs = [s for s in all_symbols if any(p in s for p in desired_pairs) and s.endswith('m')]
+            if not active_pairs: # Fallback if no 'm' suffix pairs found
+                active_pairs = [s for s in all_symbols if any(p in s for p in desired_pairs)]
+    except Exception as e:
+        print(f"Could not fetch MT5 symbols: {e}")
+        # Fallback to default if MT5 connection fails
+        active_pairs = ["BTC/USD", "ETH/USD", "EUR/USD"]
+
     ENGINE_STATUS = {
         "is_running": True,
         "start_time": datetime.now().isoformat(),
         "total_signals": 0,
         "total_trades": 0,
-        "active_pairs": ["BTC/USD", "ETH/USD", "EUR/USD"]
+        "active_pairs": active_pairs or ["No compatible pairs found"]
     }
     
     return {"message": "Engine started successfully", "status": ENGINE_STATUS}

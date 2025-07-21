@@ -78,6 +78,158 @@
 }
 
 @layer utilities {
+  /* Responsive page/screen margins */
+  .main-margin {
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+  @media (min-width: 480px) {
+    .main-margin {
+      margin-left: 24px;
+      margin-right: 24px;
+    }
+  }
+  @media (min-width: 768px) {
+    .main-margin {
+      margin-left: 32px;
+      margin-right: 32px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .main-margin {
+      margin-left: 60px;
+      margin-right: 60px;
+    }
+  }
+  @media (min-width: 1440px) {
+    .main-margin {
+      margin-left: 120px;
+      margin-right: 120px;
+    }
+  }
+
+  /* Section vertical spacing */
+  .section-gap {
+    margin-top: 24px;
+    margin-bottom: 24px;
+  }
+  @media (min-width: 768px) {
+    .section-gap {
+      margin-top: 48px;
+      margin-bottom: 48px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .section-gap {
+      margin-top: 64px;
+      margin-bottom: 64px;
+    }
+  }
+  @media (min-width: 1440px) {
+    .section-gap {
+      margin-top: 120px;
+      margin-bottom: 120px;
+    }
+  }
+
+  /* List item gap */
+  .list-gap {
+    gap: 8px;
+  }
+  @media (min-width: 768px) {
+    .list-gap {
+      gap: 16px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .list-gap {
+      gap: 24px;
+    }
+  }
+
+  /* Button padding */
+  .btn-pad {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  @media (min-width: 768px) {
+    .btn-pad {
+      padding-top: 12px;
+      padding-bottom: 12px;
+      padding-left: 24px;
+      padding-right: 24px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .btn-pad {
+      padding-top: 16px;
+      padding-bottom: 16px;
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+  }
+
+  /* Card/container padding */
+  .card-pad {
+    padding: 16px;
+  }
+  @media (min-width: 768px) {
+    .card-pad {
+      padding: 24px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .card-pad {
+      padding: 32px;
+    }
+  }
+  @media (min-width: 1440px) {
+    .card-pad {
+      padding: 40px;
+    }
+  }
+
+  /* Grid gutter */
+  .grid-gutter {
+    column-gap: 8px;
+    row-gap: 8px;
+  }
+  @media (min-width: 768px) {
+    .grid-gutter {
+      column-gap: 16px;
+      row-gap: 16px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .grid-gutter {
+      column-gap: 24px;
+      row-gap: 24px;
+    }
+  }
+  @media (min-width: 1440px) {
+    .grid-gutter {
+      column-gap: 30px;
+      row-gap: 30px;
+    }
+  }
+
+  /* Icon + label gap */
+  .icon-label-gap {
+    gap: 4px;
+  }
+  @media (min-width: 768px) {
+    .icon-label-gap {
+      gap: 8px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .icon-label-gap {
+      gap: 16px;
+    }
+  }
+
   .animate-fade-in {
     animation: fadeIn 0.5s ease-in-out;
   }
@@ -229,18 +381,6 @@
 
 /* Improved mobile responsive improvements */
 @media (max-width: 768px) {
-  /* Force smaller text and compact layout */
-  * {
-    font-size: 0.75rem !important;
-  }
-  
-  .text-lg { font-size: 0.875rem !important; }
-  .text-xl { font-size: 1rem !important; }
-  .text-2xl { font-size: 1.125rem !important; }
-  .text-3xl { font-size: 1.25rem !important; }
-  .text-4xl { font-size: 1.5rem !important; }
-  .text-5xl { font-size: 1.75rem !important; }
-  
   /* Compact padding everywhere */
   .p-4 { padding: 0.5rem !important; }
   .p-6 { padding: 0.75rem !important; }

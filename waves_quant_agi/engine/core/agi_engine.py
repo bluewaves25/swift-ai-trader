@@ -5,6 +5,7 @@ import logging
 import importlib
 import pkgutil
 import os
+from datetime import datetime
 
 from waves_quant_agi.engine.strategies.base_strategy import BaseStrategy
 from waves_quant_agi.engine.intelligence.attention_engine import AttentionEngine
@@ -15,6 +16,10 @@ from waves_quant_agi.engine.core.risk_manager import RiskManager
 from waves_quant_agi.engine.core.execution_engine import ExecutionEngine
 from waves_quant_agi.engine.core.schema import MarketData, MarketRegime
 from waves_quant_agi.engine.core.signal import Signal
+from waves_quant_agi.engine.core.strategy_manager import StrategyManager
+from waves_quant_agi.engine.strategies.aggressive_scalper import AggressiveScalper
+from waves_quant_agi.core.models.transaction import Trade
+from waves_quant_agi.core.database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +49,18 @@ class AGIEngine:
         self.current_regime = MarketRegime.RANGING
         self.volatility_level = 0.0
         self.explain_log: List[Dict[str, Any]] = []
+
+        self.db_session = SessionLocal()
+        self.strategy_manager = StrategyManager()
+        self.risk_manager = RiskManager()
+        self.execution_engine = ExecutionEngine(self.db_session, self.risk_manager)
+        self.online_learner = OnlineLearner()
+        
+        # Add aggressive strategy for HFT
+        self.strategy_manager.add_strategy(AggressiveScalper())
+        
+        self.market_regime = "trending" 
+        self.last_learning_update = datetime.now()
 
         logger.info(f"AGI Engine initialized (sandbox_mode={sandbox_mode})")
         if os.getenv("DISCOVER_STRATEGIES", "false").lower() == "true":
@@ -175,6 +192,36 @@ class AGIEngine:
             'metrics': self.performance_metrics.copy(),
         })
 
+    def process_market_data(self, market_data: MarketData):
+        """
+        Main processing loop for the engine.
+        - Updates risk manager with new data.
+        - Gets signals from all strategies.
+        - Executes the highest priority signal.
+        - Periodically learns from past trades.
+        """
+        # 1. Update risk manager with latest market data
+        self.risk_manager.update_market_data(market_data)
+
+        # 2. Get signals from all strategies
+        signals = self.strategy_manager.get_all_signals(market_data)
+        
+        if not signals:
+            return
+
+        # 3. Prioritize signals and execute the best one
+        highest_priority_signal = max(signals, key=lambda s: s.priority)
+        self.execution_engine.execute_signals([highest_priority_signal])
+
+        # 4. Periodically update strategy weights from recent trades
+        if (datetime.now() - self.last_learning_update).seconds > 60:
+             # Fetch recent trades from Supabase
+            recent_trades = self.db_session.query(Trade).order_by(Trade.timestamp.desc()).limit(100).all()
+            if recent_trades:
+                new_weights = self.online_learner.update_weights(recent_trades, self.strategy_manager.strategy_weights)
+                self.strategy_manager.update_strategy_weights(new_weights)
+            self.last_learning_update = datetime.now()
+        
     def get_status(self):
         return {
             'performance_metrics': self.performance_metrics,

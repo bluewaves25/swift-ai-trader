@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Play, Pause, Square, AlertTriangle, Zap } from "lucide-react";
+import { Play, Pause, Square, AlertTriangle, Zap, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { API_ENDPOINTS, apiCall } from "@/config/api";
@@ -25,10 +25,15 @@ export function EngineControl() {
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const [mt5Status, setMt5Status] = useState<{ connected: boolean; account?: any; error?: string; message?: string } | null>(null);
 
   useEffect(() => {
     fetchEngineStatus();
-    const interval = setInterval(fetchEngineStatus, 5000);
+    fetchMt5Status();
+    const interval = setInterval(() => {
+      fetchEngineStatus();
+      fetchMt5Status();
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -125,6 +130,15 @@ export function EngineControl() {
     }
   };
 
+  const fetchMt5Status = async () => {
+    try {
+      const data = await apiCall("/api/v1/owner/mt5-status");
+      setMt5Status(data);
+    } catch (error) {
+      setMt5Status({ connected: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  };
+
   const getUptime = () => {
     if (!engineState.start_time) return "Not running";
     const startTime = new Date(engineState.start_time);
@@ -154,7 +168,38 @@ export function EngineControl() {
           )} />
           {engineState.is_running ? "Running" : "Stopped"}
         </Badge>
+        {/* MT5 Status Badge */}
+        {mt5Status && (
+          <Badge
+            variant={mt5Status.connected ? "default" : "secondary"}
+            className={cn(
+              "ml-4 px-3 py-1 flex items-center gap-2",
+              mt5Status.connected
+                ? "bg-green-100 text-green-800 border-green-200"
+                : "bg-red-100 text-red-800 border-red-200"
+            )}
+          >
+            {mt5Status.connected ? (
+              <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-red-500 mr-1" />
+            )}
+            {mt5Status.connected ? "MT5 Connected" : "MT5 Not Connected"}
+          </Badge>
+        )}
       </div>
+      {/* MT5 Account Info/Error */}
+      {mt5Status && (
+        <div className="text-xs mt-1">
+          {mt5Status.connected && mt5Status.account ? (
+            <span>
+              Balance: <span className="font-semibold">${mt5Status.account.balance?.toFixed(2)}</span> | Equity: <span className="font-semibold">${mt5Status.account.equity?.toFixed(2)}</span>
+            </span>
+          ) : mt5Status.error ? (
+            <span className="text-red-600">{mt5Status.error}</span>
+          ) : null}
+        </div>
+      )}
 
       {/* Control Buttons */}
       <Card className="relative overflow-hidden">
@@ -234,33 +279,50 @@ export function EngineControl() {
           </CardContent>
         </Card>
         
-        <Card className="transition-all duration-300 hover:shadow-lg">
+        <Card className="transition-all duration-300 hover:shadow-lg col-span-1 md:col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Active Pairs</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{engineState.active_pairs?.length || 0}</div>
+            {engineState.active_pairs && engineState.active_pairs.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {engineState.active_pairs.map(pair => (
+                  <Badge key={pair} variant="outline" className="text-purple-700 border-purple-200 bg-purple-50">
+                    {pair}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">No active pairs</div>
+            )}
           </CardContent>
         </Card>
       </div>
 
       {/* Active Pairs Display */}
-      {engineState.active_pairs?.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Active Trading Pairs</CardTitle>
-          </CardHeader>
-          <CardContent>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Active Trading Pairs</CardTitle>
+          <CardDescription>
+            The engine is currently monitoring and trading these pairs from your MT5 account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {engineState.active_pairs && engineState.active_pairs.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {engineState.active_pairs?.map((pair) => (
-                <Badge key={pair} variant="secondary" className="px-3 py-1">
+              {engineState.active_pairs.map(pair => (
+                <Badge key={pair} variant="secondary" className="px-3 py-1 text-sm">
                   {pair}
                 </Badge>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              No active pairs found. Check MT5 connection and symbols.
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -79,8 +79,8 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
     const checkScroll = () => {
       if (sidebarContentRef.current) {
         const { scrollTop, scrollHeight, clientHeight } = sidebarContentRef.current;
-        setShowScrollUp(scrollTop > 20);
-        setShowScrollDown(scrollTop < scrollHeight - clientHeight - 20);
+        setShowScrollUp(scrollTop > 8);
+        setShowScrollDown(scrollTop < scrollHeight - clientHeight - 8);
       }
     };
 
@@ -91,7 +91,7 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
       
       return () => contentElement.removeEventListener('scroll', checkScroll);
     }
-  }, [isCollapsed, paymentsOpen]);
+  }, [isCollapsed]);
 
   const scrollToTop = () => {
     if (sidebarContentRef.current) {
@@ -137,7 +137,7 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
 
   return (
     <div className={cn(
-      "flex flex-col h-full bg-card border-r transition-all duration-300 relative overflow-hidden",
+      "flex flex-col h-screen max-h-screen overflow-hidden bg-card border-r transition-all duration-300 relative",
       isCollapsed ? "w-12 md:w-16" : "w-56 md:w-64",
       "md:relative md:translate-x-0",
       "fixed inset-y-0 left-0 z-50 md:z-auto",
@@ -198,22 +198,15 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
 
       {/* Scroll Up Button */}
       {showScrollUp && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10">
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={scrollToTop}
-            className="h-6 w-6 p-0 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg hover:bg-white dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
-          >
+        <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-10">
+          <Button size="sm" variant="secondary" onClick={scrollToTop} className="h-6 w-6 p-0 rounded-full shadow-lg">
             <ChevronUp className="h-3 w-3" />
           </Button>
         </div>
       )}
-
-      {/* Main Navigation */}
       <SidebarContent 
         ref={sidebarContentRef}
-        className="flex-1 p-1 md:p-2 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent"
+        className="flex-1 min-h-0 overflow-auto p-1 md:p-2 space-y-1 relative"
       >
         <div className={cn("space-y-1", !isCollapsed && "px-1 md:px-2")}>
           {!isCollapsed && (
@@ -316,16 +309,10 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
           ))}
         </div>
       </SidebarContent>
-
       {/* Scroll Down Button */}
       {showScrollDown && (
-        <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-10">
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={scrollToBottom}
-            className="h-6 w-6 p-0 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg hover:bg-white dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
-          >
+        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-10">
+          <Button size="sm" variant="secondary" onClick={scrollToBottom} className="h-6 w-6 p-0 rounded-full shadow-lg">
             <ChevronDown className="h-3 w-3" />
           </Button>
         </div>

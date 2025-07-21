@@ -1,7 +1,9 @@
 ### engine/core/strategy_manager.py
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Type
 from waves_quant_agi.engine.strategies.base_strategy import BaseStrategy
+from waves_quant_agi.engine.core.schema import MarketData
+from waves_quant_agi.engine.core.signal import Signal
 import logging
 from waves_quant_agi.core.models.strategy import Strategy as StrategyModel
 from waves_quant_agi.core.database import get_db
@@ -12,85 +14,49 @@ logger = logging.getLogger(__name__)
 
 class StrategyManager:
     """
-    📈 StrategyManager: Handles registration, retrieval, update, and execution
-    of all trading strategies within the AGI engine. Supports runtime management and DB persistence.
+    Manages the lifecycle and execution of a portfolio of trading strategies.
+    - Holds all active strategies.
+    - Assigns and dynamically updates weights based on performance.
+    - Distributes market data to all strategies.
+    - Collects and returns generated signals.
     """
-
     def __init__(self):
         self.strategies: Dict[str, BaseStrategy] = {}
-        logger.info("Strategy Manager initialized ✅")
+        self.strategy_weights: Dict[str, float] = {}
 
-    async def register_strategy(self, strategy: BaseStrategy, db=None):
-        if strategy.name in self.strategies:
-            logger.warning(f"Strategy '{strategy.name}' already registered, skipping")
+    def add_strategy(self, strategy: BaseStrategy, weight: float = 1.0):
+        """Adds a strategy to the manager and sets its initial weight."""
+        if strategy.strategy_id in self.strategies:
+            print(f"Strategy {strategy.strategy_id} already exists.")
             return
-        self.strategies[strategy.name] = strategy
-        logger.info(f"Registered strategy: {strategy.name}")
-        # Persist to DB if db session provided
-        if db:
-            await self._persist_strategy(strategy, db)
+        self.strategies[strategy.strategy_id] = strategy
+        self.strategy_weights[strategy.strategy_id] = weight
+        print(f"Strategy {strategy.strategy_id} added with weight {weight}")
 
-    async def remove_strategy(self, strategy_name: str, db=None):
-        if strategy_name in self.strategies:
-            del self.strategies[strategy_name]
-            logger.info(f"Removed strategy: {strategy_name}")
-            if db:
-                await self._remove_strategy_db(strategy_name, db)
-        else:
-            logger.warning(f"Strategy '{strategy_name}' not found")
+    def remove_strategy(self, strategy_id: str):
+        """Removes a strategy from the manager."""
+        if strategy_id in self.strategies:
+            del self.strategies[strategy_id]
+            del self.strategy_weights[strategy_id]
+            print(f"Strategy {strategy_id} removed.")
 
-    def get_strategy(self, strategy_name: str) -> Optional[BaseStrategy]:
-        return self.strategies.get(strategy_name)
+    def update_strategy_weights(self, new_weights: Dict[str, float]):
+        """Dynamically updates the weights of the strategies."""
+        print(f"Updating strategy weights: {new_weights}")
+        for strategy_id, weight in new_weights.items():
+            if strategy_id in self.strategy_weights:
+                self.strategy_weights[strategy_id] = weight
 
-    def list_strategies(self) -> List[str]:
-        return list(self.strategies.keys())
-
-    async def update_strategy(self, strategy_name: str, config: dict, db=None):
-        strat = self.strategies.get(strategy_name)
-        if strat:
-            strat.config.update(config)
-            logger.info(f"Updated config for strategy: {strategy_name}")
-            if db:
-                await self._update_strategy_db(strategy_name, config, db)
-        else:
-            logger.warning(f"Strategy '{strategy_name}' not found for update")
-
-    async def run_all(self, market_data):
-        results = []
-        for name, strategy in self.strategies.items():
-            logger.info(f"Running strategy: {name}")
-            signal = await strategy.generate_signal(market_data)
-            results.append(signal)
-        return results
-
-    async def _persist_strategy(self, strategy: BaseStrategy, db):
-        # Save strategy config to DB
-        db_strategy = StrategyModel(
-            id=strategy.name,
-            name=strategy.name,
-            win_rate=0.0,
-            sharpe_ratio=0.0,
-            sortino_ratio=0.0,
-            max_drawdown=0.0,
-            validated=False,
-            status="active",
-            performance=0.0,
-            description=strategy.__doc__ or ""
-        )
-        db.add(db_strategy)
-        await db.commit()
-
-    async def _remove_strategy_db(self, strategy_name: str, db):
-        result = await db.execute(select(StrategyModel).where(StrategyModel.name == strategy_name))
-        db_strategy = result.scalar_one_or_none()
-        if db_strategy:
-            await db.delete(db_strategy)
-            await db.commit()
-
-    async def _update_strategy_db(self, strategy_name: str, config: dict, db):
-        result = await db.execute(select(StrategyModel).where(StrategyModel.name == strategy_name))
-        db_strategy = result.scalar_one_or_none()
-        if db_strategy:
-            db_strategy.status = config.get("status", db_strategy.status)
-            db_strategy.description = config.get("description", db_strategy.description)
-            await db.commit()
+    def get_all_signals(self, market_data: MarketData) -> List[Signal]:
+        """
+        Distributes market data to all active strategies and collects signals.
+        Enriches signals with the current strategy weight.
+        """
+        signals = []
+        for strategy_id, strategy in self.strategies.items():
+            signal = strategy.generate_signal(market_data)
+            if signal:
+                # Add the strategy's current weight to the signal metadata
+                signal.metadata['strategy_weight'] = self.strategy_weights.get(strategy_id, 0)
+                signals.append(signal)
+        return signals

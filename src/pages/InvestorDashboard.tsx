@@ -81,7 +81,7 @@ const InvestorDashboard = () => {
   return (
     <ErrorBoundary>
       <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-background">
+        <div className="flex h-screen w-screen max-w-none overflow-hidden bg-background">
           {/* Mobile Menu Button */}
           <Button
             variant="outline"
@@ -103,8 +103,8 @@ const InvestorDashboard = () => {
             isMobileOpen={isMobileOpen}
             onMobileToggle={setIsMobileOpen}
           />
-          
-          <div className="flex-1 flex flex-col min-w-0 max-w-full">
+          {/* Main content wrapper: flex column, header sticky, main scrollable */}
+          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
             {/* Fixed Header */}
             <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95 p-1 md:p-2 shadow-sm flex-shrink-0">
               <div className="flex items-center justify-between ml-6 md:ml-0">
@@ -118,7 +118,6 @@ const InvestorDashboard = () => {
                     </p>
                   </div>
                 </div>
-                
                 <div className="flex items-center space-x-1 flex-shrink-0">
                   <Badge variant="outline" className="px-1 py-0 text-xs border-green-200 text-green-700 bg-green-50 dark:border-green-800 dark:text-green-400 dark:bg-green-900/20">
                     <Activity className="h-2 w-2 mr-0.5" />
@@ -128,10 +127,9 @@ const InvestorDashboard = () => {
                 </div>
               </div>
             </header>
-
-            {/* Main Content */}
-            <main className="flex-1 p-1 md:p-2 lg:p-3 overflow-auto bg-background">
-              <div className="max-w-full mx-auto">
+            {/* Main Content (scrollable) */}
+            <main className="flex-1 min-h-0 overflow-auto bg-background">
+              <div className="main-margin mx-auto section-gap">
                 {renderContent()}
               </div>
             </main>

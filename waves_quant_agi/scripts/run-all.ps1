@@ -19,6 +19,10 @@ Start-Sleep -Seconds 2
 Write-Host "Starting backend-ml (ML engine) in env_310..."
 Start-Process powershell -WorkingDirectory $projectRoot -ArgumentList '-NoExit', '-Command', '$env:DISCOVER_STRATEGIES="true"; .\waves_quant_agi\env_310\Scripts\activate; python -m waves_quant_agi.backend-ml.app *>> backend-ml.log' -WindowStyle Normal
 
+# Start MT5 market data feeder
+Write-Host "Starting MT5 market data feeder..."
+Start-Process powershell -WorkingDirectory $projectRoot -ArgumentList '-NoExit', '-Command', '.\waves_quant_agi\env_310\Scripts\activate; python waves_quant_agi/engine/feeders/mt5_feeder.py *>> mt5-feeder.log' -WindowStyle Normal
+
 # Optionally, start additional engine workers for scaling
 # Write-Host "Starting additional trading engine worker..."
 # Start-Process powershell -WorkingDirectory $projectRoot -ArgumentList '-NoExit', '-Command', 'Set-Location $projectRoot; $env:PYTHONPATH=$projectRoot; $env:DISCOVER_STRATEGIES="true"; .\waves_quant_agi\env_310\Scripts\activate; python waves_quant_agi/engine/run_engine_api.py *>> trading-engine.log' -WindowStyle Normal

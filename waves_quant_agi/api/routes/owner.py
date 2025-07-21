@@ -18,7 +18,8 @@ from waves_quant_agi.core.models.portfolio import InvestorPortfolio
 from waves_quant_agi.core.models.transaction import Trade
 from sqlalchemy import func
 from datetime import timedelta, date
-from waves_quant_agi.core.models.settings import SystemSettings
+import traceback
+from fastapi import status as http_status
 
 # TODO: Use API/IPC/Redis to communicate with engine for strategy management
 
@@ -269,4 +270,35 @@ async def get_logs(current_admin: User = Depends(get_current_admin)):
 @router.get("/automl/status")
 async def automl_status(current_admin: User = Depends(get_current_admin)):
     # TODO: Integrate with real Auto-ML status
-    return {"evolving_models": [], "validated_models": []} 
+    return {"evolving_models": [], "validated_models": []}
+
+# MT5 HEALTH CHECK ENDPOINT (moved to /mt5-status for clarity)
+@router.get("/mt5-status", tags=["owner"])
+async def mt5_status():
+    """Check MT5 connection and account status."""
+    import os
+    mt5_login = os.getenv("MT5_LOGIN")
+    mt5_password = os.getenv("MT5_PASSWORD")
+    mt5_server = os.getenv("MT5_SERVER", "Exness-MT5")
+    if not (mt5_login and mt5_password and mt5_server):
+        return {
+            "connected": False,
+            "error": "MT5 credentials not set in environment variables."
+        }
+    try:
+        from waves_quant_agi.engine.brokers.mt5_plugin import MT5Broker
+        mt5 = MT5Broker(int(mt5_login), mt5_password, mt5_server)
+        mt5.connect()
+        account_info = mt5.get_balance()
+        return {
+            "connected": True,
+            "account": account_info,
+            "message": f"Connected to {mt5_server} as {mt5_login}"
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "connected": False,
+            "error": str(e),
+            "trace": traceback.format_exc()
+        } 
