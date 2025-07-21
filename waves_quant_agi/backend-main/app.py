@@ -21,7 +21,8 @@ from waves_quant_agi.core.models.strategy import Strategy as StrategyModel
 from sqlalchemy.future import select
 import requests
 from fastapi import Request
-from waves_quant_agi.backend-main.spa_handler import setup_spa_handler
+# SPA handler import - commented out for now to avoid import issues
+# from waves_quant_agi.backend_main.spa_handler import setup_spa_handler
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -55,7 +56,7 @@ app.include_router(portfolio.router, prefix="/api/v1/portfolio")
 app.include_router(support.router, prefix="/api/v1/support")
 
 # Setup SPA handler for React app (if frontend is built)
-setup_spa_handler(app, static_dir="../dist")
+# setup_spa_handler(app, static_dir="../dist")
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 redis_client = redis.Redis.from_url(REDIS_URL)
@@ -353,12 +354,13 @@ async def api_status():
         "timestamp": datetime.utcnow().isoformat()
     }
 
-@app.get("/api/v1/engine/status")
-async def engine_status():
-    """
-    Returns the current status, performance metrics, and explainability log of the AGI engine.
-    """
-    return agi_engine.get_status()
+# This endpoint conflicts with the engine router, so we'll remove it
+# @app.get("/api/v1/engine/status")
+# async def engine_status():
+#     """
+#     Returns the current status, performance metrics, and explainability log of the AGI engine.
+#     """
+#     return agi_engine.get_status()
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):

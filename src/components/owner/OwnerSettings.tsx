@@ -77,7 +77,7 @@ export function OwnerSettings() {
     const fetchSettings = async () => {
       setLoading(true);
       try {
-        const data = await apiService.getOwnerSettings?.();
+        const { data } = await apiService.getOwnerSettings();
         setSettings(data || null);
       } catch (error) {
         setSettings(null);

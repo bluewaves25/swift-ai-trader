@@ -17,6 +17,7 @@ import { OwnerSettings } from "@/components/owner/OwnerSettings";
 import { LiveSignals } from "@/components/owner/LiveSignals";
 import { TradeHistory } from "@/components/owner/TradeHistory";
 import SubscriptionManagement from '@/components/owner/SubscriptionManagement';
+import OwnerDashboardOverview from '@/components/owner/OwnerDashboardOverview';
 import apiService from '@/services/api';
 import axios from 'axios';
 
@@ -54,80 +55,7 @@ const OwnerDashboard = () => {
   const renderContent = () => {
     switch (activeSection) {
       case 'overview':
-        return (
-          <div className="space-y-2 md:space-y-4">
-            {/* Stats Overview */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
-              <Card className="p-2 md:p-4">
-                <CardContent className="p-1 md:p-2">
-                  <div className="flex items-center space-x-1 md:space-x-2">
-                    <Users className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
-                    <div>
-                      <p className="text-xs md:text-sm font-medium">Total Users</p>
-                      <p className="text-lg md:text-2xl font-bold">{stats.totalUsers.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="p-2 md:p-4">
-                <CardContent className="p-1 md:p-2">
-                  <div className="flex items-center space-x-1 md:space-x-2">
-                    <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
-                    <div>
-                      <p className="text-xs md:text-sm font-medium">Total Trades</p>
-                      <p className="text-lg md:text-2xl font-bold">{stats.totalTrades.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="p-2 md:p-4">
-                <CardContent className="p-1 md:p-2">
-                  <div className="flex items-center space-x-1 md:space-x-2">
-                    <DollarSign className="h-3 w-3 md:h-4 md:w-4 text-purple-600" />
-                    <div>
-                      <p className="text-xs md:text-sm font-medium">Revenue</p>
-                      <p className="text-lg md:text-2xl font-bold">${(stats.totalRevenue / 1000000).toFixed(1)}M</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="p-2 md:p-4">
-                <CardContent className="p-1 md:p-2">
-                  <div className="flex items-center space-x-1 md:space-x-2">
-                    <Activity className="h-3 w-3 md:h-4 md:w-4 text-orange-600" />
-                    <div>
-                      <p className="text-xs md:text-sm font-medium">Strategies</p>
-                      <p className="text-lg md:text-2xl font-bold">{stats.activeStrategies}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Recent Activity */}
-            <Card>
-              <CardHeader className="p-2 md:p-4">
-                <CardTitle className="text-sm md:text-base">Recent System Logs</CardTitle>
-                <CardDescription className="text-xs md:text-sm">Latest engine activity and alerts</CardDescription>
-              </CardHeader>
-              <CardContent className="p-2 md:p-4">
-                <div className="space-y-1 md:space-y-2 max-h-32 md:max-h-48 overflow-y-auto">
-                  {recentLogs.map((log) => (
-                    <div key={log.id} className="flex items-center justify-between text-xs md:text-sm p-1 md:p-2 rounded bg-muted/50">
-                      <span className="truncate flex-1">{log.message}</span>
-                      <Badge variant={log.level === 'warning' ? 'destructive' : 'default'} className="text-xs ml-2">
-                        {log.level}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        );
+        return <OwnerDashboardOverview />;
       case 'subscription':
         return <SubscriptionManagement />;
       case 'engine':

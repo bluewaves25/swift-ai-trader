@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -9,9 +9,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Shield, AlertTriangle, TrendingDown, Settings, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { apiService } from "@/services/api";
+
+interface RiskSettings {
+  maxRiskPerTrade: number;
+  maxRiskPerDay: number;
+  maxRiskPerWeek: number;
+  maxPositionSize: number;
+  stopLossPercentage: number;
+  takeProfitPercentage: number;
+  maxConcurrentTrades: number;
+  riskLevel: string;
+}
 
 export function RiskManagement() {
-  const [riskSettings, setRiskSettings] = useState({
+  const [riskSettings, setRiskSettings] = useState<RiskSettings>({
     maxRiskPerTrade: 2.5,
     maxRiskPerDay: 10.0,
     maxRiskPerWeek: 25.0,
@@ -24,6 +36,26 @@ export function RiskManagement() {
   
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchRiskSettings();
+  }, []);
+
+  const fetchRiskSettings = async () => {
+    setLoading(true);
+    try {
+      const { data } = await apiService.getRiskSettings?.();
+      setRiskSettings(data || riskSettings);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch risk settings",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSliderChange = (field: string) => (value: number[]) => {
     setRiskSettings(prev => ({
@@ -45,9 +77,7 @@ export function RiskManagement() {
   const handleSaveSettings = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      await apiService.saveRiskSettings?.(riskSettings);
       toast({
         title: "Risk Settings Updated",
         description: "Your risk management settings have been saved successfully",

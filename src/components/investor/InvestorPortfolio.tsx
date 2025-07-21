@@ -16,25 +16,25 @@ import {
   DollarSign,
   Receipt
 } from "lucide-react";
-import { apiService } from '@/services/api';
+import { apiService, Portfolio, Performance } from '@/services/api';
 
 const InvestorPortfolio = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [portfolio, setPortfolio] = useState(null);
-  const [performance, setPerformance] = useState(null);
+  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  const [performance, setPerformance] = useState<Performance | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPortfolio = async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await apiService.getPortfolio();
-        setPortfolio(data);
-        const perf = await apiService.getPortfolioPerformance();
-        setPerformance(perf);
+        const { data: portfolioData } = await apiService.getPortfolio();
+        setPortfolio(portfolioData);
+        const { data: perfData } = await apiService.getPortfolioPerformance();
+        setPerformance(perfData);
       } catch (err) {
         setError('Failed to load portfolio');
         toast.error('Failed to load portfolio');

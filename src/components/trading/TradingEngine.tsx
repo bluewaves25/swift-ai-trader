@@ -33,8 +33,8 @@ const TradingEngine = ({ isRunning }: TradingEngineProps) => {
     if (isRunning) {
       const fetchStats = async () => {
         try {
-          const stats = await apiService.getEngineStats?.();
-          setEngineStats(stats || null);
+          const { data } = await apiService.getEngineStatus();
+          setEngineStats(data || null);
         } catch (error) {
           setEngineStats(null);
         }

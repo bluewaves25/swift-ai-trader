@@ -59,8 +59,8 @@ export function TransactionsList() {
       setLoading(true);
       setError(null);
       try {
-        const data = await apiService.getTransactions();
-        setTransactions(data);
+        const { data } = await apiService.getTransactions();
+        setTransactions(Array.isArray(data) ? data : []);
       } catch (err) {
         setError('Failed to fetch transactions');
         toast.error('Failed to fetch transactions');

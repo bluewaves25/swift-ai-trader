@@ -42,8 +42,23 @@ export default function TradeHistory() {
       setLoading(true);
       setError(null);
       try {
-        const data = await apiService.getTrades();
-        setTrades(Array.isArray(data) ? (data as Trade[]) : []);
+        const { data } = await apiService.getTradeHistory();
+        setTrades(
+          Array.isArray(data.trades)
+            ? data.trades.map((trade: any) => ({
+                ...trade,
+                symbol: trade.symbol ?? '',
+                trade_type: trade.trade_type ?? '',
+                amount: trade.amount ?? 0,
+                entry_price: trade.entry_price ?? 0,
+                exit_price: trade.exit_price ?? 0,
+                profit_loss: trade.profit_loss ?? 0,
+                status: trade.status ?? '',
+                timestamp: trade.timestamp ?? '',
+                strategy: trade.strategy ?? '',
+              }))
+            : []
+        );
       } catch (err) {
         setError('Failed to fetch trade history');
         toast.error('Failed to fetch trade history');
@@ -74,8 +89,23 @@ export default function TradeHistory() {
             setLoading(true);
             setError(null);
             try {
-              const data = await apiService.getTrades();
-              setTrades(Array.isArray(data) ? (data as Trade[]) : []);
+              const { data } = await apiService.getTradeHistory();
+              setTrades(
+                Array.isArray(data.trades)
+                  ? data.trades.map((trade: any) => ({
+                      ...trade,
+                      symbol: trade.symbol ?? '',
+                      trade_type: trade.trade_type ?? '',
+                      amount: trade.amount ?? 0,
+                      entry_price: trade.entry_price ?? 0,
+                      exit_price: trade.exit_price ?? 0,
+                      profit_loss: trade.profit_loss ?? 0,
+                      status: trade.status ?? '',
+                      timestamp: trade.timestamp ?? '',
+                      strategy: trade.strategy ?? '',
+                    }))
+                  : []
+              );
             } catch (err) {
               setError('Failed to fetch trade history');
               toast.error('Failed to fetch trade history');

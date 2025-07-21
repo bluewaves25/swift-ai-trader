@@ -717,6 +717,7 @@ export type Database = {
           email: string
           id: string
           is_admin: boolean | null
+          is_active: boolean | null
           role: string | null
         }
         Insert: {
@@ -724,6 +725,7 @@ export type Database = {
           email: string
           id?: string
           is_admin?: boolean | null
+          is_active?: boolean | null
           role?: string | null
         }
         Update: {
@@ -731,6 +733,7 @@ export type Database = {
           email?: string
           id?: string
           is_admin?: boolean | null
+          is_active?: boolean | null
           role?: string | null
         }
         Relationships: []

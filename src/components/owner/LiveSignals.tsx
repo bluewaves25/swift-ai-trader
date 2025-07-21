@@ -6,19 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Activity, Play, Square, TrendingUp, TrendingDown, Pause, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { apiService } from "@/services/api";
-
-interface Trade {
-  id: string;
-  symbol: string;
-  type: 'buy' | 'sell';
-  volume: number;
-  price: number;
-  broker: 'binance' | 'exness';
-  timestamp: string;
-  status: 'pending' | 'filled' | 'rejected';
-  profit?: number;
-}
+import { apiService, Trade } from "@/services/api";
+import { API_ENDPOINTS, apiCall } from "@/config/api";
 
 interface Signal {
   id: string;
@@ -49,30 +38,37 @@ export function LiveSignals() {
   const fetchLiveData = async () => {
     try {
       // Fetch real signals and trades
-      const signalsData = await apiService.getAISignals?.();
-      setSignals(signalsData || []);
-      const tradesData = await apiService.getTrades?.();
-      setTrades(tradesData || []);
+      const { data: signalsData } = await apiService.getLiveSignals();
+      setSignals(Array.isArray(signalsData.signals) ? signalsData.signals : []);
+      const { data: tradesData } = await apiService.getTradeHistory();
+      setTrades(Array.isArray(tradesData.trades) ? tradesData.trades : []);
     } catch (error) {
-      console.error('Error fetching live data:', error);
+      // Only log error once per session to avoid spam
+      const errorKey = 'liveSignalsErrorLogged';
+      if (!sessionStorage.getItem(errorKey)) {
+        console.error('Error fetching live data:', error);
+        sessionStorage.setItem(errorKey, 'true');
+        // Clear the flag after 30 seconds to allow retry
+        setTimeout(() => sessionStorage.removeItem(errorKey), 30000);
+      }
+      setSignals([]);
+      setTrades([]);
     }
   };
 
   const startEngine = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/engine/start', {
+      const data = await apiCall(API_ENDPOINTS.ENGINE_START, {
         method: 'POST',
       });
       
-      if (response.ok) {
-        setEngineRunning(true);
-        toast({
-          title: "Trading Engine Started",
-          description: "Live trading has been activated",
-          className: "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200"
-        });
-      }
+      setEngineRunning(true);
+      toast({
+        title: "Trading Engine Started",
+        description: "Live trading has been activated",
+        className: "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200"
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -87,18 +83,16 @@ export function LiveSignals() {
   const stopEngine = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/engine/stop', {
+      const data = await apiCall(API_ENDPOINTS.ENGINE_STOP, {
         method: 'POST',
       });
       
-      if (response.ok) {
-        setEngineRunning(false);
-        toast({
-          title: "Trading Engine Stopped",
-          description: "All positions have been closed",
-          className: "bg-gradient-to-r from-red-50 to-pink-50 border-red-200"
-        });
-      }
+      setEngineRunning(false);
+      toast({
+        title: "Trading Engine Stopped",
+        description: "All positions have been closed",
+        className: "bg-gradient-to-r from-red-50 to-pink-50 border-red-200"
+      });
     } catch (error) {
       toast({
         title: "Error",

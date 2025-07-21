@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, TrendingDown, BarChart3, PieChart as PieChartIcon, Target, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { apiService } from "@/services/api";
+import { apiService, Performance } from "@/services/api";
 
 interface PerformanceData {
   strategies: {
@@ -32,12 +32,12 @@ interface PerformanceData {
 export function PerformanceAnalytics() {
   const [timeframe, setTimeframe] = useState<"daily" | "weekly" | "monthly">("daily");
   const [sortBy, setSortBy] = useState<"date" | "profit" | "winRate" | "trades">("date");
-  const [data, setData] = useState<PerformanceData | null>(null);
+  const [data, setData] = useState<Performance | null>(null);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const analytics = await apiService.getPerformanceAnalytics?.();
+        const { data: analytics } = await apiService.getPerformanceData();
         setData(analytics || null);
       } catch (error) {
         setData(null);

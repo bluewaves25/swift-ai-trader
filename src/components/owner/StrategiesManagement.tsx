@@ -8,12 +8,13 @@ import { Switch } from "@/components/ui/switch";
 import { Play, Pause, Brain, TrendingUp, Activity, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import apiService from "@/services/api";
+import { apiService, Trade, User } from "@/services/api";
 import { toast } from 'sonner';
 import { LineChart, Line, XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts';
 import ReactDiffViewer from 'react-diff-viewer-continued';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Strategy {
   id: string;
@@ -22,6 +23,7 @@ interface Strategy {
   status: string;
   performance: number;
   last_retrained: string;
+  performanceData?: any[];
 }
 
 const configPresets = [
@@ -30,15 +32,25 @@ const configPresets = [
   { label: 'Momentum', value: '{"lookback": 14, "threshold": 0.7}' },
 ];
 
+// Helper to safely stringify log for ReactNode
+function stringifyLog(log: unknown): string {
+  if (typeof log === 'string') return log;
+  try {
+    return JSON.stringify(log, null, 2);
+  } catch {
+    return String(log);
+  }
+}
+
 export function StrategiesManagement() {
   const { user } = useAuth();
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [auditLog, setAuditLog] = useState<any[]>([]);
-  const [strategies, setStrategies] = useState<string[]>([]);
+  const [auditLog, setAuditLog] = useState<{ action: string; details: any; date: string }[]>([]);
+  const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
-  const [strategyConfig, setStrategyConfig] = useState<any>({});
-  const [validationResult, setValidationResult] = useState<any>(null);
-  const [backtestResult, setBacktestResult] = useState<any>(null);
+  const [strategyConfig, setStrategyConfig] = useState<Record<string, unknown>>({});
+  const [validationResult, setValidationResult] = useState<Record<string, unknown> | null>(null);
+  const [backtestResult, setBacktestResult] = useState<Record<string, unknown> | null>(null);
   const [explainLog, setExplainLog] = useState<any[]>([]);
   const [newStrategy, setNewStrategy] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -47,19 +59,24 @@ export function StrategiesManagement() {
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const [showDiff, setShowDiff] = useState(false);
   const [originalConfig, setOriginalConfig] = useState<string>('{}');
-  const [validationHistory, setValidationHistory] = useState<any[]>([]);
-  const [backtestEquity, setBacktestEquity] = useState<any[]>([]);
+  const [validationHistory, setValidationHistory] = useState<Record<string, unknown>[]>([]);
+  const [backtestEquity, setBacktestEquity] = useState<{ time: number; equity: number }[]>([]);
   const [search, setSearch] = useState('');
   const [compare, setCompare] = useState<string[]>([]);
+
+  const logAction = (action: string, details: any) => {
+    setAuditLog(prev => [{ action, details, date: new Date().toLocaleString() }, ...prev]);
+  };
 
   const fetchStrategies = async () => {
     try {
       setLive(true);
-      const res = await apiService.get("/api/v1/strategies");
-      setStrategies(res.data.strategies);
+      const { data } = await apiService.getStrategies();
+      setStrategies(Array.isArray(data) ? data : []);
       setLive(false);
     } catch (err) {
       setError('Failed to fetch strategies');
+      setStrategies([]);
       setLive(false);
     }
   };
@@ -76,7 +93,7 @@ export function StrategiesManagement() {
     // Fetch user role from Supabase users table if user is logged in
     const fetchRole = async () => {
       if (user) {
-        const { data, error } = await window.supabase
+        const { data, error } = await supabase
           .from('users')
           .select('role')
           .eq('id', user.id)
@@ -90,21 +107,33 @@ export function StrategiesManagement() {
   const handleAdd = async () => {
     if (!newStrategy) return;
     setLoading(true);
-    await apiService.post("/api/v1/strategies/add", null, { params: { strategy_name: newStrategy } });
-    setNewStrategy("");
-    fetchStrategies();
-    setLoading(false);
-    logAction('add', { strategy: newStrategy });
-    toast.success('Strategy added');
+    try {
+      await apiService.addStrategy(newStrategy);
+      setNewStrategy("");
+      fetchStrategies();
+      logAction('add', { strategy: newStrategy });
+      toast.success('Strategy added');
+    } catch (err) {
+      setError('Failed to add strategy');
+      toast.error('Failed to add strategy');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRemove = async (name: string) => {
     setLoading(true);
-    await apiService.post("/api/v1/strategies/remove", null, { params: { strategy_name: name } });
-    fetchStrategies();
-    setLoading(false);
-    logAction('remove', { strategy: name });
-    toast.success('Strategy removed');
+    try {
+      await apiService.removeStrategy(name);
+      fetchStrategies();
+      logAction('remove', { strategy: name });
+      toast.success('Strategy removed');
+    } catch (err) {
+      setError('Failed to remove strategy');
+      toast.error('Failed to remove strategy');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEditConfig = (name: string) => {
@@ -126,47 +155,62 @@ export function StrategiesManagement() {
 
   const confirmUpdate = async () => {
     setLoading(true);
-    await apiService.post("/api/v1/strategies/update", { strategy_name: selectedStrategy, config: strategyConfig });
-    fetchStrategies();
-    setShowDiff(false);
-    setLoading(false);
-    logAction('update', { strategy: selectedStrategy, config: strategyConfig });
-    toast.success('Strategy config updated');
+    try {
+      await apiService.updateStrategy(selectedStrategy, strategyConfig);
+      fetchStrategies();
+      setShowDiff(false);
+      logAction('update', { strategy: selectedStrategy, config: strategyConfig });
+      toast.success('Strategy config updated');
+    } catch (err) {
+      setError('Failed to update strategy config');
+      toast.error('Failed to update strategy config');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleValidate = async (name: string) => {
     setLoading(true);
-    const res = await apiService.get(`/api/v1/strategies/validate/${name}`);
-    setValidationResult(res.data);
-    setValidationHistory((prev) => [{ strategy: name, ...res.data, date: new Date().toLocaleString() }, ...prev]);
-    setLoading(false);
+    try {
+      const { data } = await apiService.validateStrategy(name);
+      setValidationResult(data);
+      setValidationHistory((prev) => [{ strategy: name, ...data, date: new Date().toLocaleString() }, ...prev]);
+    } catch (err) {
+      setError('Failed to validate strategy');
+      toast.error('Failed to validate strategy');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleBacktest = async (name: string, data: any[]) => {
     setLoading(true);
-    const res = await apiService.post(`/api/v1/strategies/backtest`, { strategy_name: name, data });
-    setBacktestResult(res.data);
-    // Demo: generate fake equity curve
-    setBacktestEquity(Array.from({ length: 20 }, (_, i) => ({ time: i, equity: 10000 + i * 100 + Math.random() * 200 })));
-    setLoading(false);
+    try {
+      const { data: backtestData } = await apiService.backtestStrategy(name, data);
+      setBacktestResult(backtestData);
+      setBacktestEquity(Array.from({ length: 20 }, (_, i) => ({ time: i, equity: 10000 + i * 100 + Math.random() * 200 })));
+    } catch (err) {
+      setError('Failed to backtest strategy');
+      toast.error('Failed to backtest strategy');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleExplainLog = async () => {
     setLoading(true);
-    const res = await apiService.get(`/api/v1/engine/explainability`);
-    setExplainLog(res.data);
-    setLoading(false);
+    try {
+      const { data: explainData } = await apiService.getExplainabilityLog();
+      setExplainLog(explainData || []);
+    } catch (err) {
+      setError('Failed to fetch explainability log');
+      toast.error('Failed to fetch explainability log');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Demo performance data for chart (replace with real data if available)
-  const demoPerfData = Array.from({ length: 10 }, (_, i) => ({ time: i, winRate: 50 + Math.random() * 50 }));
-
-  const filteredStrategies = strategies.filter(name => name.toLowerCase().includes(search.toLowerCase()));
-
-  // Audit log helper
-  const logAction = (action: string, details: any) => {
-    setAuditLog(prev => [{ action, details, date: new Date().toLocaleString() }, ...prev]);
-  };
+  const filteredStrategies = strategies.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
 
   if (userRole !== 'owner') {
     return <div className="text-red-500">You do not have access to strategy management.</div>;
@@ -193,26 +237,26 @@ export function StrategiesManagement() {
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
-        <Button onClick={() => setCompare(filteredStrategies)}>Compare All</Button>
+        <Button onClick={() => setCompare(filteredStrategies.map(s => s.name))}>Compare All</Button>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        {filteredStrategies.map((name) => (
-          <Card key={name} className="relative">
+        {filteredStrategies.map((strategy) => (
+          <Card key={strategy.name} className="relative">
             <CardHeader className="pb-4 flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">{name}</CardTitle>
-              <Button variant="destructive" size="sm" onClick={() => handleRemove(name)} disabled={loading}>Remove</Button>
+              <CardTitle className="text-lg">{strategy.name}</CardTitle>
+              <Button variant="destructive" size="sm" onClick={() => handleRemove(strategy.name)} disabled={loading}>Remove</Button>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button size="sm" onClick={() => handleEditConfig(name)}>Edit Config</Button>
-              <Button size="sm" onClick={() => handleValidate(name)}>Validate</Button>
-              <Button size="sm" onClick={() => handleBacktest(name, [])}>Backtest (empty data)</Button>
-              <Button size="sm" onClick={() => setCompare(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name])}>
-                {compare.includes(name) ? 'Remove from Compare' : 'Compare'}
+              <Button size="sm" onClick={() => handleEditConfig(strategy.name)}>Edit Config</Button>
+              <Button size="sm" onClick={() => handleValidate(strategy.name)}>Validate</Button>
+              <Button size="sm" onClick={() => handleBacktest(strategy.name, [])}>Backtest (empty data)</Button>
+              <Button size="sm" onClick={() => setCompare(prev => prev.includes(strategy.name) ? prev.filter(n => n !== strategy.name) : [...prev, strategy.name])}>
+                {compare.includes(strategy.name) ? 'Remove from Compare' : 'Compare'}
               </Button>
               <div className="mt-2">
                 <h4 className="font-semibold text-xs mb-1">Performance (Win Rate)</h4>
                 <ResponsiveContainer width="100%" height={80}>
-                  <LineChart data={demoPerfData} margin={{ left: -20, right: 10, top: 5, bottom: 5 }}>
+                  <LineChart data={Array.isArray(strategy.performanceData) ? strategy.performanceData : []} margin={{ left: -20, right: 10, top: 5, bottom: 5 }}>
                     <XAxis dataKey="time" hide />
                     <YAxis domain={[0, 100]} hide />
                     <ChartTooltip />
@@ -290,20 +334,23 @@ export function StrategiesManagement() {
         <div className="mt-6 p-4 border rounded bg-purple-50">
           <h3 className="font-bold">Strategy Comparison</h3>
           <ul className="flex flex-wrap gap-4">
-            {compare.map(name => (
-              <li key={name} className="border rounded p-2 bg-white shadow">
-                <div className="font-semibold">{name}</div>
-                {/* Add more analytics here as needed */}
-                <ResponsiveContainer width={180} height={60}>
-                  <LineChart data={demoPerfData} margin={{ left: -20, right: 10, top: 5, bottom: 5 }}>
-                    <XAxis dataKey="time" hide />
-                    <YAxis domain={[0, 100]} hide />
-                    <ChartTooltip />
-                    <Line type="monotone" dataKey="winRate" stroke="#2563eb" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </li>
-            ))}
+            {compare.map(name => {
+              const strategy = strategies.find(s => s.name === name);
+              return strategy ? (
+                <li key={name} className="border rounded p-2 bg-white shadow">
+                  <div className="font-semibold">{name}</div>
+                  {/* Add more analytics here as needed */}
+                  <ResponsiveContainer width={180} height={60}>
+                    <LineChart data={Array.isArray(strategy.performanceData) ? strategy.performanceData : []} margin={{ left: -20, right: 10, top: 5, bottom: 5 }}>
+                      <XAxis dataKey="time" hide />
+                      <YAxis domain={[0, 100]} hide />
+                      <ChartTooltip />
+                      <Line type="monotone" dataKey="winRate" stroke="#2563eb" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </li>
+              ) : null;
+            })}
           </ul>
         </div>
       )}
@@ -312,10 +359,12 @@ export function StrategiesManagement() {
         {explainLog.length > 0 && (
           <div className="mt-2 p-4 border rounded bg-yellow-50">
             <h3 className="font-bold">Explainability Log</h3>
-            <ul>
-              {explainLog.map((log, idx) => (
-                <li key={idx}><pre>{JSON.stringify(log, null, 2)}</pre></li>
-              ))}
+            <ul className="list-disc pl-6">
+              {Array.isArray(explainLog)
+                ? (explainLog as unknown[]).map((log, idx) => (
+                    <li key={idx}><pre>{stringifyLog(log)}</pre></li>
+                  ))
+                : null}
             </ul>
           </div>
         )}
@@ -328,16 +377,18 @@ export function StrategiesManagement() {
             <TableHeader>
               <TableRow>
                 <TableHead>Strategy</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Result</TableHead>
                 <TableHead>Date</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {validationHistory.map((v, idx) => (
+              {validationHistory.map((vh, idx) => (
                 <TableRow key={idx}>
-                  <TableCell>{v.strategy}</TableCell>
-                  <TableCell>{JSON.stringify(v.validation)}</TableCell>
-                  <TableCell>{v.date}</TableCell>
+                  <TableCell>{String(vh.strategy)}</TableCell>
+                  <TableCell>{String(vh.status)}</TableCell>
+                  <TableCell>{String(vh.result)}</TableCell>
+                  <TableCell>{String(vh.date)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Play, Pause, Square, AlertTriangle, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { API_ENDPOINTS, apiCall } from "@/config/api";
 
 interface EngineState {
   is_running: boolean;
@@ -20,7 +21,7 @@ export function EngineControl() {
     start_time: null,
     total_signals: 0,
     total_trades: 0,
-    active_pairs: []
+    active_pairs: [] // Ensure this is always an array
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -33,32 +34,38 @@ export function EngineControl() {
 
   const fetchEngineStatus = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/engine/status');
-      const data = await response.json();
-      setEngineState(data);
+      const data: EngineState = await apiCall(API_ENDPOINTS.ENGINE_STATUS);
+      // Ensure active_pairs is always an array
+      setEngineState({
+        ...data,
+        active_pairs: data.active_pairs || []
+      });
     } catch (error) {
       console.error('Failed to fetch engine status:', error);
+      // Set default state on error
+      setEngineState({
+        is_running: false,
+        start_time: null,
+        total_signals: 0,
+        total_trades: 0,
+        active_pairs: []
+      });
     }
   };
 
   const startEngine = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/engine/start', {
+      const data = await apiCall(API_ENDPOINTS.ENGINE_START, {
         method: 'POST',
       });
-      const data = await response.json();
       
-      if (response.ok) {
-        toast({
-          title: "Engine Started",
-          description: "Trading engine has been started successfully",
-          className: "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200"
-        });
-        fetchEngineStatus();
-      } else {
-        throw new Error(data.detail || 'Failed to start engine');
-      }
+      toast({
+        title: "Engine Started",
+        description: "Trading engine has been started successfully",
+        className: "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200"
+      });
+      fetchEngineStatus();
     } catch (error) {
       toast({
         title: "Start Failed",
@@ -73,21 +80,16 @@ export function EngineControl() {
   const stopEngine = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/engine/stop', {
+      const data = await apiCall(API_ENDPOINTS.ENGINE_STOP, {
         method: 'POST',
       });
-      const data = await response.json();
       
-      if (response.ok) {
-        toast({
-          title: "Engine Stopped",
-          description: "Trading engine has been stopped successfully",
-          className: "bg-gradient-to-r from-orange-50 to-red-50 border-orange-200"
-        });
-        fetchEngineStatus();
-      } else {
-        throw new Error(data.detail || 'Failed to stop engine');
-      }
+      toast({
+        title: "Engine Stopped",
+        description: "Trading engine has been stopped successfully",
+        className: "bg-gradient-to-r from-orange-50 to-red-50 border-orange-200"
+      });
+      fetchEngineStatus();
     } catch (error) {
       toast({
         title: "Stop Failed",
@@ -102,21 +104,16 @@ export function EngineControl() {
   const emergencyStop = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/engine/emergency-stop', {
+      const data = await apiCall(API_ENDPOINTS.ENGINE_EMERGENCY_STOP, {
         method: 'POST',
       });
-      const data = await response.json();
       
-      if (response.ok) {
-        toast({
-          title: "Emergency Stop Executed",
-          description: "All trading activities have been halted immediately",
-          className: "bg-gradient-to-r from-red-50 to-pink-50 border-red-200"
-        });
-        fetchEngineStatus();
-      } else {
-        throw new Error(data.detail || 'Failed to execute emergency stop');
-      }
+      toast({
+        title: "Emergency Stop Executed",
+        description: "All trading activities have been halted immediately",
+        className: "bg-gradient-to-r from-red-50 to-pink-50 border-red-200"
+      });
+      fetchEngineStatus();
     } catch (error) {
       toast({
         title: "Emergency Stop Failed",
@@ -242,20 +239,20 @@ export function EngineControl() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Active Pairs</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{engineState.active_pairs.length}</div>
+            <div className="text-2xl font-bold text-purple-600">{engineState.active_pairs?.length || 0}</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Active Pairs Display */}
-      {engineState.active_pairs.length > 0 && (
+      {engineState.active_pairs?.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Active Trading Pairs</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {engineState.active_pairs.map((pair) => (
+              {engineState.active_pairs?.map((pair) => (
                 <Badge key={pair} variant="secondary" className="px-3 py-1">
                   {pair}
                 </Badge>

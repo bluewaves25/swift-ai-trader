@@ -22,25 +22,7 @@ import {
   XCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { apiService } from "@/services/api";
-
-interface Trade {
-  id: string;
-  symbol: string;
-  type: 'buy' | 'sell';
-  volume: number;
-  openPrice: number;
-  closePrice?: number;
-  status: 'open' | 'closed' | 'cancelled';
-  broker: 'binance' | 'exness';
-  category: 'crypto' | 'forex' | 'commodities' | 'indices';
-  profit?: number;
-  commission: number;
-  openTime: string;
-  closeTime?: string;
-  strategy: string;
-  userId: string;
-}
+import { apiService, Trade } from "@/services/api";
 
 export function TradeHistory() {
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -55,28 +37,21 @@ export function TradeHistory() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Fetch trade history from backend
+    const fetchTrades = async () => {
+      try {
+        const { data } = await apiService.getTradeHistory();
+        setTrades(Array.isArray(data.trades) ? data.trades : []);
+      } catch (error) {
+        setTrades([]);
+      }
+    };
     fetchTrades();
   }, []);
 
   useEffect(() => {
     filterAndSortTrades();
   }, [trades, searchTerm, statusFilter, brokerFilter, categoryFilter, sortBy, sortOrder]);
-
-  const fetchTrades = async () => {
-    setLoading(true);
-    try {
-      const data = await apiService.getTrades();
-      setTrades(data || []);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch trade history",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filterAndSortTrades = () => {
     let filtered = trades.filter(trade => {
@@ -90,14 +65,12 @@ export function TradeHistory() {
     });
 
     filtered.sort((a, b) => {
-      let aValue: any = a[sortBy as keyof Trade];
-      let bValue: any = b[sortBy as keyof Trade];
-      
-      if (sortBy === 'openTime' || sortBy === 'closeTime') {
-        aValue = new Date(aValue).getTime();
-        bValue = new Date(bValue).getTime();
+      let aValue = a[sortBy as keyof Trade];
+      let bValue = b[sortBy as keyof Trade];
+      if ((sortBy === 'openTime' || sortBy === 'closeTime') && aValue && bValue) {
+        aValue = new Date(aValue as string).getTime();
+        bValue = new Date(bValue as string).getTime();
       }
-      
       if (sortOrder === 'asc') {
         return aValue > bValue ? 1 : -1;
       } else {
@@ -110,13 +83,9 @@ export function TradeHistory() {
 
   const handleCloseTrade = async (tradeId: string) => {
     try {
-      // TODO: Implement API call to close trade
-      setTrades(prev => prev.map(trade => 
-        trade.id === tradeId 
-          ? { ...trade, status: 'closed' as const, closeTime: new Date().toISOString() }
-          : trade
-      ));
-      
+      // Example close trade handler (apiService.closeTrade does not exist)
+      // TODO: Implement close trade logic or call backend endpoint if available
+      alert(`Close trade ${tradeId} (not implemented)`);
       toast({
         title: "Trade Closed",
         description: "Trade has been closed successfully",

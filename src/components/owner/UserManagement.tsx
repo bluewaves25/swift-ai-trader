@@ -18,6 +18,7 @@ interface User {
   role: string;
   is_admin: boolean;
   created_at: string;
+  is_active: boolean; // <-- Added this line
   profile?: {
     full_name: string;
   };
@@ -51,7 +52,7 @@ export function UserManagement() {
       const { data: usersData, error: usersError } = await supabase
         .from('users')
         .select(`
-          *,
+          id, email, role, is_admin, is_active, created_at,
           profiles (full_name),
           portfolios (total_balance, realized_pnl)
         `)
@@ -62,7 +63,7 @@ export function UserManagement() {
 
       // Fetch trade statistics for each user
       const usersWithStats = await Promise.all(
-        (usersData || []).map(async (user) => {
+        (usersData || []).map(async (user: any) => {
           const { data: trades } = await supabase
             .from('trades')
             .select('*')
@@ -75,11 +76,12 @@ export function UserManagement() {
 
           return {
             ...user,
+            is_active: user.is_active ?? true, // fallback to true if undefined
             stats: {
               totalTrades,
               winRate,
               profit,
-              isActive: true // This would come from a user status field
+              isActive: user.is_active ?? true
             }
           };
         })
@@ -101,17 +103,19 @@ export function UserManagement() {
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
     setActionLoading(userId);
     try {
-      // Simulate API call to toggle user status
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
+      // Call backend or Supabase to toggle user status
+      const { error } = await supabase
+        .from('users')
+        .update({ is_active: !currentStatus })
+        .eq('id', userId);
+      if (error) throw error;
       setUsers(prev => 
         prev.map(user => 
           user.id === userId 
-            ? { ...user, stats: { ...user.stats, isActive: !currentStatus } }
+            ? { ...user, is_active: !currentStatus, stats: { ...user.stats, isActive: !currentStatus } }
             : user
         )
       );
-
       toast({
         title: `User ${!currentStatus ? 'Activated' : 'Deactivated'}`,
         description: `User account has been ${!currentStatus ? 'activated' : 'deactivated'}`,

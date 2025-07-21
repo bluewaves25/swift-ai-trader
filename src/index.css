@@ -68,10 +68,12 @@
     @apply bg-background text-foreground font-sans;
     font-feature-settings: "rlig" 1, "calt" 1;
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 1rem;
   }
 
   html {
     scroll-behavior: smooth;
+    font-size: 16px;
   }
 }
 
@@ -151,94 +153,7 @@
   }
 
   /* Enhanced mobile optimizations */
-  @media (max-width: 768px) {
-    .mobile-text-sm {
-      font-size: 0.65rem !important;
-      line-height: 0.9rem !important;
-    }
-    
-    .mobile-text-xs {
-      font-size: 0.5rem !important;
-      line-height: 0.75rem !important;
-    }
-    
-    .mobile-spacing-tight {
-      padding: 0.15rem !important;
-    }
-    
-    .mobile-spacing-normal {
-      padding: 0.35rem !important;
-    }
-
-    /* Smaller text everywhere on mobile */
-    h1 { font-size: 1.5rem !important; }
-    h2 { font-size: 1.25rem !important; }
-    h3 { font-size: 1.125rem !important; }
-    p { font-size: 0.75rem !important; }
-    span { font-size: 0.65rem !important; }
-    
-    /* Compact button styles */
-    .btn-mobile {
-      padding: 0.25rem 0.5rem !important;
-      font-size: 0.65rem !important;
-      height: 1.75rem !important;
-    }
-    
-    /* Compact card styles */
-    .card-mobile {
-      padding: 0.5rem !important;
-    }
-    
-    .card-mobile .card-header {
-      padding: 0.25rem !important;
-    }
-    
-    .card-mobile .card-content {
-      padding: 0.25rem !important;
-    }
-
-    /* Better sidebar on mobile */
-    .sidebar-mobile {
-      width: 200px !important;
-    }
-
-    /* Smaller badges and icons */
-    .badge-mobile {
-      font-size: 0.55rem !important;
-      padding: 0.125rem 0.25rem !important;
-    }
-
-    .icon-mobile {
-      width: 0.75rem !important;
-      height: 0.75rem !important;
-    }
-
-    /* Compact form elements */
-    .input-mobile {
-      height: 1.75rem !important;
-      font-size: 0.65rem !important;
-      padding: 0.25rem 0.5rem !important;
-    }
-  }
-
-  /* Ultra-compact mode for very small screens */
-  @media (max-width: 480px) {
-    .mobile-text-sm {
-      font-size: 0.6rem !important;
-      line-height: 0.8rem !important;
-    }
-    
-    .mobile-text-xs {
-      font-size: 0.45rem !important;
-      line-height: 0.65rem !important;
-    }
-    
-    h1 { font-size: 1.25rem !important; }
-    h2 { font-size: 1rem !important; }
-    h3 { font-size: 0.875rem !important; }
-    p { font-size: 0.65rem !important; }
-    span { font-size: 0.55rem !important; }
-  }
+  /* Remove all mobile-specific font-size reductions. Use global base font size for all screens. */
 }
 
 @keyframes fadeIn {

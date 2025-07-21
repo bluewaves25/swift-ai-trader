@@ -49,7 +49,16 @@ export default function PairStrategies() {
 
       if (error) throw error;
 
-      setStrategies(data || []);
+      setStrategies(
+        (data || []).map((item: any) => ({
+          ...item,
+          current_strategy: item.current_strategy ?? item.strategy ?? '',
+          confidence_score: item.confidence_score ?? 0,
+          performance_score: item.performance_score ?? 0,
+          total_trades: item.total_trades ?? 0,
+          win_rate: item.win_rate ?? 0,
+        }))
+      );
     } catch (error) {
       console.error('Error fetching strategies:', error);
       toast.error('Failed to load strategies');
