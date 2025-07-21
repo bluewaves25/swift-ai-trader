@@ -82,7 +82,7 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
     <Button
       variant={isActive ? "secondary" : "ghost"}
       className={cn(
-        "w-full justify-start h-12 mb-1 transition-all duration-300 group relative",
+        "w-full justify-start h-12 mb-2 transition-all duration-300 group relative rounded-lg",
         isCollapsed ? "px-3" : "px-4",
         isActive && "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-700 dark:text-blue-400 border-r-2 border-blue-500",
         !isActive && "hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105"
@@ -98,7 +98,7 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
         isActive ? item.color : "text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
       )} />
       {!isCollapsed && (
-        <span className="font-medium transition-all duration-300">{item.label}</span>
+        <span className="font-medium transition-all duration-300 text-sm">{item.label}</span>
       )}
       {isActive && !isCollapsed && (
         <div className="absolute right-2 w-2 h-2 rounded-full bg-blue-500"></div>
@@ -132,29 +132,19 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
         isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
         {/* Header */}
-        <div className="p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
+        <div className="p-4">
           <div className="flex items-center justify-between">
             {!isCollapsed && (
-              <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg">
-                  <Brain className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <span className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    Owner Panel
-                  </span>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span className="text-xs text-muted-foreground">Online</span>
-                  </div>
-                </div>
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold text-sm">{user?.email?.split('@')[0] || 'User'}</span>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
               </div>
             )}
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="h-8 w-8 p-0 hidden md:flex hover:bg-white/50 dark:hover:bg-gray-800/50"
+              className="h-8 w-8 p-0 hidden md:flex hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-full"
             >
               {isCollapsed ? (
                 <ChevronRight className="h-4 w-4" />
@@ -165,22 +155,7 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
           </div>
         </div>
 
-        {/* User Info */}
-        {!isCollapsed && (
-          <div className="p-4 border-b bg-gray-50 dark:bg-gray-800/50">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                {user?.email?.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user?.email}</p>
-                <Badge variant="outline" className="text-xs mt-1 border-green-200 text-green-700 bg-green-50 dark:border-green-800 dark:text-green-400 dark:bg-green-900/20">
-                  Owner
-                </Badge>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* User Info - This section is removed and merged into the header */}
 
         {/* Main Navigation */}
         {/* Scroll Up Button */}
@@ -191,10 +166,10 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
             </Button>
           </div>
         )}
-        <div ref={navRef} className="flex-1 min-h-0 overflow-auto p-2 space-y-1 relative">
-          <div className={cn("space-y-1", !isCollapsed && "px-2")}>
+        <div ref={navRef} className="flex-1 min-h-0 overflow-auto p-2 space-y-2 relative">
+          <div className={cn("space-y-2", !isCollapsed && "px-2")}>
             {!isCollapsed && (
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">
+              <p className="text-sm font-medium text-muted-foreground mb-3 px-2">
                 Main Menu
               </p>
             )}
@@ -209,9 +184,9 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
 
           <Separator className="my-4" />
 
-          <div className={cn("space-y-1", !isCollapsed && "px-2")}>
+          <div className={cn("space-y-2", !isCollapsed && "px-2")}>
             {!isCollapsed && (
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">
+              <p className="text-sm font-medium text-muted-foreground mb-3 px-2">
                 Management
               </p>
             )}
@@ -234,17 +209,17 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
         )}
 
         {/* Sign Out Button */}
-        <div className="p-2 border-t bg-gray-50 dark:bg-gray-800/50">
+        <div className="p-2 border-t mt-auto">
           <Button
             variant="ghost"
             className={cn(
-              "w-full justify-start h-12 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-300",
-              isCollapsed && "px-3"
+              "w-full justify-start h-12 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-300 rounded-lg",
+              isCollapsed ? "px-3" : "px-4"
             )}
             onClick={signOut}
           >
             <LogOut className={cn("h-5 w-5", isCollapsed ? "mx-auto" : "mr-3")} />
-            {!isCollapsed && <span className="font-medium">Sign Out</span>}
+            {!isCollapsed && <span className="font-medium text-sm">Sign Out</span>}
           </Button>
         </div>
       </div>

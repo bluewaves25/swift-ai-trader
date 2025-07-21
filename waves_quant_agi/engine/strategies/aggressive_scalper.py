@@ -12,6 +12,7 @@ class AggressiveScalper(BaseStrategy):
     """
     def __init__(self, strategy_id="aggressive_scalper_v1", symbol="XAUUSDm"):
         super().__init__(strategy_id)
+        self.strategy_id = strategy_id
         self.symbol = symbol
         self.last_price = None
 

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { SupportChat } from "@/components/support/SupportChat";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -491,6 +492,7 @@ const Index = () => {
           </div>
         </div>
       </div>
+      <SupportChat />
     </div>
   );
 };

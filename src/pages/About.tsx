@@ -14,24 +14,23 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 const About = () => {
   return (
-    <div className="min-h-screen dark bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Header with glassmorphism */}
-      <div className="sticky top-0 z-20 border-b border-white/10 bg-white/10 backdrop-blur-xl supports-[backdrop-filter]:bg-white/5">
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Header */}
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-2 md:px-4 py-2 md:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Brain className="h-6 w-6 md:h-8 md:w-8 text-white" />
-              <span className="text-lg md:text-2xl font-bold text-white">Waves Quant Engine</span>
-            </div>
             <Link to="/">
-              <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
-                <ArrowLeft className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-                <span className="text-xs md:text-sm">Back</span>
+              <Button variant="ghost" size="icon" className="hover:bg-muted">
+                <ArrowLeft className="h-5 w-5" />
+                <span className="sr-only">Back</span>
               </Button>
             </Link>
+            <span className="text-lg md:text-2xl font-bold">About</span>
+            <ThemeToggle />
           </div>
         </div>
       </div>
@@ -39,19 +38,17 @@ const About = () => {
       <div className="container mx-auto px-2 md:px-4 py-4 md:py-12">
         {/* Hero Section */}
         <div className="text-center mb-8 md:mb-16">
-          <Badge variant="secondary" className="mb-3 md:mb-6 bg-white/20 text-white border-white/30 backdrop-blur-sm text-xs md:text-sm">
+          <Badge variant="secondary" className="mb-3 md:mb-6">
             <Zap className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
             About Our Platform
           </Badge>
-          
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-8 leading-tight text-white">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-8 leading-tight">
             Revolutionizing Trading
             <span className="block bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent">
               with AI Precision
             </span>
           </h1>
-          
-          <p className="text-sm md:text-xl lg:text-2xl mb-6 md:mb-12 text-white/95 max-w-4xl mx-auto leading-relaxed font-medium">
+          <p className="text-sm md:text-xl lg:text-2xl mb-6 md:mb-12 max-w-4xl mx-auto leading-relaxed font-medium text-muted-foreground">
             We combine cutting-edge artificial intelligence with sophisticated trading strategies to deliver 
             consistent results in volatile markets, making advanced trading accessible to everyone.
           </p>
@@ -59,26 +56,26 @@ const About = () => {
 
         {/* Mission Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8 mb-8 md:mb-16">
-          <Card className="bg-white/10 backdrop-blur-md border-white/20 text-white">
+          <Card className="bg-card border-border text-card-foreground">
             <CardHeader className="p-3 md:p-6">
               <div className="flex items-center space-x-2 mb-2 md:mb-4">
                 <Target className="h-5 w-5 md:h-6 md:w-6 text-blue-300" />
                 <CardTitle className="text-lg md:text-2xl">Our Mission</CardTitle>
               </div>
-              <CardDescription className="text-sm md:text-base text-white/90">
+              <CardDescription className="text-sm md:text-base text-card-foreground">
                 To democratize sophisticated trading strategies through AI-powered automation, making professional-grade 
                 trading accessible to investors of all levels while maintaining the highest standards of risk management.
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="bg-white/10 backdrop-blur-md border-white/20 text-white">
+          <Card className="bg-card border-border text-card-foreground">
             <CardHeader className="p-3 md:p-6">
               <div className="flex items-center space-x-2 mb-2 md:mb-4">
                 <Globe className="h-5 w-5 md:h-6 md:w-6 text-purple-300" />
                 <CardTitle className="text-lg md:text-2xl">Our Vision</CardTitle>
               </div>
-              <CardDescription className="text-sm md:text-base text-white/90">
+              <CardDescription className="text-sm md:text-base text-card-foreground">
                 To become the world's leading AI-driven trading platform, setting new standards for performance, 
                 transparency, and user experience in the financial technology industry.
               </CardDescription>
@@ -92,7 +89,7 @@ const About = () => {
             <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-6 text-white">
               What Sets Us Apart
             </h2>
-            <p className="text-sm md:text-xl text-white/90 max-w-3xl mx-auto">
+            <p className="text-sm md:text-xl text-muted-foreground max-w-3xl mx-auto">
               Our platform combines advanced technology with proven trading methodologies to deliver exceptional results.
             </p>
           </div>
@@ -136,7 +133,7 @@ const About = () => {
                 color: "indigo"
               }
             ].map((feature, index) => (
-              <Card key={index} className="group hover:shadow-lg transition-all duration-300 bg-white/10 backdrop-blur-md border-white/20 text-white">
+              <Card key={index} className="group hover:shadow-lg transition-all duration-300 bg-card border-border text-card-foreground">
                 <CardHeader className="p-3 md:p-6">
                   <div className={`p-2 md:p-3 rounded-lg w-fit bg-${feature.color}-100/20 group-hover:scale-110 transition-transform duration-300`}>
                     <feature.icon className={`h-4 w-4 md:h-6 md:w-6 text-${feature.color}-300`} />
@@ -144,7 +141,7 @@ const About = () => {
                   <CardTitle className="text-base md:text-xl">{feature.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="p-3 md:p-6 pt-0">
-                  <CardDescription className="text-xs md:text-base text-white/90">
+                  <CardDescription className="text-xs md:text-base text-card-foreground">
                     {feature.description}
                   </CardDescription>
                 </CardContent>
@@ -159,7 +156,7 @@ const About = () => {
             <h2 className="text-2xl md:text-4xl font-bold mb-3 md:mb-6 text-white">
               Platform Statistics
             </h2>
-            <p className="text-sm md:text-xl text-white/90 max-w-3xl mx-auto">
+            <p className="text-sm md:text-xl text-muted-foreground max-w-3xl mx-auto">
               Real numbers that demonstrate our platform's success and growing community.
             </p>
           </div>
@@ -171,10 +168,10 @@ const About = () => {
               { number: "87.3%", label: "Success Rate" },
               { number: "$2.8M+", label: "Total Profits" }
             ].map((stat, index) => (
-              <Card key={index} className="bg-white/10 backdrop-blur-md border-white/20 text-white text-center">
+              <Card key={index} className="bg-card border-border text-card-foreground text-center">
                 <CardContent className="p-3 md:p-6">
                   <div className="text-xl md:text-3xl lg:text-4xl font-bold text-white mb-1 md:mb-2">{stat.number}</div>
-                  <div className="text-xs md:text-sm text-white/80">{stat.label}</div>
+                  <div className="text-xs md:text-sm text-muted-foreground">{stat.label}</div>
                 </CardContent>
               </Card>
             ))}
@@ -186,7 +183,7 @@ const About = () => {
           <h2 className="text-2xl md:text-4xl font-bold mb-3 md:mb-6 text-white">
             Ready to Start Trading?
           </h2>
-          <p className="text-sm md:text-xl mb-6 md:mb-8 text-white/90 max-w-2xl mx-auto">
+          <p className="text-sm md:text-xl mb-6 md:mb-8 text-muted-foreground max-w-2xl mx-auto">
             Join thousands of successful traders who trust Waves Quant Engine with their investments.
           </p>
           

@@ -147,11 +147,6 @@ export function SupportChat() {
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
     
-    if (!user) {
-      toast.error("Please sign in to use chat support");
-      return;
-    }
-
     const userMessage: Message = {
       id: Date.now().toString(),
       text: newMessage,
@@ -184,8 +179,21 @@ export function SupportChat() {
         setMessages(prev => [...prev, botMessage]);
         setLoading(false);
 
-        // If bot suggests human support, create ticket
-        if (botResponse.includes('support team') || botResponse.includes('support ticket')) {
+        // Only require sign-in if bot suggests human support
+        if ((botResponse.includes('support team') || botResponse.includes('support ticket')) && !user) {
+          setTimeout(() => {
+            setMessages(prev => [...prev, {
+              id: (Date.now() + 2).toString(),
+              text: "Please sign in to continue with human support.",
+              sender: 'bot',
+              timestamp: new Date(),
+              status: 'sent'
+            }]);
+          }, 1000);
+          return;
+        }
+        // If signed in and bot suggests human support, create ticket
+        if ((botResponse.includes('support team') || botResponse.includes('support ticket')) && user) {
           setTimeout(async () => {
             try {
               const { error } = await supabase
@@ -199,7 +207,7 @@ export function SupportChat() {
 
               if (!error) {
                 const ticketMessage: Message = {
-                  id: (Date.now() + 2).toString(),
+                  id: (Date.now() + 3).toString(),
                   text: "✅ I've created a support ticket for you. Our team will respond within 24 hours. You'll receive updates via email.",
                   sender: 'bot',
                   timestamp: new Date(),
@@ -256,10 +264,11 @@ export function SupportChat() {
           />
           
           {/* Chat Modal */}
-          <div className={`absolute bottom-0 right-4 w-full max-w-sm h-[600px] pointer-events-auto transition-all duration-300 ease-out transform ${
-            isMinimized ? 'h-16' : 'h-[600px]'
-          }`}>
-            <Card className="h-full flex flex-col bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-2xl border-white/20 rounded-t-xl rounded-b-none">
+          <div
+            className={`absolute right-4 bottom-8 md:bottom-8 z-50 pointer-events-auto transition-all duration-300`}
+            style={{ maxWidth: 400, minWidth: 320 }}
+          >
+            <Card className="h-full flex flex-col bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-2xl border-white/20 rounded-t-xl rounded-b-xl">
               {/* Header */}
               <CardHeader className="flex-shrink-0 pb-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-xl">
                 <div className="flex items-center justify-between">

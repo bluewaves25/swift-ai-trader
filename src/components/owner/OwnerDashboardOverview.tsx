@@ -128,8 +128,8 @@ const OwnerDashboardOverview = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Platform Overview</h2>
-        <p className="text-muted-foreground">Real-time platform performance and metrics</p>
+        <h2 className="text-3xl font-bold tracking-tight">Owner Dashboard Overview</h2>
+        <p className="text-muted-foreground">Your platform's performance at a glance</p>
       </div>
 
       {/* Key Metrics */}

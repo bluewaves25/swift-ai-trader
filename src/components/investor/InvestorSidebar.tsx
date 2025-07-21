@@ -115,22 +115,22 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
     <SidebarMenuButton
       onClick={() => onSectionChange(item.id)}
       className={cn(
-        "w-full justify-start h-9 md:h-11 mb-1 transition-all duration-300 group relative rounded-lg",
-        isCollapsed ? "px-2 md:px-3" : "px-3 md:px-4",
+        "w-full justify-start h-12 mb-2 transition-all duration-300 group relative rounded-lg",
+        isCollapsed ? "px-3" : "px-4",
         isActive && "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-700 dark:text-blue-400 border-r-2 border-blue-500 shadow-md",
         !isActive && "hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-[1.02] hover:shadow-sm"
       )}
     >
       <item.icon className={cn(
-        "h-4 w-4 md:h-5 md:w-5 transition-colors duration-300 flex-shrink-0",
-        isCollapsed ? "mx-auto" : "mr-2 md:mr-3",
+        "h-5 w-5 transition-colors duration-300 flex-shrink-0",
+        isCollapsed ? "mx-auto" : "mr-3",
         isActive ? item.color : "text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
       )} />
       {!isCollapsed && (
-        <span className="font-medium transition-all duration-300 text-xs md:text-sm truncate">{item.label}</span>
+        <span className="font-medium transition-all duration-300 text-sm truncate">{item.label}</span>
       )}
       {isActive && !isCollapsed && (
-        <div className="absolute right-2 w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-500 animate-pulse"></div>
+        <div className="absolute right-2 w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
       )}
     </SidebarMenuButton>
   );
@@ -138,64 +138,39 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
   return (
     <div className={cn(
       "flex flex-col h-screen max-h-screen overflow-hidden bg-card border-r transition-all duration-300 relative",
-      isCollapsed ? "w-12 md:w-16" : "w-56 md:w-64",
+      isCollapsed ? "w-16" : "w-64",
       "md:relative md:translate-x-0",
       "fixed inset-y-0 left-0 z-50 md:z-auto",
       isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
     )}>
       {/* Header */}
       <SidebarHeader className="flex-shrink-0">
-        <div className="p-2 md:p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
+        <div className="p-4">
           <div className="flex items-center justify-between">
             {!isCollapsed && (
-              <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
-                <div className="p-1 md:p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg flex-shrink-0">
-                  <Brain className="h-4 w-4 md:h-6 md:w-6 text-white" />
-                </div>
-                <div className="min-w-0">
-                  <span className="font-bold text-sm md:text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent block truncate">
-                    Investor
-                  </span>
-                  <div className="flex items-center space-x-1 md:space-x-2 mt-1">
-                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0"></div>
-                    <span className="text-xs text-muted-foreground">Online</span>
-                  </div>
-                </div>
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold text-sm">{user?.email?.split('@')[0] || 'User'}</span>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
               </div>
             )}
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="h-6 w-6 md:h-8 md:w-8 p-0 hidden md:flex hover:bg-white/50 dark:hover:bg-gray-800/50 flex-shrink-0"
+              className="h-8 w-8 p-0 hidden md:flex hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-full"
             >
               {isCollapsed ? (
-                <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
+                <ChevronRight className="h-4 w-4" />
               ) : (
-                <ChevronLeft className="h-3 w-3 md:h-4 md:w-4" />
+                <ChevronLeft className="h-4 w-4" />
               )}
             </Button>
           </div>
         </div>
       </SidebarHeader>
 
-      {/* User Info */}
-      {!isCollapsed && (
-        <div className="p-2 md:p-4 border-b bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
-          <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs md:text-sm flex-shrink-0">
-              {user?.email?.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs md:text-sm font-medium truncate">{user?.email}</p>
-              <Badge variant="outline" className="text-xs mt-1 border-blue-200 text-blue-700 bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:bg-blue-900/20">
-                Investor
-              </Badge>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* User Info - This section is removed as it's merged into the header */}
+      
       {/* Scroll Up Button */}
       {showScrollUp && (
         <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-10">
@@ -206,11 +181,11 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
       )}
       <SidebarContent 
         ref={sidebarContentRef}
-        className="flex-1 min-h-0 overflow-auto p-1 md:p-2 space-y-1 relative"
+        className="flex-1 min-h-0 overflow-auto p-2 space-y-2 relative"
       >
-        <div className={cn("space-y-1", !isCollapsed && "px-1 md:px-2")}>
+        <div className={cn("space-y-2", !isCollapsed && "px-2")}>
           {!isCollapsed && (
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 md:mb-3 px-1 md:px-2">
+            <p className="text-sm font-medium text-muted-foreground mb-2 px-2">
               Main Menu
             </p>
           )}
@@ -223,12 +198,12 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
           ))}
         </div>
 
-        <Separator className="my-2 md:my-4" />
+        <Separator className="my-4" />
 
         {/* Payments Collapsible Menu */}
-        <div className={cn("space-y-1", !isCollapsed && "px-1 md:px-2")}>
+        <div className={cn("space-y-2", !isCollapsed && "px-2")}>
           {!isCollapsed && (
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 md:mb-3 px-1 md:px-2">
+            <p className="text-sm font-medium text-muted-foreground mb-2 px-2">
               Financial Hub
             </p>
           )}
@@ -236,22 +211,22 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
             <CollapsibleTrigger asChild>
               <SidebarMenuButton
                 className={cn(
-                  "w-full justify-start h-9 md:h-11 mb-1 transition-all duration-300 rounded-lg group",
-                  isCollapsed ? "px-2 md:px-3" : "px-3 md:px-4",
+                  "w-full justify-start h-12 mb-2 transition-all duration-300 rounded-lg group",
+                  isCollapsed ? "px-3" : "px-4",
                   (activeSection === 'deposit' || activeSection === 'withdraw' || activeSection === 'transactions') && 
                   "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-700 dark:text-blue-400 shadow-md"
                 )}
               >
                 <CreditCard className={cn(
-                  "h-4 w-4 md:h-5 md:w-5 flex-shrink-0",
-                  isCollapsed ? "mx-auto" : "mr-2 md:mr-3"
+                  "h-5 w-5 flex-shrink-0",
+                  isCollapsed ? "mx-auto" : "mr-3"
                 )} />
                 {!isCollapsed && (
                   <>
-                    <span className="text-xs md:text-sm font-medium">Payments</span>
+                    <span className="text-sm font-medium">Payments</span>
                     {paymentsOpen ? 
-                      <ChevronDown className="h-3 w-3 md:h-4 md:w-4 ml-auto transition-transform duration-200" /> : 
-                      <ChevronRight className="h-3 w-3 md:h-4 md:w-4 ml-auto transition-transform duration-200" />
+                      <ChevronDown className="h-4 w-4 ml-auto transition-transform duration-200" /> : 
+                      <ChevronRight className="h-4 w-4 ml-auto transition-transform duration-200" />
                     }
                   </>
                 )}
@@ -270,15 +245,15 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
                         )}
                       >
                         <div className={cn(
-                          "w-6 h-6 rounded-full flex items-center justify-center mr-2 transition-all duration-300",
+                          "w-6 h-6 rounded-full flex items-center justify-center mr-3 transition-all duration-300",
                           activeSection === item.id ? `bg-gradient-to-r ${item.gradient} shadow-md` : "bg-gray-100 dark:bg-gray-700 group-hover:bg-gray-200 dark:group-hover:bg-gray-600"
                         )}>
                           <item.icon className={cn(
-                            "h-3 w-3",
+                            "h-3.5 w-3.5",
                             activeSection === item.id ? "text-white" : item.color
                           )} />
                         </div>
-                        <span className="text-xs md:text-sm font-medium">{item.label}</span>
+                        <span className="text-sm font-medium">{item.label}</span>
                         {activeSection === item.id && (
                           <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
                         )}
@@ -291,12 +266,12 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
           </Collapsible>
         </div>
 
-        <Separator className="my-2 md:my-4" />
+        <Separator className="my-4" />
 
         {/* Account Section */}
-        <div className={cn("space-y-1", !isCollapsed && "px-1 md:px-2")}>
+        <div className={cn("space-y-2", !isCollapsed && "px-2")}>
           {!isCollapsed && (
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 md:mb-3 px-1 md:px-2">
+            <p className="text-sm font-medium text-muted-foreground mb-2 px-2">
               Account
             </p>
           )}
@@ -319,17 +294,17 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
       )}
 
       {/* Sign Out Button */}
-      <div className="p-1 md:p-2 border-t bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
+      <div className="p-2 border-t mt-auto">
         <Button
           variant="ghost"
           className={cn(
-            "w-full justify-start h-9 md:h-11 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-300 rounded-lg",
-            isCollapsed ? "px-2 md:px-3" : "px-3 md:px-4"
+            "w-full justify-start h-12 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-300 rounded-lg",
+            isCollapsed ? "px-3" : "px-4"
           )}
           onClick={signOut}
         >
-          <LogOut className={cn("h-4 w-4 md:h-5 md:w-5", isCollapsed ? "mx-auto" : "mr-2 md:mr-3")} />
-          {!isCollapsed && <span className="font-medium text-xs md:text-sm">Sign Out</span>}
+          <LogOut className={cn("h-5 w-5", isCollapsed ? "mx-auto" : "mr-3")} />
+          {!isCollapsed && <span className="font-medium text-sm">Sign Out</span>}
         </Button>
       </div>
     </div>

@@ -20,6 +20,7 @@ import PerformanceFees from '@/components/owner/PerformanceFees';
 import axios from 'axios';
 import StrategyMarketplace from '@/components/investor/StrategyMarketplace';
 import AffiliateDashboard from '@/components/investor/AffiliateDashboard';
+import { SupportChat } from "@/components/support/SupportChat";
 // Lazy load payment components
 const LazyPaymentForm = lazy(() => import("@/components/payments/PaymentForm").then(module => ({ default: module.PaymentForm })));
 const LazyWithdrawForm = lazy(() => import("@/components/payments/PaymentForm").then(module => ({ default: module.PaymentForm })));
@@ -133,6 +134,7 @@ const InvestorDashboard = () => {
                 {renderContent()}
               </div>
             </main>
+            <SupportChat />
           </div>
         </div>
       </SidebarProvider>
