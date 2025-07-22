@@ -21,6 +21,9 @@ from sqlalchemy import func
 from datetime import timedelta, date
 import traceback
 from fastapi import status as http_status
+import logging
+from waves_quant_agi.api.deps import get_mt5_broker
+from waves_quant_agi.engine.brokers.mt5_plugin import MT5Broker
 
 # TODO: Use API/IPC/Redis to communicate with engine for strategy management
 
@@ -273,159 +276,130 @@ async def automl_status(current_admin: User = Depends(get_current_admin)):
     # TODO: Integrate with real Auto-ML status
     return {"evolving_models": [], "validated_models": []}
 
-# MT5 HEALTH CHECK ENDPOINT (moved to /mt5-status for clarity)
-@router.get("/mt5-status", tags=["owner"])
-async def mt5_status():
-    """Check MT5 connection and account status."""
-    import os
-    mt5_login = os.getenv("MT5_LOGIN")
-    mt5_password = os.getenv("MT5_PASSWORD")
-    mt5_server = os.getenv("MT5_SERVER", "Exness-MT5")
-    if not (mt5_login and mt5_password and mt5_server):
-        return {
-            "connected": False,
-            "error": "MT5 credentials not set in environment variables."
-        }
+async def sync_mt5_trades_in_background(db: AsyncSession, broker: MT5Broker):
+    """
+    The actual trade sync logic that runs in the background.
+    """
+    logging.info("[MT5 SYNC BG] Background sync task started.")
     try:
-        from waves_quant_agi.engine.brokers.mt5_plugin import MT5Broker
-        mt5 = MT5Broker(int(mt5_login), mt5_password, mt5_server)
-        mt5.connect()
-        account_info = mt5.get_balance()
-        return {
-            "connected": True,
-            "account": account_info,
-            "message": f"Connected to {mt5_server} as {mt5_login}"
-        }
+        open_positions = broker.get_positions()
+        closed_trades = broker.get_closed_trades()
+        logging.info(f"[MT5 SYNC BG] Fetched {len(open_positions)} open positions and {len(closed_trades)} closed trades.")
+
+        # --- Your existing sync logic here ---
+        # (Adapted to use the broker dependency and corrected schema)
+        for pos in open_positions:
+            trade_id = str(pos.get('ticket'))
+            if not trade_id:
+                continue
+
+            existing_trade = await db.get(Trade, trade_id)
+            if not existing_trade:
+                new_trade = Trade(
+                    id=trade_id,
+                    user_id="mt5_user", # Placeholder
+                    symbol=pos.get('symbol'),
+                    side="buy" if pos.get('type') == 0 else "sell",
+                    volume=pos.get('volume', 0.0),
+                    price=pos.get('price_open', 0.0),
+                    pnl=pos.get('profit', 0.0),
+                    strategy="manual" if pos.get('magic') == 0 else "engine",
+                    created_at=datetime.fromtimestamp(pos.get('time', 0)),
+                    status=TradeStatus.OPEN
+                )
+                db.add(new_trade)
+                logging.info(f"[MT5 SYNC BG] Adding new open trade to DB: {trade_id}")
+            elif existing_trade.status == TradeStatus.OPEN:
+                # Update the status of an existing open trade to closed
+                existing_trade.status = TradeStatus.CLOSED
+                existing_trade.pnl = pos.get('profit', existing_trade.pnl)
+                logging.info(f"[MT5 SYNC BG] Updating trade to closed: {trade_id}")
+
+        for deal in closed_trades:
+            trade_id = str(deal.get('order'))
+            if not trade_id:
+                continue
+
+            existing_trade = await db.get(Trade, trade_id)
+            if not existing_trade:
+                 # Only add if it's an outgoing trade deal
+                if deal.get('entry') == 1: # 0=in, 1=out, 2=in/out
+                    new_trade = Trade(
+                        id=trade_id,
+                        user_id="mt5_user", # Placeholder
+                        symbol=deal.get('symbol'),
+                        side="buy" if deal.get('type') == 0 else "sell",
+                        volume=deal.get('volume', 0.0),
+                        price=deal.get('price', 0.0),
+                        pnl=deal.get('profit', 0.0),
+                        strategy="manual" if deal.get('magic') == 0 else "engine",
+                        created_at=datetime.fromtimestamp(deal.get('time', 0)),
+                        status=TradeStatus.CLOSED
+                    )
+                    db.add(new_trade)
+                    logging.info(f"[MT5 SYNC BG] Adding new closed trade to DB: {trade_id}")
+            elif existing_trade.status == TradeStatus.OPEN:
+                # Update the status of an existing open trade to closed
+                existing_trade.status = TradeStatus.CLOSED
+                existing_trade.pnl = deal.get('profit', existing_trade.pnl)
+                logging.info(f"[MT5 SYNC BG] Updating trade to closed: {trade_id}")
+        
+        await db.commit()
+        logging.info("[MT5 SYNC BG] Background sync task finished successfully.")
     except Exception as e:
         import traceback
-        return {
-            "connected": False,
-            "error": str(e),
-            "trace": traceback.format_exc()
-        }
+        logging.error(f"[MT5 SYNC BG] Error during background sync: {e}\n{traceback.format_exc()}")
+        await db.rollback()
+
+@router.post("/mt5/trigger-sync", tags=["owner"])
+async def trigger_mt5_sync(background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db), broker: MT5Broker = Depends(get_mt5_broker)):
+    """
+    Triggers a background task to sync MT5 trades. Returns immediately.
+    """
+    background_tasks.add_task(sync_mt5_trades_in_background, db, broker)
+    return {"message": "MT5 trade synchronization started in the background."}
+
+@router.get("/all-trades", tags=["owner"])
+async def get_all_trades_from_db(db: AsyncSession = Depends(get_db)):
+    """
+    Returns all trades currently stored in the backend database.
+    This should be called after triggering a sync.
+    """
+    all_trades_result = await db.execute(select(Trade).order_by(Trade.created_at.desc()))
+    all_trades = all_trades_result.scalars().all()
+    
+    return {"trades": [
+        {
+            "id": t.id,
+            "symbol": t.symbol,
+            "side": t.side,
+            "volume": t.volume,
+            "price": t.price,
+            "pnl": t.pnl,
+            "status": t.status.value if hasattr(t.status, 'value') else str(t.status),
+            "created_at": t.created_at.isoformat() if t.created_at else None
+        } for t in all_trades
+    ]}
+
+# Refactor other MT5 routes to use the dependency
+@router.get("/mt5-status", tags=["owner"])
+async def mt5_status(broker: MT5Broker = Depends(get_mt5_broker)):
+    account_info = broker.get_balance()
+    return {"connected": True, "account": account_info}
 
 @router.get("/mt5/open-trades", tags=["owner"])
-async def mt5_open_trades():
-    """Fetch all open trades/positions from MT5 (manual + automatic)."""
-    import os
-    from waves_quant_agi.engine.brokers.mt5_plugin import MT5Broker
-    mt5_login = os.getenv("MT5_LOGIN")
-    mt5_password = os.getenv("MT5_PASSWORD")
-    mt5_server = os.getenv("MT5_SERVER", "Exness-MT5")
-    if not (mt5_login and mt5_password and mt5_server):
-        return {"connected": False, "error": "MT5 credentials not set in environment variables."}
-    try:
-        mt5 = MT5Broker(int(mt5_login), mt5_password, mt5_server)
-        mt5.connect()
-        positions = mt5.get_positions()
-        return {"connected": True, "positions": positions}
-    except Exception as e:
-        import traceback
-        return {"connected": False, "error": str(e), "trace": traceback.format_exc()}
+async def mt5_open_trades(broker: MT5Broker = Depends(get_mt5_broker)):
+    positions = broker.get_positions()
+    return {"connected": True, "positions": positions}
 
 @router.post("/mt5/close-all-trades", tags=["owner"])
-async def mt5_close_all_trades():
-    """Emergency stop: Close all open trades in MT5 (manual + automatic)."""
-    import os
-    from waves_quant_agi.engine.brokers.mt5_plugin import MT5Broker
-    mt5_login = os.getenv("MT5_LOGIN")
-    mt5_password = os.getenv("MT5_PASSWORD")
-    mt5_server = os.getenv("MT5_SERVER", "Exness-MT5")
-    if not (mt5_login and mt5_password and mt5_server):
-        return {"connected": False, "error": "MT5 credentials not set in environment variables."}
-    try:
-        mt5 = MT5Broker(int(mt5_login), mt5_password, mt5_server)
-        mt5.connect()
-        positions = mt5.get_positions()
-        results = []
-        for pos in positions:
-            try:
-                res = mt5.close_position(pos['ticket'])
-                results.append({"ticket": pos['ticket'], "symbol": pos['symbol'], "result": res})
-            except Exception as e:
-                results.append({"ticket": pos['ticket'], "symbol": pos['symbol'], "error": str(e)})
-        return {"connected": True, "closed": results}
-    except Exception as e:
-        import traceback
-        return {"connected": False, "error": str(e), "trace": traceback.format_exc()}
-
-@router.post("/mt5/sync-trades", tags=["owner"])
-async def mt5_sync_trades(db: AsyncSession = Depends(get_db)):
-    """
-    Sync all trades (open + closed, manual + engine) from MT5 to the backend DB.
-    Inserts any missing trades and updates status for closed ones.
-    Returns the unified list of all trades.
-    """
-    import os
-    from waves_quant_agi.engine.brokers.mt5_plugin import MT5Broker
-    mt5_login = os.getenv("MT5_LOGIN")
-    mt5_password = os.getenv("MT5_PASSWORD")
-    mt5_server = os.getenv("MT5_SERVER", "Exness-MT5")
-    if not (mt5_login and mt5_password and mt5_server):
-        raise HTTPException(status_code=400, detail="MT5 credentials not set in environment variables.")
-    try:
-        mt5 = MT5Broker(int(mt5_login), mt5_password, mt5_server)
-        mt5.connect()
-        open_positions = mt5.get_positions()  # open trades
-        closed_trades = mt5.get_closed_trades()  # closed trades
-        # Insert/update open positions
-        for pos in open_positions:
-            trade_id = str(pos['ticket'])
-            result = await db.execute(select(Trade).where(Trade.id == trade_id))
-            existing = result.scalar_one_or_none()
-            if not existing:
-                db.add(Trade(
-                    id=trade_id,
-                    user_id="manual_or_engine",  # TODO: map to user if possible
-                    symbol=pos['symbol'],
-                    side="buy" if pos['type'] == 0 else "sell",
-                    volume=pos['volume'],
-                    price=pos['price_open'],
-                    pnl=pos['profit'],
-                    strategy=None,
-                    timestamp=datetime.fromtimestamp(pos['time']),
-                    status=TradeStatus.OPEN
-                ))
-        # Insert/update closed trades
-        for deal in closed_trades:
-            trade_id = str(deal['ticket']) if 'ticket' in deal else str(deal['position_id'])
-            result = await db.execute(select(Trade).where(Trade.id == trade_id))
-            existing = result.scalar_one_or_none()
-            if not existing:
-                db.add(Trade(
-                    id=trade_id,
-                    user_id="manual_or_engine",  # TODO: map to user if possible
-                    symbol=deal['symbol'],
-                    side="buy" if deal['type'] == 0 else "sell",
-                    volume=deal['volume'],
-                    price=deal['price'],
-                    pnl=deal['profit'],
-                    strategy=None,
-                    timestamp=datetime.fromtimestamp(deal['time']),
-                    status=TradeStatus.CLOSED
-                ))
-            else:
-                # If trade exists and is still open, mark as closed
-                if existing.status != TradeStatus.CLOSED:
-                    existing.status = TradeStatus.CLOSED
-                    existing.pnl = deal['profit']
-                    existing.price = deal['price']
-                    existing.timestamp = datetime.fromtimestamp(deal['time'])
-        await db.commit()
-        # Return all trades
-        all_trades = (await db.execute(select(Trade))).scalars().all()
-        return {"trades": [
-            {
-                "id": t.id,
-                "symbol": t.symbol,
-                "side": t.side,
-                "volume": t.volume,
-                "price": t.price,
-                "pnl": t.pnl,
-                "status": t.status.value if hasattr(t.status, 'value') else t.status,
-                "timestamp": t.timestamp.isoformat() if t.timestamp else None
-            } for t in all_trades
-        ]}
-    except Exception as e:
-        import traceback
-        raise HTTPException(status_code=500, detail=f"MT5 sync error: {e}\n{traceback.format_exc()}") 
+async def mt5_close_all_trades(broker: MT5Broker = Depends(get_mt5_broker)):
+    positions = broker.get_positions()
+    results = []
+    for pos in positions:
+        try:
+            res = broker.close_position(pos['ticket'])
+            results.append({"ticket": pos['ticket'], "result": res})
+        except Exception as e:
+            results.append({"ticket": pos['ticket'], "error": str(e)})
+    return {"connected": True, "closed": results} 

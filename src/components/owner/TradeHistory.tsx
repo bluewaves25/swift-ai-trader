@@ -28,27 +28,30 @@ import { API_ENDPOINTS, apiCall } from "@/config/api";
 export function TradeHistory() {
   const [trades, setTrades] = useState<any[]>([]);
   const [filteredTrades, setFilteredTrades] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("timestamp");
+  const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const { toast } = useToast();
 
   useEffect(() => {
-    // Fetch all trades (manual + engine, open + closed) from unified endpoint
-    const fetchTrades = async () => {
+    const triggerAndFetch = async () => {
       setLoading(true);
       try {
-        const syncRes = await apiCall(API_ENDPOINTS.OWNER_MT5_SYNC_TRADES, { method: 'POST' });
-        setTrades(Array.isArray(syncRes.trades) ? syncRes.trades : []);
+        await apiCall(API_ENDPOINTS.OWNER_MT5_TRIGGER_SYNC, { method: 'POST' });
+        // Allow a moment for the background task to process
+        setTimeout(async () => {
+          const tradesRes = await apiCall(API_ENDPOINTS.OWNER_ALL_TRADES);
+          setTrades(Array.isArray(tradesRes.trades) ? tradesRes.trades : []);
+          setLoading(false);
+        }, 2000);
       } catch (error) {
         setTrades([]);
-      } finally {
         setLoading(false);
       }
     };
-    fetchTrades();
+    triggerAndFetch();
   }, []);
 
   useEffect(() => {
@@ -64,7 +67,7 @@ export function TradeHistory() {
     filtered.sort((a, b) => {
       let aValue = a[sortBy];
       let bValue = b[sortBy];
-      if (sortBy === 'timestamp' && aValue && bValue) {
+      if (sortBy === 'created_at' && aValue && bValue) {
         aValue = new Date(aValue).getTime();
         bValue = new Date(bValue).getTime();
       }
@@ -305,7 +308,7 @@ export function TradeHistory() {
                       )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {trade.timestamp ? new Date(trade.timestamp).toLocaleString() : ''}
+                      {trade.created_at ? new Date(trade.created_at).toLocaleString() : ''}
                     </TableCell>
                   </TableRow>
                 ))}

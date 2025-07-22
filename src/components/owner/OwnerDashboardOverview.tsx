@@ -64,49 +64,31 @@ const OwnerDashboardOverview = () => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [mt5Positions, setMt5Positions] = useState<Mt5Position[]>([]);
   const [allTrades, setAllTrades] = useState<any[]>([]);
+  const [isSyncing, setIsSyncing] = useState(true);
 
   useEffect(() => {
-    syncAndFetchDashboardData(true);
-    fetchEngineStatus();
-    // Refresh data every 1 second
-    const interval = setInterval(() => {
-      syncAndFetchDashboardData(false);
-      fetchEngineStatus();
-    }, 1000);
+    const triggerAndFetch = async () => {
+      setIsSyncing(true);
+      await apiCall(API_ENDPOINTS.OWNER_MT5_TRIGGER_SYNC, { method: 'POST' });
+      // Allow a moment for the background task to process
+      setTimeout(async () => {
+        try {
+          const tradesRes = await apiCall(API_ENDPOINTS.OWNER_ALL_TRADES);
+          setAllTrades(Array.isArray(tradesRes.trades) ? tradesRes.trades : []);
+          const statsRes: DashboardStats = await apiCall(API_ENDPOINTS.OWNER_DASHBOARD_STATS);
+          setStats(statsRes);
+        } catch (error) {
+          console.error("Error fetching data after sync:", error);
+        } finally {
+          setIsSyncing(false);
+        }
+      }, 2000); // 2-second delay
+    };
+
+    triggerAndFetch();
+    const interval = setInterval(triggerAndFetch, 10000); // Sync every 10 seconds
     return () => clearInterval(interval);
   }, []);
-
-  const syncAndFetchDashboardData = async (isInitial = false) => {
-    if (isInitial) setIsInitialLoading(true);
-    try {
-      // Sync all trades from MT5 to backend
-      const syncRes = await apiCall(API_ENDPOINTS.OWNER_MT5_SYNC_TRADES, { method: 'POST' });
-      setAllTrades(Array.isArray(syncRes.trades) ? syncRes.trades : []);
-      // Fetch all stats from backend
-      const statsRes: DashboardStats = await apiCall(API_ENDPOINTS.OWNER_DASHBOARD_STATS);
-      setStats(statsRes);
-      // Fetch AUM chart data from backend
-      const aumRes = await apiCall(API_ENDPOINTS.OWNER_DASHBOARD_AUM);
-      setAumData(Array.isArray(aumRes.data) ? aumRes.data : []);
-    } catch (error) {
-      setStats({
-        totalUsers: 0,
-        totalTrades: 0,
-        totalRevenue: 0,
-        activeStrategies: 0,
-        aum: 0,
-        dailyPnL: 0,
-        winRate: 0,
-        activeUsers: 0,
-        is_running: false
-      });
-      setAumData([]);
-      setAllTrades([]);
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      if (isInitial) setIsInitialLoading(false);
-    }
-  };
 
   const fetchEngineStatus = async () => {
     try {
@@ -303,8 +285,8 @@ const OwnerDashboardOverview = () => {
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Total Trades:</span>
               <span className="text-2xl font-bold flex items-center gap-2">
-                {allTrades.length}
-                <span className="text-xs text-muted-foreground">({closedTrades} closed)</span>
+                {isSyncing ? '...' : allTrades.length}
+                <span className="text-xs text-muted-foreground">({isSyncing ? '...' : closedTrades} closed)</span>
                 {allTrades.length > stats.totalTrades && (
                   <span className="text-xs text-muted-foreground" title="Includes manual and engine trades from MT5">(MT5 synced)</span>
                 )}

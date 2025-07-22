@@ -46,6 +46,8 @@ export const API_ENDPOINTS = {
   OWNER_MT5_OPEN_TRADES: `${API_BASE_URL}/api/v1/owner/mt5/open-trades`,
   OWNER_MT5_CLOSE_ALL_TRADES: `${API_BASE_URL}/api/v1/owner/mt5/close-all-trades`,
   OWNER_MT5_SYNC_TRADES: `${API_BASE_URL}/api/v1/owner/mt5/sync-trades`,
+  OWNER_MT5_TRIGGER_SYNC: `${API_BASE_URL}/api/v1/owner/mt5/trigger-sync`,
+  OWNER_ALL_TRADES: `${API_BASE_URL}/api/v1/owner/all-trades`,
 };
 
 export const API_CONFIG = {

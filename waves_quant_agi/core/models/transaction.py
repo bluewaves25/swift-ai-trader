@@ -41,12 +41,12 @@ class Trade(Base):
     __tablename__ = "trades"
 
     id = Column(String, primary_key=True, index=True)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    user_id = Column(String, nullable=True) # Changed to nullable to support placeholder
     symbol = Column(String, nullable=False)
     side = Column(String, nullable=False)  # buy/sell
     volume = Column(Float, nullable=False)
     price = Column(Float, nullable=False)
     pnl = Column(Float, default=0.0)
     strategy = Column(String, nullable=True)
-    timestamp = Column(DateTime(timezone=True), server_default=func.now())
-    status = Column(SqlEnum(TradeStatus, native_enum=False), default=TradeStatus.CLOSED)
+    created_at = Column(DateTime(timezone=True), server_default=func.now()) # Standardized to created_at
+    status = Column(SqlEnum(TradeStatus, native_enum=False), default=TradeStatus.PENDING) # Changed default
