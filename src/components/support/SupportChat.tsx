@@ -145,34 +145,6 @@ export function SupportChat() {
     }
   };
 
-  const getBotResponse = (userMessage: string): string => {
-    const message = userMessage.toLowerCase();
-    
-    // Check for common questions
-    for (const qa of commonQuestions) {
-      if (qa.question.toLowerCase().includes(message) || 
-          message.includes(qa.question.toLowerCase().split(' ')[0]) ||
-          (message.includes('deposit') && qa.question.toLowerCase().includes('deposit')) ||
-          (message.includes('fee') && qa.question.toLowerCase().includes('fee')) ||
-          (message.includes('withdraw') && qa.question.toLowerCase().includes('withdraw')) ||
-          (message.includes('ai') && qa.question.toLowerCase().includes('ai')) ||
-          (message.includes('safe') && qa.question.toLowerCase().includes('safe'))) {
-        return qa.answer + "\n\nIs there anything else I can help you with? If you need further assistance, I can connect you with our support team.";
-      }
-    }
-    
-    // Default responses
-    if (message.includes('hello') || message.includes('hi')) {
-      return "Hello! I'm here to help you with any questions about our trading platform. What would you like to know?";
-    }
-    
-    if (message.includes('human') || message.includes('support') || message.includes('agent')) {
-      return "I'll connect you with our support team right away. They'll be able to provide more detailed assistance. Please hold on while I create a support ticket for you.";
-    }
-    
-    return "I understand you're asking about: \"" + userMessage + "\". While I don't have specific information about that, I can connect you with our support team who will be able to help you better. Would you like me to create a support ticket?";
-  };
-
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
     
@@ -195,65 +167,26 @@ export function SupportChat() {
         msg.id === userMessage.id ? { ...msg, status: 'sent' } : msg
       ));
 
-      // Get bot response
-      setTimeout(() => {
-        const botResponse = getBotResponse(currentMessage);
-        const botMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: botResponse,
-          sender: 'bot',
-          timestamp: new Date(),
-          status: 'sent'
-        };
-        setMessages(prev => [...prev, botMessage]);
-        setLoading(false);
-
-        // Only require sign-in if bot suggests human support
-        if ((botResponse.includes('support team') || botResponse.includes('support ticket')) && !user) {
-          setTimeout(() => {
-            setMessages(prev => [...prev, {
-              id: (Date.now() + 2).toString(),
-              text: "Please sign in to continue with human support.",
-              sender: 'bot',
-              timestamp: new Date(),
-              status: 'sent'
-            }]);
-          }, 1000);
-          return;
-        }
-        // If signed in and bot suggests human support, create ticket
-        if ((botResponse.includes('support team') || botResponse.includes('support ticket')) && user) {
-          setTimeout(async () => {
-            try {
-              const { error } = await supabase
-                .from('support_tickets')
-                .insert({
-                  user_id: user.id,
-                  subject: 'Chat Support Request',
-                  description: `User message: ${currentMessage}\n\nBot response: ${botResponse}`,
-                  status: 'open'
-                });
-
-              if (!error) {
-                const ticketMessage: Message = {
-                  id: (Date.now() + 3).toString(),
-                  text: "✅ I've created a support ticket for you. Our team will respond within 24 hours. You'll receive updates via email.",
-                  sender: 'bot',
-                  timestamp: new Date(),
-                  status: 'sent'
-                };
-                setMessages(prev => [...prev, ticketMessage]);
-              }
-            } catch (error) {
-              console.error('Error creating support ticket:', error);
-            }
-          }, 1000);
-        }
-      }, 1000);
-
+      // Call backend support chat endpoint
+      const response = await fetch("/api/support/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: currentMessage })
+      });
+      if (!response.ok) throw new Error("Failed to get response from support chat");
+      const data = await response.json();
+      const botMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: data.response,
+        sender: 'bot',
+        timestamp: new Date(),
+        status: 'sent'
+      };
+      setMessages(prev => [...prev, botMessage]);
+      setLoading(false);
     } catch (error) {
       console.error('Error sending message:', error);
-      toast.error('Failed to send message');
+      toast.error('Failed to get support response');
       setLoading(false);
     }
   };

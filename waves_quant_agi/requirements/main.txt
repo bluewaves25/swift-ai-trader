@@ -2,4 +2,6 @@ fastapi
 uvicorn
 redis
 python-dotenv
+httpx
+numpy
 # Add any other backend-main dependencies below
