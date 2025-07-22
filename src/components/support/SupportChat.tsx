@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageCircle, X, Send, User, Bot, Clock, CheckCircle, MessageSquare, History, Mic, MicOff, Minimize2 } from "lucide-react";
+import { MessageCircle, X, Send, User, Bot, Clock, CheckCircle, MessageSquare, History, Mic, MicOff, Minimize2, ChevronUp, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -85,6 +85,35 @@ export function SupportChat() {
   ]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollUp, setShowScrollUp] = useState(false);
+  const [showScrollDown, setShowScrollDown] = useState(false);
+
+  // Auto-scroll to bottom on new message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Scroll logic for showing buttons
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const checkScroll = () => {
+      setShowScrollUp(container.scrollTop > 8);
+      setShowScrollDown(container.scrollTop < container.scrollHeight - container.clientHeight - 8);
+    };
+    container.addEventListener('scroll', checkScroll);
+    checkScroll();
+    return () => container.removeEventListener('scroll', checkScroll);
+  }, [messages.length, isOpen]);
+
+  const scrollToTop = () => {
+    messagesContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const scrollToBottom = () => {
+    messagesContainerRef.current?.scrollTo({ top: messagesContainerRef.current.scrollHeight, behavior: 'smooth' });
+  };
 
   const { isRecording, startRecording, stopRecording } = useAudioRecorder({
     onRecordingComplete: async (audioBlob) => {
@@ -259,16 +288,15 @@ export function SupportChat() {
         <div className="fixed inset-0 z-50 pointer-events-none">
           {/* Backdrop */}
           <div 
-            className="absolute inset-0 bg-black/20 backdrop-blur-sm pointer-events-auto" 
+            className="absolute inset-0 bg-black/20 pointer-events-auto" 
             onClick={() => setIsOpen(false)} 
           />
-          
           {/* Chat Modal */}
           <div
-            className={`absolute right-4 bottom-8 md:bottom-8 z-50 pointer-events-auto transition-all duration-300`}
-            style={{ maxWidth: 400, minWidth: 320 }}
+            className="absolute right-4 bottom-8 md:bottom-8 z-50 pointer-events-auto transition-all duration-300 w-full max-w-sm"
+            style={{ minWidth: 320, maxHeight: '80vh' }}
           >
-            <Card className="h-full flex flex-col bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-2xl border-white/20 rounded-t-xl rounded-b-xl">
+            <Card className="flex flex-col bg-white/95 dark:bg-gray-900/95 shadow-2xl border-white/20 rounded-t-xl rounded-b-xl max-h-[80vh] h-[600px]">
               {/* Header */}
               <CardHeader className="flex-shrink-0 pb-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-xl">
                 <div className="flex items-center justify-between">
@@ -305,7 +333,7 @@ export function SupportChat() {
 
               {/* Content - Hidden when minimized */}
               {!isMinimized && (
-                <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 flex flex-col overflow-hidden max-h-[calc(80vh-56px)] relative">
                   <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
                     <TabsList className="grid w-full grid-cols-2 bg-white/50 dark:bg-gray-800/50 m-2 rounded-lg">
                       <TabsTrigger value="chat" className="flex items-center gap-2 text-xs">
@@ -317,28 +345,30 @@ export function SupportChat() {
                         History
                       </TabsTrigger>
                     </TabsList>
-                    
-                    <TabsContent value="chat" className="flex-1 flex flex-col mt-0">
-                      {/* Quick Questions */}
-                      <div className="p-2 border-b bg-white/50 dark:bg-gray-800/50">
-                        <p className="text-xs font-medium mb-2">Quick questions:</p>
-                        <div className="flex gap-1 flex-wrap">
-                          {commonQuestions.slice(0, 3).map((qa, i) => (
-                            <Button
-                              key={i}
-                              variant="outline"
-                              size="sm"
-                              className="text-xs h-5 px-2"
-                              onClick={() => handleQuickQuestion(qa.question)}
-                            >
-                              {qa.question}
-                            </Button>
-                          ))}
-                        </div>
+                    {/* Quick Questions */}
+                    <div className="p-2 border-b bg-white/50 dark:bg-gray-800/50">
+                      <p className="text-xs font-medium mb-2">Quick questions:</p>
+                      <div className="flex gap-1 flex-wrap">
+                        {commonQuestions.slice(0, 3).map((qa, i) => (
+                          <Button
+                            key={i}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-5 px-2"
+                            onClick={() => handleQuickQuestion(qa.question)}
+                          >
+                            {qa.question}
+                          </Button>
+                        ))}
                       </div>
-
-                      {/* Messages */}
-                      <ScrollArea className="flex-1 p-3">
+                    </div>
+                    {/* Messages area with scroll buttons */}
+                    <div className="relative flex-1">
+                      <div
+                        ref={messagesContainerRef}
+                        className="flex-1 p-3 overflow-y-auto pr-8" // add pr-8 for scroll buttons
+                        style={{ maxHeight: '320px', minHeight: '120px' }}
+                      >
                         <div className="space-y-3">
                           {messages.map((message) => (
                             <div
@@ -361,7 +391,7 @@ export function SupportChat() {
                                     <MessageCircle className="h-3 w-3 text-white" />
                                   )}
                                 </div>
-                                <div className={`rounded-2xl px-3 py-2 ${
+                                <div className={`rounded-2xl px-3 py-2 border shadow-sm ${
                                   message.sender === 'user'
                                     ? 'bg-blue-500 text-white'
                                     : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white border shadow-sm'
@@ -403,64 +433,57 @@ export function SupportChat() {
                               </div>
                             </div>
                           )}
-                        </div>
-                      </ScrollArea>
-
-                      {/* Sticky Input */}
-                      <div className="flex-shrink-0 p-3 border-t bg-white/50 dark:bg-gray-800/50 sticky bottom-0">
-                        <div className="flex space-x-2">
-                          <Input
-                            value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder="Type your message..."
-                            className="flex-1 rounded-full border-gray-300 focus:border-blue-500 bg-white dark:bg-gray-700 text-xs"
-                            disabled={loading}
-                          />
-                          <Button
-                            onClick={handleAudioToggle}
-                            variant={isRecording ? "destructive" : "outline"}
-                            size="sm"
-                            className="rounded-full w-8 h-8 p-0"
-                          >
-                            {isRecording ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
-                          </Button>
-                          <Button
-                            onClick={handleSendMessage}
-                            disabled={loading || !newMessage.trim()}
-                            className="rounded-full w-8 h-8 p-0 bg-blue-500 hover:bg-blue-600"
-                          >
-                            <Send className="h-3 w-3" />
-                          </Button>
+                          <div ref={messagesEndRef} />
                         </div>
                       </div>
-                    </TabsContent>
-
-                    <TabsContent value="history" className="flex-1 mt-0">
-                      <ScrollArea className="h-full p-3">
-                        <div className="space-y-2">
-                          {chatSessions.map((session) => (
-                            <div key={session.id} className="p-2 rounded-lg border bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
-                              <div className="flex items-center justify-between mb-1">
-                                <h4 className="font-medium text-xs">{session.title}</h4>
-                                <div className="flex items-center space-x-1">
-                                  <Badge variant={session.status === 'active' ? 'default' : session.status === 'resolved' ? 'secondary' : 'destructive'} className="text-xs">
-                                    {session.status}
-                                  </Badge>
-                                  {session.unreadCount > 0 && (
-                                    <Badge variant="destructive" className="text-xs">
-                                      {session.unreadCount}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">{session.lastMessage}</p>
-                              <p className="text-xs text-gray-500">{session.timestamp.toLocaleDateString()}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </TabsContent>
+                      {/* Scroll buttons */}
+                      {showScrollUp && (
+                        <button
+                          className="absolute right-2 top-2 z-30 bg-white dark:bg-gray-800 rounded-full shadow p-1 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          onClick={scrollToTop}
+                          aria-label="Scroll to top"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </button>
+                      )}
+                      {showScrollDown && (
+                        <button
+                          className="absolute right-2 bottom-2 z-30 bg-white dark:bg-gray-800 rounded-full shadow p-1 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          onClick={scrollToBottom}
+                          aria-label="Scroll to bottom"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                    {/* Sticky Input */}
+                    <div className="flex-shrink-0 p-2 border-t bg-white/50 dark:bg-gray-800/50 sticky bottom-0 z-20">
+                      <div className="flex space-x-2">
+                        <Input
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyPress={handleKeyPress}
+                          placeholder="Type your message..."
+                          className="flex-1 rounded-full border-gray-300 focus:border-blue-500 bg-white dark:bg-gray-700 text-xs"
+                          disabled={loading}
+                        />
+                        <Button
+                          onClick={handleAudioToggle}
+                          variant={isRecording ? "destructive" : "outline"}
+                          size="sm"
+                          className="rounded-full w-8 h-8 p-0"
+                        >
+                          {isRecording ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
+                        </Button>
+                        <Button
+                          onClick={handleSendMessage}
+                          disabled={loading || !newMessage.trim()}
+                          className="rounded-full w-8 h-8 p-0 bg-blue-500 hover:bg-blue-600"
+                        >
+                          <Send className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
                   </Tabs>
                 </div>
               )}

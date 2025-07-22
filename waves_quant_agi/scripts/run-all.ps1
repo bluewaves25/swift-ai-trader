@@ -21,7 +21,7 @@ Start-Process powershell -WorkingDirectory $projectRoot -ArgumentList '-NoExit',
 
 # Start MT5 market data feeder
 Write-Host "Starting MT5 market data feeder..."
-Start-Process powershell -WorkingDirectory $projectRoot -ArgumentList '-NoExit', '-Command', '.\waves_quant_agi\env_310\Scripts\activate; python waves_quant_agi/engine/feeders/mt5_feeder.py *>> mt5-feeder.log' -WindowStyle Normal
+Start-Process powershell -WorkingDirectory $projectRoot -ArgumentList '-NoExit', '-Command', '.\waves_quant_agi\env_310\Scripts\activate; python -m waves_quant_agi.engine.feeders.mt5_feeder *>> mt5-feeder.log' -WindowStyle Normal
 
 # Optionally, start additional engine workers for scaling
 # Write-Host "Starting additional trading engine worker..."

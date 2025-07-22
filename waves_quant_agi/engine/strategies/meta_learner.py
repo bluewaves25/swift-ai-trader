@@ -1,16 +1,16 @@
 from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from waves_quant_agi.engine.strategies.base_strategy import BaseStrategy
+import logging
+
+logger = logging.getLogger(__name__)
 
 class MetaLearner(BaseStrategy):
     def __init__(self):
         super().__init__()
+        self.last_signal = 'sell'
 
-    def optimize(self, X, y):
-        grid = {
-            "n_estimators": [50, 100],
-            "max_depth": [3, 5, None]
-        }
-        model = GridSearchCV(RandomForestClassifier(), grid, cv=3)
-        model.fit(X, y)
-        return model.best_params_
+    def generate_signal(self, market_data):
+        self.last_signal = 'buy' if self.last_signal == 'sell' else 'sell'
+        logger.info(f"[MetaLearner] Generated signal: {self.last_signal} {getattr(market_data, 'symbol', 'N/A')}")
+        return self.last_signal

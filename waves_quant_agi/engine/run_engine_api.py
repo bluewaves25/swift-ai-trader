@@ -40,23 +40,27 @@ def parse_market_data(raw: list) -> list:
     ]
 
 # 🔁 Main event loop
+last_data_time = time.time()
 while True:
     try:
         # Set engine heartbeat
         r.set("engine-heartbeat", datetime.now().isoformat())
-        task = r.blpop("market-data", timeout=0)
+        task = r.blpop("market-data", timeout=10)
         if not task:
+            if time.time() - last_data_time > 10:
+                print("[WARN] No market data received in the last 10 seconds. Check your feeder and Redis.")
             continue
 
         _, payload = task
+        last_data_time = time.time()
         raw_data = json.loads(payload)
 
         # 📊 Parse + process
-        market_data = parse_market_data(raw_data)
-        trades = asyncio.run(engine.process_market_data(market_data))
-
-        # 🧠 Store result
-        r.set("market-result", json.dumps(trades))
+        market_data_list = parse_market_data(raw_data)
+        for market_data in market_data_list:
+            print(f"[ENGINE] Processing market data: {market_data.symbol}")
+            trades = engine.process_market_data(market_data)
+            r.set("market-result", json.dumps(trades))
 
     except Exception as e:
         print(f"[ERROR] {e}")

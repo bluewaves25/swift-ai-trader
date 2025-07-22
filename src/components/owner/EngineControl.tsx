@@ -33,7 +33,7 @@ export function EngineControl() {
     const interval = setInterval(() => {
       fetchEngineStatus();
       fetchMt5Status();
-    }, 10000);
+    }, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -109,13 +109,15 @@ export function EngineControl() {
   const emergencyStop = async () => {
     setLoading(true);
     try {
-      const data = await apiCall(API_ENDPOINTS.ENGINE_EMERGENCY_STOP, {
+      // Call the new MT5 close-all-trades endpoint
+      const mt5Result = await apiCall(API_ENDPOINTS.OWNER_MT5_CLOSE_ALL_TRADES, {
         method: 'POST',
       });
-      
+      let closedCount = Array.isArray(mt5Result.closed) ? mt5Result.closed.filter(r => r.result && r.result.status === 'success').length : 0;
+      let errorCount = Array.isArray(mt5Result.closed) ? mt5Result.closed.filter(r => r.error).length : 0;
       toast({
         title: "Emergency Stop Executed",
-        description: "All trading activities have been halted immediately",
+        description: `Closed ${closedCount} MT5 trades${errorCount ? `, ${errorCount} errors` : ''}`,
         className: "bg-gradient-to-r from-red-50 to-pink-50 border-red-200"
       });
       fetchEngineStatus();

@@ -170,7 +170,7 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
       </SidebarHeader>
 
       {/* User Info - This section is removed as it's merged into the header */}
-      
+
       {/* Scroll Up Button */}
       {showScrollUp && (
         <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-10">

@@ -14,4 +14,4 @@ class InvestorPortfolio(Base):
     returns = Column(Float, default=0.0)
 
     user = relationship("User", back_populates="portfolio")
-    transactions = relationship("Transaction", back_populates="portfolio", cascade="all, delete-orphan")
+    transactions = relationship("Transaction", back_populates="portfolio", cascade="all, delete-orphan")  # <-- Ensure this matches Transaction.portfolio

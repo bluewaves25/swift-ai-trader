@@ -3,6 +3,7 @@
 import MetaTrader5 as mt5
 from waves_quant_agi.engine.brokers.base_broker import BaseBroker
 import time
+import logging
 
 class MT5Broker(BaseBroker):
     """
@@ -83,10 +84,11 @@ class MT5Broker(BaseBroker):
         symbols = mt5.symbols_get()
         return [s.name for s in symbols] if symbols else []
 
-    def place_order(self, symbol: str, side: str, volume: float, price: float = 0.0, order_type: str = "market") -> dict:
+    def place_order(self, symbol: str, side: str, volume: float, price: float = 0.0, sl: float = 0.0, tp: float = 0.0, order_type: str = "market") -> dict:
         """
         Place a new order (market or limit) with MT5.
         """
+        logger = logging.getLogger(__name__)
         if not self.connected:
             self.connect()
 
@@ -99,6 +101,7 @@ class MT5Broker(BaseBroker):
 
         order_type_code = order_type_map.get((side, order_type))
         if order_type_code is None:
+            logger.error(f"[MT5Broker] Invalid order type: {side} {order_type}")
             raise ValueError(f"Invalid order type: {side} {order_type}")
 
         request = {
@@ -107,15 +110,19 @@ class MT5Broker(BaseBroker):
             "volume": volume,
             "type": order_type_code,
             "price": price if order_type == "limit" else mt5.symbol_info_tick(symbol).ask,
+            "sl": sl,
+            "tp": tp,
             "deviation": 10,
             "magic": 123456,
             "comment": "WAVES_QAGI",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
-
+        logger.info(f"[MT5Broker] Placing order: {request}")
         result = mt5.order_send(request)
+        logger.info(f"[MT5Broker] Order send result: {result}")
         if result.retcode != mt5.TRADE_RETCODE_DONE:
+            logger.error(f"[MT5Broker] Order failed: {result.retcode}, {result.comment}")
             raise RuntimeError(f"Order failed: {result.retcode}, {result.comment}")
 
         return {"order_id": result.order, "status": "success"}
@@ -151,3 +158,17 @@ class MT5Broker(BaseBroker):
             raise RuntimeError(f"Close failed: {result.retcode}, {result.comment}")
 
         return {"status": "closed", "ticket": result.order}
+
+    def get_closed_trades(self, from_timestamp=None, to_timestamp=None) -> list:
+        """
+        Return all closed trades (deals) from MT5 history.
+        Optionally filter by time range (timestamps in seconds).
+        """
+        if not self.connected:
+            self.connect()
+        from_time = from_timestamp or 0
+        to_time = to_timestamp or time.time()
+        deals = mt5.history_deals_get(from_time, to_time)
+        if deals is None:
+            raise RuntimeError(f"Failed to get closed trades: {mt5.last_error()}")
+        return [deal._asdict() for deal in deals]

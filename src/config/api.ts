@@ -43,6 +43,9 @@ export const API_ENDPOINTS = {
   // Owner dashboard endpoints
   OWNER_DASHBOARD_STATS: `${API_BASE_URL}/api/v1/owner/dashboard/stats`,
   OWNER_DASHBOARD_AUM: `${API_BASE_URL}/api/v1/owner/dashboard/aum`,
+  OWNER_MT5_OPEN_TRADES: `${API_BASE_URL}/api/v1/owner/mt5/open-trades`,
+  OWNER_MT5_CLOSE_ALL_TRADES: `${API_BASE_URL}/api/v1/owner/mt5/close-all-trades`,
+  OWNER_MT5_SYNC_TRADES: `${API_BASE_URL}/api/v1/owner/mt5/sync-trades`,
 };
 
 export const API_CONFIG = {

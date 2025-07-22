@@ -76,14 +76,5 @@ class RiskManager:
         }
 
     def approve_trade(self, signal) -> bool:
-        """
-        Centralized approval logic for trades.
-        For now, approves all trades. Can be extended with more rules.
-        """
-        # Example rule: Don't trade if volatility is too low
-        if self.atr < 0.0001: # Example threshold
-             # print("Trade rejected: Low volatility")
-             # return False
-             pass
-        
+        logger.info(f"[RiskManager] Approving trade for {signal.symbol} {signal.action}")
         return True

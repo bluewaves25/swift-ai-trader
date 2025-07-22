@@ -35,6 +35,17 @@ interface AUMData {
   trades: number;
 }
 
+interface Mt5Position {
+  ticket: number;
+  symbol: string;
+  type: number;
+  volume: number;
+  price_open: number;
+  profit: number;
+  time: number;
+  [key: string]: any;
+}
+
 const OwnerDashboardOverview = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
@@ -50,23 +61,27 @@ const OwnerDashboardOverview = () => {
   const [aumData, setAumData] = useState<AUMData[]>([]);
   const [loading, setLoading] = useState(true);
   const [engineStatus, setEngineStatus] = useState<DashboardStats | null>(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [mt5Positions, setMt5Positions] = useState<Mt5Position[]>([]);
+  const [allTrades, setAllTrades] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchDashboardData();
+    syncAndFetchDashboardData(true);
     fetchEngineStatus();
-    
-    // Refresh data every 30 seconds
+    // Refresh data every 1 second
     const interval = setInterval(() => {
-      fetchDashboardData();
+      syncAndFetchDashboardData(false);
       fetchEngineStatus();
-    }, 30000);
-
+    }, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
+  const syncAndFetchDashboardData = async (isInitial = false) => {
+    if (isInitial) setIsInitialLoading(true);
     try {
+      // Sync all trades from MT5 to backend
+      const syncRes = await apiCall(API_ENDPOINTS.OWNER_MT5_SYNC_TRADES, { method: 'POST' });
+      setAllTrades(Array.isArray(syncRes.trades) ? syncRes.trades : []);
       // Fetch all stats from backend
       const statsRes: DashboardStats = await apiCall(API_ENDPOINTS.OWNER_DASHBOARD_STATS);
       setStats(statsRes);
@@ -86,9 +101,10 @@ const OwnerDashboardOverview = () => {
         is_running: false
       });
       setAumData([]);
+      setAllTrades([]);
       console.error('Error fetching dashboard data:', error);
     } finally {
-      setLoading(false);
+      if (isInitial) setIsInitialLoading(false);
     }
   };
 
@@ -101,6 +117,15 @@ const OwnerDashboardOverview = () => {
     }
   };
 
+  const fetchMt5OpenTrades = async () => {
+    try {
+      const mt5Res = await apiCall(API_ENDPOINTS.OWNER_MT5_OPEN_TRADES);
+      setMt5Positions(Array.isArray(mt5Res.positions) ? mt5Res.positions : []);
+    } catch (error) {
+      setMt5Positions([]);
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) {
       return `$${(amount / 1000000).toFixed(1)}M`;
@@ -110,7 +135,9 @@ const OwnerDashboardOverview = () => {
     return `$${amount.toFixed(0)}`;
   };
 
-  if (loading) {
+  const closedTrades = allTrades.filter(t => t.status === 'closed').length;
+
+  if (isInitialLoading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
@@ -267,20 +294,21 @@ const OwnerDashboardOverview = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-green-600" />
-              Platform Metrics
+              <Activity className="h-5 w-5 text-blue-600" />
+              Trading Engine Status
             </CardTitle>
-            <CardDescription>Key platform performance indicators</CardDescription>
+            <CardDescription>Current engine performance and status</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Total Users:</span>
-              <span className="font-semibold">{stats.totalUsers.toLocaleString()}</span>
-            </div>
-            
-            <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Total Trades:</span>
-              <span className="font-semibold">{stats.totalTrades.toLocaleString()}</span>
+              <span className="text-2xl font-bold flex items-center gap-2">
+                {allTrades.length}
+                <span className="text-xs text-muted-foreground">({closedTrades} closed)</span>
+                {allTrades.length > stats.totalTrades && (
+                  <span className="text-xs text-muted-foreground" title="Includes manual and engine trades from MT5">(MT5 synced)</span>
+                )}
+              </span>
             </div>
             
             <div className="flex items-center justify-between">

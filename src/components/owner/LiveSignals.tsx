@@ -18,9 +18,21 @@ interface Signal {
   source: string;
 }
 
+interface Mt5Position {
+  ticket: number;
+  symbol: string;
+  type: number;
+  volume: number;
+  price_open: number;
+  profit: number;
+  time: number;
+  [key: string]: any;
+}
+
 export function LiveSignals() {
   const [signals, setSignals] = useState<Signal[]>([]);
-  const [trades, setTrades] = useState<Trade[]>([]);
+  const [allTrades, setAllTrades] = useState<any[]>([]);
+  const [mt5Positions, setMt5Positions] = useState<Mt5Position[]>([]);
   const [engineRunning, setEngineRunning] = useState(false);
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -37,22 +49,26 @@ export function LiveSignals() {
 
   const fetchLiveData = async () => {
     try {
-      // Fetch real signals and trades
+      // Fetch real signals
       const { data: signalsData } = await apiService.getLiveSignals();
       setSignals(Array.isArray(signalsData.signals) ? signalsData.signals : []);
-      const { data: tradesData } = await apiService.getTradeHistory();
-      setTrades(Array.isArray(tradesData.trades) ? tradesData.trades : []);
+      // Fetch all trades (manual + engine, open + closed)
+      const syncRes = await apiCall(API_ENDPOINTS.OWNER_MT5_SYNC_TRADES, { method: 'POST' });
+      setAllTrades(Array.isArray(syncRes.trades) ? syncRes.trades : []);
+      // Fetch open MT5 trades for the dedicated card
+      const mt5Res = await apiCall(API_ENDPOINTS.OWNER_MT5_OPEN_TRADES);
+      setMt5Positions(Array.isArray(mt5Res.positions) ? mt5Res.positions : []);
     } catch (error) {
       // Only log error once per session to avoid spam
       const errorKey = 'liveSignalsErrorLogged';
       if (!sessionStorage.getItem(errorKey)) {
         console.error('Error fetching live data:', error);
         sessionStorage.setItem(errorKey, 'true');
-        // Clear the flag after 30 seconds to allow retry
         setTimeout(() => sessionStorage.removeItem(errorKey), 30000);
       }
       setSignals([]);
-      setTrades([]);
+      setAllTrades([]);
+      setMt5Positions([]);
     }
   };
 
@@ -140,9 +156,9 @@ export function LiveSignals() {
   };
 
   const getTotalProfit = () => {
-    return trades
-      .filter(t => t.status === 'filled' && t.profit)
-      .reduce((sum, t) => sum + (t.profit || 0), 0);
+    return allTrades
+      .filter(t => t.status === 'filled' && t.pnl)
+      .reduce((sum, t) => sum + (t.pnl || 0), 0);
   };
 
   return (
@@ -271,17 +287,52 @@ export function LiveSignals() {
           </CardContent>
         </Card>
 
+        {/* Open MT5 Trades */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Open MT5 Trades</CardTitle>
+            <CardDescription>
+              All currently open positions in MT5 (manual + automatic)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {mt5Positions.length === 0 ? (
+              <div className="text-muted-foreground text-sm">No open MT5 trades.</div>
+            ) : (
+              <div className="space-y-3">
+                {mt5Positions.map((pos) => (
+                  <div key={pos.ticket} className="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-50/50 to-orange-50/50 rounded-lg border">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{pos.symbol}</span>
+                        <Badge variant="outline" className="text-xs">MT5</Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {pos.type === 0 ? 'BUY' : 'SELL'} {pos.volume} @ ${pos.price_open}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={cn("text-xs font-medium", pos.profit >= 0 ? "text-green-600" : "text-red-600")}>{pos.profit >= 0 ? '+' : ''}${pos.profit.toFixed(2)}</div>
+                      <div className="text-xs text-muted-foreground">Ticket: {pos.ticket}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Recent Trades */}
         <Card>
           <CardHeader>
             <CardTitle>Recent Trades</CardTitle>
             <CardDescription>
-              Latest executed trades from both brokers
+              Latest executed trades from both brokers (manual + engine)
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {trades.map((trade) => (
+              {allTrades.slice(0, 5).map((trade) => (
                 <div 
                   key={trade.id}
                   className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50/50 to-emerald-50/50 rounded-lg border"
@@ -289,25 +340,22 @@ export function LiveSignals() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm">{trade.symbol}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {trade.broker.toUpperCase()}
-                      </Badge>
+                      <Badge variant="outline" className="text-xs">MT5</Badge>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {trade.type.toUpperCase()} {trade.volume} @ ${trade.price}
+                      {trade.side?.toUpperCase()} {trade.volume} @ ${trade.price}
                     </div>
                   </div>
-                  
                   <div className="text-right">
                     <Badge className={cn("mb-1", getStatusColor(trade.status))}>
                       {trade.status}
                     </Badge>
-                    {trade.profit !== undefined && (
+                    {trade.pnl !== undefined && (
                       <div className={cn(
                         "text-xs font-medium",
-                        trade.profit >= 0 ? "text-green-600" : "text-red-600"
+                        trade.pnl >= 0 ? "text-green-600" : "text-red-600"
                       )}>
-                        {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
+                        {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)}
                       </div>
                     )}
                   </div>
@@ -323,7 +371,7 @@ export function LiveSignals() {
         <CardHeader>
           <CardTitle>All Trades</CardTitle>
           <CardDescription>
-            Complete trading history across all brokers
+            Complete trading history across all brokers (manual + engine)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -334,52 +382,46 @@ export function LiveSignals() {
                 <TableHead>Type</TableHead>
                 <TableHead>Volume</TableHead>
                 <TableHead>Price</TableHead>
-                <TableHead>Broker</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>P&L</TableHead>
                 <TableHead>Time</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {trades.map((trade) => (
+              {allTrades.map((trade) => (
                 <TableRow key={trade.id} className="hover:bg-muted/50">
                   <TableCell className="font-medium">{trade.symbol}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      {trade.type === 'buy' ? (
+                      {trade.side === 'buy' ? (
                         <TrendingUp className="h-3 w-3 text-green-600" />
                       ) : (
                         <TrendingDown className="h-3 w-3 text-red-600" />
                       )}
-                      <span className="capitalize">{trade.type}</span>
+                      <span className="capitalize">{trade.side}</span>
                     </div>
                   </TableCell>
                   <TableCell>{trade.volume}</TableCell>
-                  <TableCell>${trade.price.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="capitalize">
-                      {trade.broker}
-                    </Badge>
-                  </TableCell>
+                  <TableCell>${trade.price?.toLocaleString()}</TableCell>
                   <TableCell>
                     <Badge className={cn(getStatusColor(trade.status))}>
                       {trade.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {trade.profit !== undefined ? (
+                    {trade.pnl !== undefined ? (
                       <span className={cn(
                         "font-medium",
-                        trade.profit >= 0 ? "text-green-600" : "text-red-600"
+                        trade.pnl >= 0 ? "text-green-600" : "text-red-600"
                       )}>
-                        {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
+                        {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {new Date(trade.timestamp).toLocaleTimeString()}
+                    {trade.timestamp ? new Date(trade.timestamp).toLocaleTimeString() : ''}
                   </TableCell>
                 </TableRow>
               ))}

@@ -13,6 +13,6 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
 
-    # Relationship to portfolio and transactions
-    portfolio = relationship("Portfolio", back_populates="user", uselist=False)
+    # Relationship to portfolio and transactions (matches InvestorPortfolio.user and Transaction.user)
+    portfolio = relationship("InvestorPortfolio", back_populates="user", uselist=False)
     transactions = relationship("Transaction", backref="user")

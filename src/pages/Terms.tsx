@@ -148,8 +148,8 @@ const Terms = () => {
                 </p>
                 <div className="mt-2 md:mt-3 text-xs md:text-sm text-card-foreground/90">
                   <p>Email: legal@wavesquant.com</p>
-                  <p>Phone: +1 (555) 123-4567</p>
-                  <p>Address: 123 Financial District, New York, NY 10001</p>
+                  <p>Phone: +233 (500) 33-4946</p>
+                  <p>Address: Site, Opposite Valley View University, Techiman, Ghana</p>
                 </div>
               </section>
             </CardContent>

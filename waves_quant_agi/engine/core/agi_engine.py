@@ -16,6 +16,7 @@ from waves_quant_agi.engine.core.strategy_manager import StrategyManager
 from waves_quant_agi.engine.strategies.aggressive_scalper import AggressiveScalper
 from waves_quant_agi.core.models.transaction import Trade
 from waves_quant_agi.core.database import SessionLocal
+from waves_quant_agi.engine.feeders.mt5_feeder import SYMBOLS
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +33,9 @@ class AGIEngine:
         self.execution_engine = ExecutionEngine(self.db_session, self.risk_manager)
         self.online_learner = OnlineLearner()
         
-        # Add aggressive strategy for HFT
-        self.strategy_manager.add_strategy(AggressiveScalper())
+        # Add an AggressiveScalper for every symbol
+        for symbol in SYMBOLS:
+            self.strategy_manager.add_strategy(AggressiveScalper(symbol=symbol, strategy_id=f"aggressive_scalper_{symbol}"))
         
         self.market_regime = "trending" 
         self.last_learning_update = datetime.now()
@@ -48,18 +50,25 @@ class AGIEngine:
         - Executes the highest priority signal.
         - Periodically learns from past trades.
         """
+        logger.info(f"[AGIEngine] Received market data: {market_data.symbol} {market_data.close}")
         # 1. Update risk manager with latest market data
         self.risk_manager.update_market_data(market_data)
 
         # 2. Get signals from all strategies
         signals = self.strategy_manager.get_all_signals(market_data)
+        logger.info(f"[AGIEngine] Signals generated: {signals}")
         
         if not signals:
+            logger.info(f"[AGIEngine] No signals generated for {market_data.symbol}")
             return
 
         # 3. Prioritize signals and execute the best one
-        highest_priority_signal = max(signals, key=lambda s: s.priority)
-        asyncio.run(self.execution_engine.execute_signals([highest_priority_signal], "user_id_placeholder"))
+        highest_priority_signal = max(signals, key=lambda s: s.confidence)
+        logger.info(f"[AGIEngine] Executing signal: {highest_priority_signal.action} {highest_priority_signal.symbol}")
+        try:
+            asyncio.run(self.execution_engine.execute_signals([highest_priority_signal]))
+        except Exception as e:
+            logger.error(f"[AGIEngine] Error executing signal: {e}")
 
         # 4. Periodically update strategy weights from recent trades
         if (datetime.now() - self.last_learning_update).seconds > 60:

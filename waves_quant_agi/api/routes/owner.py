@@ -15,7 +15,8 @@ from sqlalchemy.future import select
 from fastapi import BackgroundTasks
 from datetime import datetime
 from waves_quant_agi.core.models.portfolio import InvestorPortfolio
-from waves_quant_agi.core.models.transaction import Trade
+from waves_quant_agi.core.models.transaction import Trade, TradeStatus
+import uuid
 from sqlalchemy import func
 from datetime import timedelta, date
 import traceback
@@ -301,4 +302,130 @@ async def mt5_status():
             "connected": False,
             "error": str(e),
             "trace": traceback.format_exc()
-        } 
+        }
+
+@router.get("/mt5/open-trades", tags=["owner"])
+async def mt5_open_trades():
+    """Fetch all open trades/positions from MT5 (manual + automatic)."""
+    import os
+    from waves_quant_agi.engine.brokers.mt5_plugin import MT5Broker
+    mt5_login = os.getenv("MT5_LOGIN")
+    mt5_password = os.getenv("MT5_PASSWORD")
+    mt5_server = os.getenv("MT5_SERVER", "Exness-MT5")
+    if not (mt5_login and mt5_password and mt5_server):
+        return {"connected": False, "error": "MT5 credentials not set in environment variables."}
+    try:
+        mt5 = MT5Broker(int(mt5_login), mt5_password, mt5_server)
+        mt5.connect()
+        positions = mt5.get_positions()
+        return {"connected": True, "positions": positions}
+    except Exception as e:
+        import traceback
+        return {"connected": False, "error": str(e), "trace": traceback.format_exc()}
+
+@router.post("/mt5/close-all-trades", tags=["owner"])
+async def mt5_close_all_trades():
+    """Emergency stop: Close all open trades in MT5 (manual + automatic)."""
+    import os
+    from waves_quant_agi.engine.brokers.mt5_plugin import MT5Broker
+    mt5_login = os.getenv("MT5_LOGIN")
+    mt5_password = os.getenv("MT5_PASSWORD")
+    mt5_server = os.getenv("MT5_SERVER", "Exness-MT5")
+    if not (mt5_login and mt5_password and mt5_server):
+        return {"connected": False, "error": "MT5 credentials not set in environment variables."}
+    try:
+        mt5 = MT5Broker(int(mt5_login), mt5_password, mt5_server)
+        mt5.connect()
+        positions = mt5.get_positions()
+        results = []
+        for pos in positions:
+            try:
+                res = mt5.close_position(pos['ticket'])
+                results.append({"ticket": pos['ticket'], "symbol": pos['symbol'], "result": res})
+            except Exception as e:
+                results.append({"ticket": pos['ticket'], "symbol": pos['symbol'], "error": str(e)})
+        return {"connected": True, "closed": results}
+    except Exception as e:
+        import traceback
+        return {"connected": False, "error": str(e), "trace": traceback.format_exc()}
+
+@router.post("/mt5/sync-trades", tags=["owner"])
+async def mt5_sync_trades(db: AsyncSession = Depends(get_db)):
+    """
+    Sync all trades (open + closed, manual + engine) from MT5 to the backend DB.
+    Inserts any missing trades and updates status for closed ones.
+    Returns the unified list of all trades.
+    """
+    import os
+    from waves_quant_agi.engine.brokers.mt5_plugin import MT5Broker
+    mt5_login = os.getenv("MT5_LOGIN")
+    mt5_password = os.getenv("MT5_PASSWORD")
+    mt5_server = os.getenv("MT5_SERVER", "Exness-MT5")
+    if not (mt5_login and mt5_password and mt5_server):
+        raise HTTPException(status_code=400, detail="MT5 credentials not set in environment variables.")
+    try:
+        mt5 = MT5Broker(int(mt5_login), mt5_password, mt5_server)
+        mt5.connect()
+        open_positions = mt5.get_positions()  # open trades
+        closed_trades = mt5.get_closed_trades()  # closed trades
+        # Insert/update open positions
+        for pos in open_positions:
+            trade_id = str(pos['ticket'])
+            result = await db.execute(select(Trade).where(Trade.id == trade_id))
+            existing = result.scalar_one_or_none()
+            if not existing:
+                db.add(Trade(
+                    id=trade_id,
+                    user_id="manual_or_engine",  # TODO: map to user if possible
+                    symbol=pos['symbol'],
+                    side="buy" if pos['type'] == 0 else "sell",
+                    volume=pos['volume'],
+                    price=pos['price_open'],
+                    pnl=pos['profit'],
+                    strategy=None,
+                    timestamp=datetime.fromtimestamp(pos['time']),
+                    status=TradeStatus.OPEN
+                ))
+        # Insert/update closed trades
+        for deal in closed_trades:
+            trade_id = str(deal['ticket']) if 'ticket' in deal else str(deal['position_id'])
+            result = await db.execute(select(Trade).where(Trade.id == trade_id))
+            existing = result.scalar_one_or_none()
+            if not existing:
+                db.add(Trade(
+                    id=trade_id,
+                    user_id="manual_or_engine",  # TODO: map to user if possible
+                    symbol=deal['symbol'],
+                    side="buy" if deal['type'] == 0 else "sell",
+                    volume=deal['volume'],
+                    price=deal['price'],
+                    pnl=deal['profit'],
+                    strategy=None,
+                    timestamp=datetime.fromtimestamp(deal['time']),
+                    status=TradeStatus.CLOSED
+                ))
+            else:
+                # If trade exists and is still open, mark as closed
+                if existing.status != TradeStatus.CLOSED:
+                    existing.status = TradeStatus.CLOSED
+                    existing.pnl = deal['profit']
+                    existing.price = deal['price']
+                    existing.timestamp = datetime.fromtimestamp(deal['time'])
+        await db.commit()
+        # Return all trades
+        all_trades = (await db.execute(select(Trade))).scalars().all()
+        return {"trades": [
+            {
+                "id": t.id,
+                "symbol": t.symbol,
+                "side": t.side,
+                "volume": t.volume,
+                "price": t.price,
+                "pnl": t.pnl,
+                "status": t.status.value if hasattr(t.status, 'value') else t.status,
+                "timestamp": t.timestamp.isoformat() if t.timestamp else None
+            } for t in all_trades
+        ]}
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=f"MT5 sync error: {e}\n{traceback.format_exc()}") 

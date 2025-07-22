@@ -2,6 +2,7 @@ from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Enum as SqlE
 from sqlalchemy.sql import func
 from waves_quant_agi.core.database import Base
 import enum
+from sqlalchemy.orm import relationship
 
 class TransactionType(enum.Enum):
     DEPOSIT = "deposit"
@@ -17,6 +18,7 @@ class Transaction(Base):
 
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    portfolio_id = Column(String, ForeignKey("investor_portfolios.id"), nullable=True)
 
     # Use SqlEnum and set native_enum=False for better cross-database compatibility
     type = Column(SqlEnum(TransactionType, native_enum=False), nullable=False)
@@ -27,6 +29,8 @@ class Transaction(Base):
     # Optional: Add these if needed for deposit/withdraw tracking
     reference = Column(String, unique=True, nullable=True)
     description = Column(String, nullable=True)
+
+    portfolio = relationship("InvestorPortfolio", back_populates="transactions")
 
 class TradeStatus(enum.Enum):
     OPEN = "open"

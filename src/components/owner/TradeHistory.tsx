@@ -23,27 +23,29 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiService, Trade } from "@/services/api";
+import { API_ENDPOINTS, apiCall } from "@/config/api";
 
 export function TradeHistory() {
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [filteredTrades, setFilteredTrades] = useState<Trade[]>([]);
+  const [trades, setTrades] = useState<any[]>([]);
+  const [filteredTrades, setFilteredTrades] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [brokerFilter, setBrokerFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("openTime");
+  const [sortBy, setSortBy] = useState("timestamp");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const { toast } = useToast();
 
   useEffect(() => {
-    // Fetch trade history from backend
+    // Fetch all trades (manual + engine, open + closed) from unified endpoint
     const fetchTrades = async () => {
+      setLoading(true);
       try {
-        const { data } = await apiService.getTradeHistory();
-        setTrades(Array.isArray(data.trades) ? data.trades : []);
+        const syncRes = await apiCall(API_ENDPOINTS.OWNER_MT5_SYNC_TRADES, { method: 'POST' });
+        setTrades(Array.isArray(syncRes.trades) ? syncRes.trades : []);
       } catch (error) {
         setTrades([]);
+      } finally {
+        setLoading(false);
       }
     };
     fetchTrades();
@@ -51,25 +53,20 @@ export function TradeHistory() {
 
   useEffect(() => {
     filterAndSortTrades();
-  }, [trades, searchTerm, statusFilter, brokerFilter, categoryFilter, sortBy, sortOrder]);
+  }, [trades, searchTerm, statusFilter, sortBy, sortOrder]);
 
   const filterAndSortTrades = () => {
     let filtered = trades.filter(trade => {
-      const matchesSearch = trade.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           trade.strategy.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = trade.symbol?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "all" || trade.status === statusFilter;
-      const matchesBroker = brokerFilter === "all" || trade.broker === brokerFilter;
-      const matchesCategory = categoryFilter === "all" || trade.category === categoryFilter;
-      
-      return matchesSearch && matchesStatus && matchesBroker && matchesCategory;
+      return matchesSearch && matchesStatus;
     });
-
     filtered.sort((a, b) => {
-      let aValue = a[sortBy as keyof Trade];
-      let bValue = b[sortBy as keyof Trade];
-      if ((sortBy === 'openTime' || sortBy === 'closeTime') && aValue && bValue) {
-        aValue = new Date(aValue as string).getTime();
-        bValue = new Date(bValue as string).getTime();
+      let aValue = a[sortBy];
+      let bValue = b[sortBy];
+      if (sortBy === 'timestamp' && aValue && bValue) {
+        aValue = new Date(aValue).getTime();
+        bValue = new Date(bValue).getTime();
       }
       if (sortOrder === 'asc') {
         return aValue > bValue ? 1 : -1;
@@ -77,7 +74,6 @@ export function TradeHistory() {
         return aValue < bValue ? 1 : -1;
       }
     });
-
     setFilteredTrades(filtered);
   };
 
@@ -165,10 +161,8 @@ export function TradeHistory() {
     link.click();
   };
 
-  const totalProfit = filteredTrades.reduce((sum, trade) => sum + (trade.profit || 0), 0);
-  const totalCommission = filteredTrades.reduce((sum, trade) => sum + trade.commission, 0);
-  const openTrades = filteredTrades.filter(trade => trade.status === 'open').length;
   const closedTrades = filteredTrades.filter(trade => trade.status === 'closed').length;
+  const openTrades = filteredTrades.filter(trade => trade.status === 'open').length;
 
   return (
     <div className="space-y-6">
@@ -178,34 +172,11 @@ export function TradeHistory() {
             <History className="h-6 w-6" />
             Trade History
           </h2>
-          <p className="text-muted-foreground">Complete trading history across all brokers and instruments</p>
+          <p className="text-muted-foreground">Complete trading history (manual + engine, open + closed)</p>
         </div>
-        <Button onClick={exportTrades} variant="outline">
-          <Download className="h-4 w-4 mr-2" />
-          Export CSV
-        </Button>
       </div>
-
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total P&L</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={cn("text-2xl font-bold", totalProfit >= 0 ? "text-green-600" : "text-red-600")}>
-              ${totalProfit.toFixed(2)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Commission</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">${totalCommission.toFixed(2)}</div>
-          </CardContent>
-        </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Open Trades</CardTitle>
@@ -223,7 +194,6 @@ export function TradeHistory() {
           </CardContent>
         </Card>
       </div>
-
       {/* Filters */}
       <Card>
         <CardHeader>
@@ -233,11 +203,11 @@ export function TradeHistory() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-6">
+          <div className="grid gap-4 md:grid-cols-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search symbol or strategy..."
+                placeholder="Search symbol..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -254,38 +224,17 @@ export function TradeHistory() {
                 <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={brokerFilter} onValueChange={setBrokerFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Broker" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Brokers</SelectItem>
-                <SelectItem value="binance">Binance</SelectItem>
-                <SelectItem value="exness">Exness MT5</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="crypto">Crypto</SelectItem>
-                <SelectItem value="forex">Forex</SelectItem>
-                <SelectItem value="commodities">Commodities</SelectItem>
-                <SelectItem value="indices">Indices</SelectItem>
-              </SelectContent>
-            </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger>
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="openTime">Open Time</SelectItem>
-                <SelectItem value="closeTime">Close Time</SelectItem>
+                <SelectItem value="timestamp">Time</SelectItem>
                 <SelectItem value="symbol">Symbol</SelectItem>
-                <SelectItem value="profit">Profit</SelectItem>
+                <SelectItem value="side">Type</SelectItem>
                 <SelectItem value="volume">Volume</SelectItem>
+                <SelectItem value="price">Price</SelectItem>
+                <SelectItem value="pnl">P&L</SelectItem>
               </SelectContent>
             </Select>
             <Select value={sortOrder} onValueChange={(value: "asc" | "desc") => setSortOrder(value)}>
@@ -300,33 +249,26 @@ export function TradeHistory() {
           </div>
         </CardContent>
       </Card>
-
       {/* Trade Table */}
       <Card>
         <CardHeader>
           <CardTitle>Trades ({filteredTrades.length})</CardTitle>
           <CardDescription>
-            Real-time trade data from Binance and Exness MT5
+            Real-time trade data (manual + engine, open + closed)
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Symbol</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Volume</TableHead>
-                  <TableHead>Open Price</TableHead>
-                  <TableHead>Close Price</TableHead>
+                  <TableHead>Price</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Broker</TableHead>
-                  <TableHead>Category</TableHead>
                   <TableHead>P&L</TableHead>
-                  <TableHead>Commission</TableHead>
-                  <TableHead>Open Time</TableHead>
-                  <TableHead>Strategy</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>Time</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -335,67 +277,35 @@ export function TradeHistory() {
                     <TableCell className="font-medium">{trade.symbol}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        {trade.type === 'buy' ? (
+                        {trade.side === 'buy' ? (
                           <TrendingUp className="h-3 w-3 text-green-600" />
                         ) : (
                           <TrendingDown className="h-3 w-3 text-red-600" />
                         )}
-                        <span className="capitalize">{trade.type}</span>
+                        <span className="capitalize">{trade.side}</span>
                       </div>
                     </TableCell>
                     <TableCell>{trade.volume}</TableCell>
-                    <TableCell>${trade.openPrice.toLocaleString()}</TableCell>
-                    <TableCell>
-                      {trade.closePrice ? `$${trade.closePrice.toLocaleString()}` : '-'}
-                    </TableCell>
+                    <TableCell>${trade.price?.toLocaleString()}</TableCell>
                     <TableCell>
                       <Badge className={cn(getStatusColor(trade.status))}>
-                        <div className="flex items-center gap-1">
-                          {getStatusIcon(trade.status)}
-                          {trade.status}
-                        </div>
+                        {trade.status}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge className={cn(getBrokerColor(trade.broker))}>
-                        {trade.broker.toUpperCase()}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">
-                        {trade.category}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {trade.profit !== undefined ? (
+                      {trade.pnl !== undefined ? (
                         <span className={cn(
                           "font-medium",
-                          trade.profit >= 0 ? "text-green-600" : "text-red-600"
+                          trade.pnl >= 0 ? "text-green-600" : "text-red-600"
                         )}>
-                          {trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}
+                          {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)}
                         </span>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-orange-600">${trade.commission.toFixed(2)}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {new Date(trade.openTime).toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{trade.strategy}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {trade.status === 'open' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleCloseTrade(trade.id)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
+                      {trade.timestamp ? new Date(trade.timestamp).toLocaleString() : ''}
                     </TableCell>
                   </TableRow>
                 ))}
