@@ -47,35 +47,41 @@ const Index = () => {
 
   return (
     <div className="min-h-screen dark">
-      {/* Hero Section with Background Image */}
-      <div 
-        className="relative min-h-screen overflow-hidden"
-        style={{
-          backgroundImage: `linear-gradient(135deg, rgba(59, 130, 246, 0.85) 0%, rgba(139, 92, 246, 0.85) 50%, rgba(79, 70, 229, 0.85) 100%), url('/landing_background_1.png')`,
-          backgroundSize: 'cover, cover',
-          backgroundPosition: 'center, center',
-          backgroundBlendMode: 'overlay, normal'
-        }}
-      >
-        {/* Dark overlay for text clarity */}
-        <div className="absolute inset-0 z-0 pointer-events-none">
+      {/* Hero Section with new Background Image container */}
+      <div className="relative min-h-screen overflow-hidden bg-gray-900">
+        
+        {/* New Background Image Element */}
+        <div className="absolute inset-0 z-10 flex items-center justify-center p-4 pointer-events-none">
           <div
-            className="w-full h-full"
+            className="w-full h-full max-h-[85vh] rounded-2xl shadow-2xl border border-white/10"
             style={{
-              background: 'rgba(20, 20, 30, 0.45)'
+              backgroundImage: `linear-gradient(135deg, rgba(59, 130, 246, 0.85) 0%, rgba(139, 92, 246, 0.85) 50%, rgba(79, 70, 229, 0.85) 100%), url('/landing_background_1.png')`,
+              backgroundSize: 'cover, cover',
+              backgroundPosition: 'center, center',
+              backgroundBlendMode: 'overlay, normal',
             }}
-          />
-        </div>
+          >
+            {/* Dark overlay for text clarity */}
+            <div className="absolute inset-0 z-0 rounded-2xl pointer-events-none">
+              <div
+                className="w-full h-full rounded-2xl"
+                style={{
+                  background: 'rgba(20, 20, 30, 0.45)'
+                }}
+              />
+            </div>
 
-        {/* Animated background elements */}
-        <div className="absolute inset-0 z-10 pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-400/20 rounded-full blur-3xl animate-pulse delay-500"></div>
+            {/* Animated background elements */}
+            <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden rounded-2xl">
+              <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
+              <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-400/20 rounded-full blur-3xl animate-pulse delay-500"></div>
+            </div>
+          </div>
         </div>
-
+        
         {/* Header - Sticky with glassmorphism */}
-        <div className="sticky top-0 z-20 border-b border-white/10 bg-white/10 backdrop-blur-xl supports-[backdrop-filter]:bg-white/5">
+        <div className="sticky top-0 z-30 border-b border-white/10 bg-black/20 backdrop-blur-xl supports-[backdrop-filter]:bg-black/10">
           <div className="container mx-auto px-2 md:px-4 py-2 md:py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
