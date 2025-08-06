@@ -1,5 +1,0 @@
-fastapi
-uvicorn
-redis
-python-dotenv
-# Add any other backend-ml dependencies below

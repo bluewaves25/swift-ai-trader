@@ -56,17 +56,17 @@ const Index = () => {
               Waves Quant
             </span>
           </Link>
-          <div className="hidden md:flex items-center space-x-6">
+                <div className="hidden md:flex items-center space-x-6">
             <Link to="/about" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary">About</Link>
             <Link to="/contact" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary">Contact</Link>
             <Link to="/terms" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary">Terms</Link>
-          </div>
-          <Button 
-            onClick={() => navigate('/auth')} 
+                </div>
+                <Button 
+                  onClick={() => navigate('/auth')} 
             className="rounded-full bg-gray-900 text-white dark:bg-black dark:text-white hover:bg-gray-800 dark:hover:bg-gray-700 px-5 py-2 text-sm font-semibold"
-          >
-            Sign In
-          </Button>
+                >
+                  Sign In
+                </Button>
         </nav>
       </header>
       
@@ -81,20 +81,20 @@ const Index = () => {
           <Badge variant="outline" className="mb-6 rounded-full border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50">
             <Zap className="h-4 w-4 mr-2" />
             AI-POWERED TRADING PLATFORM
-          </Badge>
-          
+              </Badge>
+              
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tighter mb-4">
             Empower Your Trades with
             <br />
             <span className="text-primary">Next-Gen AI Engine</span>
-          </h1>
-          
+              </h1>
+              
           <p className="max-w-2xl text-lg text-gray-600 dark:text-gray-400 mb-8 mx-auto">
             Unlock seamless trading and streamline your portfolio with our innovative AI-driven solution. 
             Experience the future of automated, intelligent investing.
-          </p>
-          
-          {/* Live Stats */}
+              </p>
+
+              {/* Live Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 max-w-2xl mx-auto">
             {[
               { icon: Users, label: "Active Traders", value: stats.totalUsers.toLocaleString(), color: "text-blue-500" },
@@ -108,16 +108,16 @@ const Index = () => {
                 <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
               </div>
             ))}
-          </div>
-
+              </div>
+              
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" onClick={() => navigate('/auth')} className="rounded-full px-8 py-6 text-base font-bold">
               Get Started
               <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+                </Button>
             <Button size="lg" variant="outline" onClick={() => navigate('/about')} className="rounded-full px-8 py-6 text-base font-bold">
-              Learn More
-            </Button>
+                  Learn More
+                </Button>
           </div>
         </div>
       </div>
@@ -254,7 +254,7 @@ const Index = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Revenue Features Section */}
       <div className="py-20 bg-gray-50 dark:bg-gray-800/50">
         <div className="container mx-auto px-4">
@@ -279,21 +279,21 @@ const Index = () => {
               { icon: Target, title: "B2B & White-Label", description: "Financial advisors, trading groups, and fintechs can license our platform or request custom integrations.", link: "/contact", cta: "Contact Sales", color: "gray" },
             ].map((feature, index) => (
               <Card key={index} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-lg transition-shadow flex flex-col">
-                <CardHeader>
+              <CardHeader>
                   <div className={`p-3 rounded-lg w-fit bg-${feature.color}-100 dark:bg-${feature.color}-900/30 mb-4`}>
                     <feature.icon className={`h-6 w-6 text-${feature.color}-600 dark:text-${feature.color}-400`} />
-                  </div>
+                </div>
                   <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">{feature.title}</CardTitle>
-                </CardHeader>
+              </CardHeader>
                 <CardContent className="flex-grow">
                   <CardDescription className="text-base text-gray-600 dark:text-gray-400">
                     {feature.description}
-                  </CardDescription>
-                </CardContent>
+                </CardDescription>
+              </CardContent>
                 <div className="p-6 pt-0">
                   <Button variant="outline" size="sm" className="w-full" onClick={() => navigate(feature.link)}>{feature.cta}</Button>
                 </div>
-              </Card>
+            </Card>
             ))}
           </div>
         </div>
