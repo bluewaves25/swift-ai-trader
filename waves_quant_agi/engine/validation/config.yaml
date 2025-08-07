@@ -1,0 +1,27 @@
+redis_url: "redis://localhost:6379"
+redis_host: "localhost"
+redis_port: 6379
+redis_db: 0
+max_leverage: 10.0
+max_exposure: 0.1
+min_sl_ratio: 0.01
+max_time_window: 300
+max_risk_reward_ratio: 2.0
+min_liquidity_ratio: 0.05
+max_time_drift: 30
+max_slippage_bps: 50.0
+max_commission_pct: 0.1
+allowed_regions:
+  - US
+  - EU
+error_threshold: 0.1
+accuracy_threshold: 0.85
+retrain_interval: 604800
+anomaly_threshold: 0.15
+confidence_threshold: 0.7
+stability_threshold: 0.9
+sentiment_threshold: 0.6
+prediction_threshold: 0.8
+rarity_threshold: 0.01
+validation_threshold: 0.9
+impact_threshold: 0.1
