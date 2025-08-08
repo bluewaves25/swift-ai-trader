@@ -1,0 +1,142 @@
+{
+  "binance": {
+    "broker_info": {
+      "name": "Binance",
+      "type": "crypto",
+      "description": "Leading cryptocurrency exchange"
+    },
+    "fees": {
+      "commission": 0.001,
+      "spread": 0.0001,
+      "minimum_fee": 1.0,
+      "maker_fee": 0.001,
+      "taker_fee": 0.001,
+      "withdrawal_fee": 0.0005
+    },
+    "limits": {
+      "min_order_size": 0.001,
+      "max_order_size": 1000000.0,
+      "min_notional": 10.0
+    }
+  },
+  "coinbase": {
+    "broker_info": {
+      "name": "Coinbase",
+      "type": "crypto",
+      "description": "Popular cryptocurrency exchange"
+    },
+    "fees": {
+      "commission": 0.005,
+      "spread": 0.0002,
+      "minimum_fee": 0.99,
+      "maker_fee": 0.005,
+      "taker_fee": 0.005,
+      "withdrawal_fee": 0.001
+    },
+    "limits": {
+      "min_order_size": 0.001,
+      "max_order_size": 500000.0,
+      "min_notional": 2.0
+    }
+  },
+  "exness": {
+    "broker_info": {
+      "name": "Exness",
+      "type": "forex",
+      "description": "Forex and CFD broker"
+    },
+    "fees": {
+      "commission": 0.0001,
+      "spread": 0.00005,
+      "minimum_fee": 0.5,
+      "maker_fee": 0.0001,
+      "taker_fee": 0.0001,
+      "swap_fee": 0.0001
+    },
+    "limits": {
+      "min_order_size": 0.01,
+      "max_order_size": 100000.0,
+      "min_notional": 1.0
+    }
+  },
+  "mt5": {
+    "broker_info": {
+      "name": "MetaTrader 5",
+      "type": "forex",
+      "description": "MetaTrader 5 platform"
+    },
+    "fees": {
+      "commission": 0.0002,
+      "spread": 0.0001,
+      "minimum_fee": 1.0,
+      "maker_fee": 0.0002,
+      "taker_fee": 0.0002,
+      "swap_fee": 0.0001
+    },
+    "limits": {
+      "min_order_size": 0.01,
+      "max_order_size": 100000.0,
+      "min_notional": 1.0
+    }
+  },
+  "oanda": {
+    "broker_info": {
+      "name": "OANDA",
+      "type": "forex",
+      "description": "Forex and CFD broker"
+    },
+    "fees": {
+      "commission": 0.0001,
+      "spread": 0.00008,
+      "minimum_fee": 0.5,
+      "maker_fee": 0.0001,
+      "taker_fee": 0.0001,
+      "swap_fee": 0.0001
+    },
+    "limits": {
+      "min_order_size": 0.01,
+      "max_order_size": 100000.0,
+      "min_notional": 1.0
+    }
+  },
+  "alpaca": {
+    "broker_info": {
+      "name": "Alpaca",
+      "type": "stocks",
+      "description": "Commission-free stock trading"
+    },
+    "fees": {
+      "commission": 0.0,
+      "spread": 0.0001,
+      "minimum_fee": 0.0,
+      "maker_fee": 0.0,
+      "taker_fee": 0.0,
+      "regulatory_fee": 0.0000229
+    },
+    "limits": {
+      "min_order_size": 1,
+      "max_order_size": 1000000.0,
+      "min_notional": 1.0
+    }
+  },
+  "robinhood": {
+    "broker_info": {
+      "name": "Robinhood",
+      "type": "stocks",
+      "description": "Commission-free trading platform"
+    },
+    "fees": {
+      "commission": 0.0,
+      "spread": 0.0001,
+      "minimum_fee": 0.0,
+      "maker_fee": 0.0,
+      "taker_fee": 0.0,
+      "regulatory_fee": 0.0000229
+    },
+    "limits": {
+      "min_order_size": 1,
+      "max_order_size": 1000000.0,
+      "min_notional": 1.0
+    }
+  }
+}

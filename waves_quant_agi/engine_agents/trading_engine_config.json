@@ -1,0 +1,54 @@
+{
+  "redis_host": "localhost",
+  "redis_port": 6379,
+  "redis_db": 0,
+  "heartbeat_interval": 30,
+  "restart_delay": 5,
+  "max_restarts": 3,
+  "core": {
+    "cycle_interval": 60,
+    "monitoring_interval": 10,
+    "reporting_interval": 30
+  },
+  "data_feeds": {
+    "update_interval": 1,
+    "max_retries": 3,
+    "retry_delay": 1
+  },
+  "market_conditions": {
+    "analysis_interval": 30,
+    "anomaly_threshold": 2.0
+  },
+  "intelligence": {
+    "learning_interval": 300,
+    "pattern_detection_interval": 60
+  },
+  "strategy_engine": {
+    "composition_interval": 300,
+    "performance_check_interval": 60
+  },
+  "risk_management": {
+    "evaluation_interval": 30,
+    "risk_threshold": 0.8
+  },
+  "execution": {
+    "latency_threshold": 100,
+    "max_slippage": 0.001
+  },
+  "validation": {
+    "validation_interval": 60,
+    "strict_mode": true
+  },
+  "fees_monitor": {
+    "optimization_interval": 300,
+    "cost_threshold": 0.002
+  },
+  "adapters": {
+    "health_check_interval": 60,
+    "connection_timeout": 30
+  },
+  "failure_prevention": {
+    "monitoring_interval": 30,
+    "alert_threshold": 3
+  }
+}
