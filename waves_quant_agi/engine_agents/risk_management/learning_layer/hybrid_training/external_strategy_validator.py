@@ -1,19 +1,11 @@
 from typing import Dict, Any, List
 import time
-import redis
 import pandas as pd
-from ...logs.risk_management_logger import RiskManagementLogger
 
 class ExternalStrategyValidator:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
+        self.connection_manager = connection_manager
         self.risk_compliance_threshold = config.get("risk_compliance_threshold", 0.9)  # 90% compliance score
 
     async def validate_strategies(self, strategy_data: pd.DataFrame) -> List[Dict[str, Any]]:
@@ -35,8 +27,10 @@ class ExternalStrategyValidator:
                         "description": f"External strategy {strategy} validated for {symbol}: Compliance {compliance_score:.2f}"
                     }
                     validation_results.append(result)
-                    self.logger.log_risk_assessment("assessment", result)
-                    self.redis_client.set(f"risk_management:strategy_validation:{strategy}:{symbol}", str(result), ex=3600)
+                    
+                    redis_client = await self.connection_manager.get_redis_client()
+                    if redis_client:
+                        redis_client.set(f"risk_management:strategy_validation:{strategy}:{symbol}", str(result), ex=3600)
                     await self.notify_execution(result)
                 else:
                     result = {
@@ -48,7 +42,7 @@ class ExternalStrategyValidator:
                         "description": f"External strategy {strategy} failed validation for {symbol}: Compliance {compliance_score:.2f}"
                     }
                     validation_results.append(result)
-                    self.logger.log_risk_assessment("assessment", result)
+                    
 
             summary = {
                 "type": "strategy_validation_summary",
@@ -56,19 +50,23 @@ class ExternalStrategyValidator:
                 "timestamp": int(time.time()),
                 "description": f"Validated {len(validation_results)} external strategies"
             }
-            self.logger.log_risk_assessment("black_swan_summary", summary)
+            
             await self.notify_core(summary)
             return validation_results
         except Exception as e:
-            self.logger.log_error(f"Error: {e}")
+            print(f"Error in external strategy validator: {e}")
             return []
 
     async def notify_execution(self, result: Dict[str, Any]):
         """Notify Executions Agent of validated strategies."""
-        self.logger.log(f"Notifying Executions Agent: {result.get('description', 'unknown')}")
-        self.redis_client.publish("execution_agent", str(result))
+        print(f"Notifying Executions Agent: {result.get('description', 'unknown')}")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("execution_agent", str(result))
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of strategy validation results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        print(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

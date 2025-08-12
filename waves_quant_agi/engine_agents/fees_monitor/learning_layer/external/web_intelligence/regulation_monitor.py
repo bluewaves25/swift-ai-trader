@@ -2,9 +2,9 @@ import requests
 import time
 from bs4 import BeautifulSoup
 from typing import Dict, Any, List
-from fees_monitor.logs.failure_agent_logger import FailureAgentLogger
-from fees_monitor.memory.incident_cache import IncidentCache
-from fees_monitor.broker_fee_models.model_loader import ModelLoader
+from ....logs.failure_agent_logger import FailureAgentLogger
+from ....memory.incident_cache import IncidentCache
+from ....broker_fee_models.model_loader import ModelLoader
 
 class RegulationMonitor:
     def __init__(self, config: Dict[str, Any], logger: FailureAgentLogger, cache: IncidentCache, model_loader: ModelLoader):

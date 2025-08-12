@@ -9,6 +9,7 @@ from .learning_layer.research_engine import ResearchEngine
 from .learning_layer.training_module import TrainingModule
 from .learning_layer.retraining_loop import RetrainingLoop
 from .logs.core_agent_logger import CoreAgentLogger
+from .enhanced_core_agent import EnhancedCoreAgent
 
 __all__ = [
     "LogicExecutor",
@@ -22,4 +23,5 @@ __all__ = [
     "TrainingModule",
     "RetrainingLoop",
     "CoreAgentLogger",
+    "EnhancedCoreAgent",
 ]

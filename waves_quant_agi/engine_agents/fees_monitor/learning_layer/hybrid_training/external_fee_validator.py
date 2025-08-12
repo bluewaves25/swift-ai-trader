@@ -1,7 +1,7 @@
 from typing import Dict, Any, List
 import time
-from fees_monitor.logs.failure_agent_logger import FailureAgentLogger
-from fees_monitor.memory.incident_cache import IncidentCache
+from ...logs.failure_agent_logger import FailureAgentLogger
+from ...memory.incident_cache import IncidentCache
 from ..external.web_intelligence.broker_scraper import BrokerScraper
 from ..external.social_analyzer.fee_sentiment_processor import FeeSentimentProcessor
 

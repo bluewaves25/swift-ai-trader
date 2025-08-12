@@ -89,7 +89,7 @@ async def start_engine():
     """
     global ENGINE_STATUS
     import os
-    from waves_quant_agi.engine.brokers.mt5_plugin import MT5Broker
+    from waves_quant_agi.engine_agents.adapters.brokers.mt5_plugin import MT5Broker
 
     active_pairs = []
     try:

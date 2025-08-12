@@ -1,8 +1,8 @@
 from typing import Dict, Any, List
 import statistics
 import time
-from fees_monitor.logs.failure_agent_logger import FailureAgentLogger
-from fees_monitor.memory.incident_cache import IncidentCache
+from ....logs.failure_agent_logger import FailureAgentLogger
+from ....memory.incident_cache import IncidentCache
 from .cost_pattern_synthesizer import CostPatternSynthesizer
 
 class AnomalyPredictor:

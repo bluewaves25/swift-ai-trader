@@ -1,28 +1,20 @@
 from typing import Dict, Any, List
-import redis
 import pandas as pd
 import numpy as np
 import time
-from ..logs.risk_management_logger import RiskManagementLogger
 
 class PortfolioDiversifier:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
-        self.correlation_threshold = config.get("correlation_threshold", 0.3)  # Max correlation for diversification
+        self.connection_manager = connection_manager
+                self.correlation_threshold = config.get("correlation_threshold", 0.3)  # Max correlation for diversification
 
     async def assess_diversification(self, portfolio_data: pd.DataFrame) -> float:
         """Assess portfolio diversification across uncorrelated assets."""
         try:
             symbols = portfolio_data.get("symbol", []).unique()
             if len(symbols) < 2:
-                self.logger.log("Insufficient assets for diversification")
+                
                 return 0.0
 
             # Calculate correlation matrix (placeholder)
@@ -40,7 +32,9 @@ class PortfolioDiversifier:
                     "description": f"High correlation detected: {max_correlation:.2f}"
                 }
                 self.logger.log_risk_alert("diversification_issue", issue)
-                self.redis_client.set("risk_management:diversification", str(issue), ex=604800)
+                redis_client = await self.connection_manager.get_redis_client()
+                        if redis_client:
+                            redis_client.set("risk_management:diversification", str(issue), ex=604800)
 
             summary = {
                 "type": "diversification_summary",
@@ -52,10 +46,12 @@ class PortfolioDiversifier:
             await self.notify_core(summary)
             return diversification_score
         except Exception as e:
-            self.logger.log_error(f"Error assessing diversification: {e}")
+            print(f"Error in {os.path.basename(file_path)}: {e}")
             return 0.0
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of diversification results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

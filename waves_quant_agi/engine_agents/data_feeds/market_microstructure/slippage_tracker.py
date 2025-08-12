@@ -6,7 +6,8 @@ from ..stream.realtime_publisher import RealtimePublisher
 from ..cache.db_connector import DBConnector
 
 class SlippageTracker:
-    def __init__(self):
+    def __init__(self, config: Dict[str, Any] = None):
+        self.config = config or {}
         self.cleaner = DataCleaner()
         self.timestamp_utils = TimestampUtils()
         self.validator = SchemaValidator()

@@ -1,20 +1,12 @@
 from typing import Dict, Any, List
 import time
-import redis
 import pandas as pd
-from ..logs.risk_management_logger import RiskManagementLogger
 
 class TemporalLimitGuard:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
-        self.hourly_drawdown_limit = config.get("hourly_drawdown_limit", 0.01)  # 1% per hour
+        self.connection_manager = connection_manager
+                self.hourly_drawdown_limit = config.get("hourly_drawdown_limit", 0.01)  # 1% per hour
         self.daily_drawdown_limit = config.get("daily_drawdown_limit", 0.03)  # 3% per day
         self.weekly_drawdown_limit = config.get("weekly_drawdown_limit", 0.05)  # 5% per week
 
@@ -47,8 +39,10 @@ class TemporalLimitGuard:
                         "description": f"Drawdown limit triggered for {symbol}: {', '.join(triggered_limits)}"
                     }
                     limits.append(limit)
-                    self.logger.log_risk_assessment("assessment", limit)
-                    self.redis_client.set(f"risk_management:drawdown_limit:{symbol}", str(limit), ex=3600)
+                    
+                    redis_client = await self.connection_manager.get_redis_client()
+                        if redis_client:
+                            redis_client.set(f"risk_management:drawdown_limit:{symbol}", str(limit), ex=3600)
                     await self.notify_execution(limit)
 
             summary = {
@@ -57,19 +51,23 @@ class TemporalLimitGuard:
                 "timestamp": int(time.time()),
                 "description": f"Enforced {len(limits)} drawdown limits"
             }
-            self.logger.log_risk_assessment("black_swan_summary", summary)
+            
             await self.notify_core(summary)
             return limits
         except Exception as e:
-            self.logger.log_error(f"Error: {e}")
+            print(f"Error in {os.path.basename(file_path)}: {e}")
             return []
 
     async def notify_execution(self, limit: Dict[str, Any]):
         """Notify Executions Agent of drawdown limit triggers."""
-        self.logger.log(f"Notifying Executions Agent: {limit.get('description', 'unknown')}")
-        self.redis_client.publish("execution_agent", str(limit))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("execution_agent", str(limit))
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of drawdown limit results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

@@ -1,8 +1,8 @@
 from typing import Dict, Any, List
 import time
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from fees_monitor.logs.failure_agent_logger import FailureAgentLogger
-from fees_monitor.memory.incident_cache import IncidentCache
+from ....logs.failure_agent_logger import FailureAgentLogger
+from ....memory.incident_cache import IncidentCache
 
 class FeeSentimentProcessor:
     def __init__(self, config: Dict[str, Any], logger: FailureAgentLogger, cache: IncidentCache):

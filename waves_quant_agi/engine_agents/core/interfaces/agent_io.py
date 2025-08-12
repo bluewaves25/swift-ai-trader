@@ -16,8 +16,8 @@ class AgentIO:
         
         # Redis configuration
         redis_host = self.config.get('redis_host', 'localhost')
-        redis_port = self.config.get('redis_port', 6379)
-        redis_db = self.config.get('redis_db', 0)
+        redis_port = int(self.config.get('redis_port', 6379))
+        redis_db = int(self.config.get('redis_db', 0))
         
         # Initialize Redis
         try:

@@ -2,7 +2,7 @@ import asyncio
 import ccxt.async_support as ccxt
 from typing import Dict, Any, Optional, List
 import time
-from ..logs.data_feeds_logger import DataFeedsLogger
+from ...shared_utils import get_shared_logger
 from ..utils.data_cleaner import DataCleaner
 from ..utils.timestamp_utils import TimestampUtils
 from ..utils.schema_validator import SchemaValidator
@@ -15,6 +15,7 @@ class CryptoPriceFeed:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.exchanges = {}
+        self.mt5_adapter = None  # Will be set when MT5 is available
         self.symbols = config.get("symbols", ["BTC/USDT", "ETH/USDT", "BNB/USDT"])
         self.interval = config.get("interval", 1)  # seconds
         self.max_retries = config.get("max_retries", 3)
@@ -91,6 +92,16 @@ class CryptoPriceFeed:
                 self.logger.log_connection_status(exchange_name, "initialized")
             except Exception as e:
                 self.logger.log_error(f"Failed to initialize {exchange_name}: {e}")
+    
+    def set_mt5_adapter(self, adapter):
+        """Set MT5 adapter for direct broker data."""
+        self.mt5_adapter = adapter
+        if adapter:
+            # Get crypto symbols from MT5
+            mt5_symbols = adapter.get_crypto_symbols()
+            if mt5_symbols:
+                self.symbols = mt5_symbols[:5]  # Use first 5 for performance
+                self.logger.log_info(f"Updated symbols from MT5: {self.symbols}")
 
     async def fetch_price(self, exchange_name: str, exchange: ccxt.Exchange, symbol: str) -> Optional[Dict[str, Any]]:
         """Fetch price and volume for a symbol from an exchange with retry logic."""

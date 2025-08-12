@@ -1,21 +1,13 @@
 from typing import Dict, Any, List
 import time
-import redis
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
-from ..logs.risk_management_logger import RiskManagementLogger
 
 class StrategyPortfolioOptimizer:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
-        self.model = RandomForestRegressor(n_estimators=config.get("n_estimators", 100))
+        self.connection_manager = connection_manager
+                self.model = RandomForestRegressor(n_estimators=config.get("n_estimators", 100))
         self.sharpe_threshold = config.get("sharpe_threshold", 2.0)
 
     async def optimize_portfolio(self, strategy_data: pd.DataFrame) -> Dict[str, Any]:
@@ -40,7 +32,9 @@ class StrategyPortfolioOptimizer:
                     "predicted_return": predicted_return,
                     "timestamp": int(time.time())
                 }
-                self.redis_client.set(f"risk_management:portfolio:{strategy_id}", str(allocations[strategy_id]), ex=3600)
+                redis_client = await self.connection_manager.get_redis_client()
+                        if redis_client:
+                            redis_client.set(f"risk_management:portfolio:{strategy_id}", str(allocations[strategy_id]), ex=3600)
 
             summary = {
                 "type": "portfolio_optimization_summary",
@@ -48,14 +42,16 @@ class StrategyPortfolioOptimizer:
                 "timestamp": int(time.time()),
                 "description": f"Optimized portfolio for {len(allocations)} strategies"
             }
-            self.logger.log_risk_assessment("black_swan_summary", summary)
+            
             await self.notify_core(summary)
             return allocations
         except Exception as e:
-            self.logger.log_error(f"Error: {e}")
+            print(f"Error in {os.path.basename(file_path)}: {e}")
             return {}
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of portfolio optimization results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

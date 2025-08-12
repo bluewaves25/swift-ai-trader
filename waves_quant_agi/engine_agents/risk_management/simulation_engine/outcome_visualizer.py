@@ -1,32 +1,24 @@
 from typing import Dict, Any, List
 import time
-import redis
 import pandas as pd
 try:
     import matplotlib.pyplot as plt
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
-from ..logs.risk_management_logger import RiskManagementLogger
 
 class OutcomeVisualizer:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
-        self.output_path = config.get("output_path", "stress_test_visuals/")
+        self.connection_manager = connection_manager
+                self.output_path = config.get("output_path", "stress_test_visuals/")
 
     async def visualize_results(self, stress_test_data: pd.DataFrame) -> List[Dict[str, Any]]:
         """Visualize stress test results for risk analysis."""
         try:
             visuals = []
             if not MATPLOTLIB_AVAILABLE:
-                self.logger.log("Warning: matplotlib not available, skipping visualizations")
+                
                 return visuals
                 
             for scenario in stress_test_data["scenario"].unique():
@@ -53,8 +45,10 @@ class OutcomeVisualizer:
                     "description": f"Generated stress test visualization for {scenario}"
                 }
                 visuals.append(visual)
-                self.logger.log_risk_assessment("assessment", visual)
-                self.redis_client.set(f"risk_management:visualization:{scenario}", str(visual), ex=604800)
+                
+                redis_client = await self.connection_manager.get_redis_client()
+                        if redis_client:
+                            redis_client.set(f"risk_management:visualization:{scenario}", str(visual), ex=604800)
 
             summary = {
                 "type": "visualization_summary",
@@ -62,14 +56,16 @@ class OutcomeVisualizer:
                 "timestamp": int(time.time()),
                 "description": f"Generated {len(visuals)} stress test visualizations"
             }
-            self.logger.log_risk_assessment("black_swan_summary", summary)
+            
             await self.notify_core(summary)
             return visuals
         except Exception as e:
-            self.logger.log_error(f"Error: {e}")
+            print(f"Error in {os.path.basename(file_path)}: {e}")
             return []
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of visualization results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

@@ -8,12 +8,19 @@ from ..stream.realtime_publisher import RealtimePublisher
 from ..cache.db_connector import DBConnector
 
 class TwitterSentiment:
-    def __init__(self, api_key: str, api_secret: str, access_token: str, access_token_secret: str, keywords: list, interval: int = 60):
-        self.auth = tweepy.OAuthHandler(api_key, api_secret)
-        self.auth.set_access_token(access_token, access_token_secret)
-        self.api = tweepy.API(self.auth, wait_on_rate_limit=True)
-        self.keywords = keywords  # e.g., ["BTC", "Bitcoin", "#crypto"]
+    def __init__(self, api_key: str = None, api_secret: str = None, access_token: str = None, access_token_secret: str = None, keywords: list = None, interval: int = 60):
+        self.keywords = keywords or ["BTC", "Bitcoin", "#crypto"]
         self.interval = interval  # seconds
+        
+        # Only initialize Twitter API if credentials are provided
+        if all([api_key, api_secret, access_token, access_token_secret]):
+            self.auth = tweepy.OAuthHandler(api_key, api_secret)
+            self.auth.set_access_token(access_token, access_token_secret)
+            self.api = tweepy.API(self.auth, wait_on_rate_limit=True)
+            self.enabled = True
+        else:
+            self.api = None
+            self.enabled = False
         self.cleaner = DataCleaner()
         self.timestamp_utils = TimestampUtils()
         self.validator = SchemaValidator()

@@ -1,20 +1,12 @@
 from typing import Dict, Any, List
 import time
-import redis
 import pandas as pd
-from ....logs.risk_management_logger import RiskManagementLogger
 
 class FundingRateArbitrageRisk:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
-        self.funding_rate_threshold = config.get("funding_rate_threshold", 0.0005)  # 0.05% min rate
+        self.connection_manager = connection_manager
+                self.funding_rate_threshold = config.get("funding_rate_threshold", 0.0005)  # 0.05% min rate
         self.exposure_limit = config.get("exposure_limit", 0.1)  # 10% max exposure
 
     async def evaluate_risk(self, arbitrage_data: pd.DataFrame) -> List[Dict[str, Any]]:
@@ -25,7 +17,9 @@ class FundingRateArbitrageRisk:
                 symbol = row.get("symbol", "BTC/USD")
                 funding_rate = float(row.get("funding_rate", 0.0))
                 exposure = float(row.get("exposure", 0.0))
-                fee_score = float(self.redis_client.get(f"fee_monitor:{symbol}:fee_score") or 0.0)
+                fee_score = float(redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.get(f"fee_monitor:{symbol}:fee_score") or 0.0)
 
                 if funding_rate < self.funding_rate_threshold or exposure > self.exposure_limit or fee_score > funding_rate:
                     decision = {
@@ -49,9 +43,11 @@ class FundingRateArbitrageRisk:
                     }
 
                 risk_decisions.append(decision)
-                self.logger.log_risk_assessment("assessment", decision)
+                
                 decision)
-                self.redis_client.set(f"risk_management:funding_rate_arbitrage:{symbol}", str(decision), ex=3600)
+                redis_client = await self.connection_manager.get_redis_client()
+                        if redis_client:
+                            redis_client.set(f"risk_management:funding_rate_arbitrage:{symbol}", str(decision), ex=3600)
                 if decision["description"].startswith("Funding rate arbitrage approved"):
                     await self.notify_execution(decision)
 
@@ -61,19 +57,23 @@ class FundingRateArbitrageRisk:
                 "timestamp": int(time.time()),
                 "description": f"Evaluated {len(risk_decisions)} funding rate arbitrage risks"
             }
-            self.logger.log_risk_assessment("black_swan_summary", summary)
+            
             await self.notify_core(summary)
             return risk_decisions
         except Exception as e:
-            self.logger.log_error(f"Error: {e}")
+            print(f"Error in {os.path.basename(file_path)}: {e}")
             return []
 
     async def notify_execution(self, decision: Dict[str, Any]):
         """Notify Executions Agent of approved arbitrage risk."""
-        self.logger.log(f"Notifying Executions Agent: {decision.get('description', 'unknown')}")
-        self.redis_client.publish("execution_agent", str(decision))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("execution_agent", str(decision))
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of arbitrage risk evaluation results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

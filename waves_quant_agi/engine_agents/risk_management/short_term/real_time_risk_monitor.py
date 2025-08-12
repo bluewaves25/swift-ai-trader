@@ -1,19 +1,11 @@
 from typing import Dict, Any, List
 import time
-import redis
 import pandas as pd
-from ..logs.risk_management_logger import RiskManagementLogger
 
 class RealTimeRiskMonitor:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
+        self.connection_manager = connection_manager
         self.exposure_threshold = config.get("exposure_threshold", 0.1)  # 10% max exposure
         self.anomaly_threshold = config.get("anomaly_threshold", 2.5)  # 2.5 std dev for anomalies
 
@@ -40,9 +32,11 @@ class RealTimeRiskMonitor:
                         "description": f"Anomaly detected for {symbol}: Volatility z-score {volatility_z_score:.2f}"
                     }
                     alerts.append(alert)
-                    self.logger.log_risk_assessment("black_swan_alert", alert)
-                    self.redis_client.set(f"risk_management:anomaly:{symbol}", str(alert), ex=3600)
-                    await self.notify_execution(alert)
+                    # Store alert in Redis using connection manager
+                    redis_client = await self.connection_manager.get_redis_client()
+                    if redis_client:
+                        redis_client.set(f"risk_management:anomaly:{symbol}", str(alert), ex=3600)
+                        await self.notify_execution(alert)
 
             if total_exposure > self.exposure_threshold:
                 exposure_alert = {
@@ -52,9 +46,11 @@ class RealTimeRiskMonitor:
                     "description": f"Total exposure exceeded: {total_exposure:.2%}"
                 }
                 alerts.append(exposure_alert)
-                self.logger.log_risk_assessment("assessment", exposure_alert)
-                self.redis_client.set("risk_management:exposure", str(exposure_alert), ex=3600)
-                await self.notify_execution(exposure_alert)
+                # Store exposure alert in Redis using connection manager
+                redis_client = await self.connection_manager.get_redis_client()
+                if redis_client:
+                    redis_client.set("risk_management:exposure", str(exposure_alert), ex=3600)
+                    await self.notify_execution(exposure_alert)
 
             summary = {
                 "type": "risk_monitor_summary",
@@ -63,19 +59,22 @@ class RealTimeRiskMonitor:
                 "timestamp": int(time.time()),
                 "description": f"Monitored {len(position_data)} positions, {len(alerts)} alerts"
             }
-            self.logger.log_risk_assessment("black_swan_summary", summary)
             await self.notify_core(summary)
             return total_exposure
         except Exception as e:
-            self.logger.log_error(f"Error: {e}")
+            print(f"Error in real-time risk monitor: {e}")
             return 0.0
 
     async def notify_execution(self, alert: Dict[str, Any]):
         """Notify Executions Agent of risk alerts."""
-        self.logger.log(f"Notifying Executions Agent: {alert.get('description', 'unknown')}")
-        self.redis_client.publish("execution_agent", str(alert))
+        print(f"Notifying Executions Agent: {alert.get('description', 'unknown')}")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("execution_agent", str(alert))
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of risk monitoring results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        print(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

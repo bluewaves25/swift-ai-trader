@@ -1,21 +1,13 @@
 from typing import Dict, Any, List
 import time
-import redis
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from ..logs.risk_management_logger import RiskManagementLogger
 
 class RiskBurstPredictor:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
-        self.model = RandomForestClassifier(n_estimators=config.get("n_estimators", 100))
+        self.connection_manager = connection_manager
+                self.model = RandomForestClassifier(n_estimators=config.get("n_estimators", 100))
         self.risk_probability_threshold = config.get("risk_probability_threshold", 0.7)
 
     async def predict_risk_pulse(self, market_data: pd.DataFrame) -> List[Dict[str, Any]]:
@@ -40,8 +32,10 @@ class RiskBurstPredictor:
                         "description": f"Risk pulse predicted for {symbol}: Probability {risk_probability:.2f}"
                     }
                     predictions.append(prediction)
-                    self.logger.log_risk_assessment("assessment", prediction)
-                    self.redis_client.set(f"risk_management:risk_pulse:{symbol}", str(prediction), ex=3600)
+                    
+                    redis_client = await self.connection_manager.get_redis_client()
+                        if redis_client:
+                            redis_client.set(f"risk_management:risk_pulse:{symbol}", str(prediction), ex=3600)
                     await self.notify_execution(prediction)
 
             summary = {
@@ -50,19 +44,23 @@ class RiskBurstPredictor:
                 "timestamp": int(time.time()),
                 "description": f"Predicted {len(predictions)} risk pulses"
             }
-            self.logger.log_risk_assessment("black_swan_summary", summary)
+            
             await self.notify_core(summary)
             return predictions
         except Exception as e:
-            self.logger.log_error(f"Error: {e}")
+            print(f"Error in {os.path.basename(file_path)}: {e}")
             return []
 
     async def notify_execution(self, prediction: Dict[str, Any]):
         """Notify Executions Agent of risk pulse predictions."""
-        self.logger.log(f"Notifying Executions Agent: {prediction.get('description', 'unknown')}")
-        self.redis_client.publish("execution_agent", str(prediction))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("execution_agent", str(prediction))
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of risk pulse prediction results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

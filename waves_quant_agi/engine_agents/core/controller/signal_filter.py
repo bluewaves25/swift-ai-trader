@@ -2,7 +2,8 @@ from typing import Dict, Any
 from ..logs.core_agent_logger import CoreAgentLogger
 
 class SignalFilter:
-    def __init__(self):
+    def __init__(self, config: Dict[str, Any] = None):
+        self.config = config or {}
         self.logger = CoreAgentLogger("signal_filter")
         self.required_fields = {"signal_id": str, "strategy": str, "params": dict, "timestamp": float}
         self.valid_strategies = {"momentum", "mean_reversion", "arbitrage"}

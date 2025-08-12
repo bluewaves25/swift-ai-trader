@@ -1,30 +1,46 @@
-from typing import Dict, Any, List
-import time
-import redis
-import pandas as pd
-from ....market_conditions.logs.failure_agent_logger import FailureAgentLogger
-from ....market_conditions.memory.incident_cache import IncidentCache
+#!/usr/bin/env python3
+"""
+Earnings Reaction Strategy - Fixed and Enhanced
+News-driven trading based on earnings announcements and reactions.
+"""
 
-class EarningsReaction:
-    def __init__(self, config: Dict[str, Any], logger: StrategyEngineLogger):
+from typing import Dict, Any, List, Optional
+import time
+import pandas as pd
+from engine_agents.shared_utils import get_shared_redis
+
+class EarningsReactionStrategy:
+    """Earnings reaction strategy for news-driven trading."""
+    
+    def __init__(self, config: Dict[str, Any], logger=None):
         self.config = config
         self.logger = logger
-                self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
+        # Use shared Redis connection
+        self.redis_conn = get_shared_redis()
         self.earnings_surprise_threshold = config.get("earnings_surprise_threshold", 0.05)  # 5% surprise
 
-    async def detect_earnings_signal(self, market_data: pd.DataFrame) -> List[Dict[str, Any]]:
+    async def detect_earnings_signal(self, market_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Detect trading signals based on earnings surprises."""
         try:
             opportunities = []
-            for _, row in market_data.iterrows():
-                symbol = row.get("symbol", "TSLA")
-                earnings_surprise = float(row.get("earnings_surprise", 0.0))
-                price_change = float(row.get("price_change", 0.0))
+            
+            if not market_data:
+                return opportunities
+            
+            # Get earnings announcements from news feeds
+            earnings_announcements = await self._get_earnings_announcements()
+            
+            for data in market_data:
+                symbol = data.get("symbol", "")
+                if not symbol:
+                    continue
+                
+                # Check if symbol has earnings announcement
+                if symbol not in earnings_announcements:
+                    continue
+                
+                earnings_surprise = float(data.get("earnings_surprise", 0.0))
+                price_change = float(data.get("price_change", 0.0))
 
                 if earnings_surprise > self.earnings_surprise_threshold and price_change > 0:
                     signal = "buy"
@@ -37,43 +53,76 @@ class EarningsReaction:
 
                 opportunity = {
                     "type": "earnings_reaction",
+                    "strategy": "news_driven",
                     "symbol": symbol,
                     "signal": signal,
                     "earnings_surprise": earnings_surprise,
+                    "price_change": price_change,
                     "timestamp": int(time.time()),
                     "description": description
                 }
                 opportunities.append(opportunity)
-                self.logger.log_strategy_deployment("deployment", opportunity)
-                opportunity)
-                self.redis_client.set(f"strategy_engine:earnings_reaction:{symbol}", str(opportunity), ex=3600)
-                await self.notify_execution(opportunity)
+                
+                # Store earnings reaction in Redis with proper JSON serialization
+                if self.redis_conn:
+                    try:
+                        import json
+                        self.redis_conn.set(
+                            f"strategy_engine:earnings_reaction:{symbol}:{int(time.time())}", 
+                            json.dumps(opportunity), 
+                            ex=3600
+                        )
+                    except json.JSONEncodeError as e:
+                        if self.logger:
+                            self.logger.error(f"JSON encoding error storing earnings reaction: {e}")
+                    except ConnectionError as e:
+                        if self.logger:
+                            self.logger.error(f"Redis connection error storing earnings reaction: {e}")
+                    except Exception as e:
+                        if self.logger:
+                            self.logger.error(f"Unexpected error storing earnings reaction: {e}")
+                
+                if self.logger:
+                    self.logger.info(f"Earnings reaction opportunity: {opportunity['description']}")
 
-            summary = {
-                "type": "earnings_reaction_summary",
-                "opportunity_count": len(opportunities),
-                "timestamp": int(time.time()),
-                "description": f"Detected {len(opportunities)} earnings reaction opportunities"
-            }
-            self.logger.log_strategy_deployment("deployment", summary)
-            summary)
-            await self.notify_core(summary)
             return opportunities
+            
         except Exception as e:
-            self.logger.log(f"Error detecting earnings reaction: {e}")
-            {
-                "type": "earnings_reaction_error",
-                "timestamp": int(time.time()),
-                "description": f"Error detecting earnings reaction: {str(e)}"
-            })
+            if self.logger:
+                self.logger.error(f"Error detecting earnings reaction: {e}")
             return []
 
-    async def notify_execution(self, opportunity: Dict[str, Any]):
-        """Notify Executions Agent of earnings signal."""
-        self.logger.log(f"Notifying Executions Agent: {opportunity.get('description', 'unknown')}")
-        self.redis_client.publish("execution_agent", str(opportunity))
+    async def _get_earnings_announcements(self) -> Dict[str, Dict[str, Any]]:
+        """Get earnings announcements from news feeds."""
+        try:
+            if not self.redis_conn:
+                return {}
+            
+            # Get earnings announcements from news feeds
+            earnings_key = "news_feeds:earnings_announcements"
+            earnings_data = self.redis_conn.get(earnings_key)
+            
+            if earnings_data:
+                import json
+                return json.loads(earnings_data)
+            
+            return {}
+            
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Error getting earnings announcements: {e}")
+            return {}
 
-    async def notify_core(self, issue: Dict[str, Any]):
-        """Notify Core Agent of earnings results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("strategy_engine_output", str(issue))
+    def get_strategy_info(self) -> Dict[str, Any]:
+        """Get strategy information and parameters."""
+        return {
+            "name": "Earnings Reaction Strategy",
+            "type": "news_driven",
+            "description": "News-driven trading based on earnings announcements and reactions",
+            "parameters": {
+                "earnings_surprise_threshold": self.earnings_surprise_threshold
+            },
+            "timeframe": "tactical",  # 30s tier
+            "asset_types": ["stocks"],
+            "execution_speed": "fast"
+        }

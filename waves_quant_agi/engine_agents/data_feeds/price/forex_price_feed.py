@@ -2,7 +2,7 @@ import asyncio
 import ccxt.async_support as ccxt
 from typing import Dict, Any, Optional, List
 import time
-from ..logs.data_feeds_logger import DataFeedsLogger
+from ...shared_utils import get_shared_logger
 from ..utils.data_cleaner import DataCleaner
 from ..utils.timestamp_utils import TimestampUtils
 from ..utils.schema_validator import SchemaValidator

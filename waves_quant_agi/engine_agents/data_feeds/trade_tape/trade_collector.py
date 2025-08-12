@@ -8,10 +8,17 @@ from ..stream.realtime_publisher import RealtimePublisher
 from ..cache.db_connector import DBConnector
 
 class TradeCollector:
-    def __init__(self, exchanges: Dict[str, Dict[str, str]], symbols: list, interval: int = 1):
-        self.exchanges = {name: getattr(ccxt, name)(config) for name, config in exchanges.items()}
-        self.symbols = symbols  # e.g., ["BTC/USDT"]
+    def __init__(self, exchanges: Dict[str, Dict[str, str]] = None, symbols: list = None, interval: int = 1):
+        self.symbols = symbols or ["BTC/USDT", "ETH/USDT"]
         self.interval = interval  # seconds
+        
+        # Only initialize exchanges if provided
+        if exchanges:
+            self.exchanges = {name: getattr(ccxt, name)(config) for name, config in exchanges.items()}
+            self.enabled = True
+        else:
+            self.exchanges = {}
+            self.enabled = False
         self.cleaner = DataCleaner()
         self.timestamp_utils = TimestampUtils()
         self.validator = SchemaValidator()

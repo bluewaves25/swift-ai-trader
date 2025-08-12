@@ -8,11 +8,18 @@ from ..stream.realtime_publisher import RealtimePublisher
 from ..cache.db_connector import DBConnector
 
 class BinanceOrderBook:
-    def __init__(self, api_key: str, api_secret: str, symbols: list, depth: int = 10, interval: int = 1):
-        self.exchange = ccxt.binance({"apiKey": api_key, "secret": api_secret, "enableRateLimit": True})
-        self.symbols = symbols  # e.g., ["BTC/USDT"]
+    def __init__(self, api_key: str = None, api_secret: str = None, symbols: list = None, depth: int = 10, interval: int = 1):
+        self.symbols = symbols or ["BTC/USDT", "ETH/USDT"]
         self.depth = depth  # Number of bid/ask levels
         self.interval = interval  # seconds
+        
+        # Only initialize exchange if credentials are provided
+        if api_key and api_secret:
+            self.exchange = ccxt.binance({"apiKey": api_key, "secret": api_secret, "enableRateLimit": True})
+            self.enabled = True
+        else:
+            self.exchange = None
+            self.enabled = False
         self.cleaner = DataCleaner()
         self.timestamp_utils = TimestampUtils()
         self.validator = SchemaValidator()
@@ -28,6 +35,8 @@ class BinanceOrderBook:
 
     async def fetch_order_book(self, symbol: str) -> Optional[Dict[str, Any]]:
         """Fetch order book for a symbol from Binance."""
+        if not self.enabled or not self.exchange:
+            return None
         try:
             order_book = await self.exchange.fetch_order_book(symbol, limit=self.depth)
             data = {
@@ -58,4 +67,5 @@ class BinanceOrderBook:
 
     async def close(self):
         """Close exchange connection."""
-        await self.exchange.close()
+        if self.exchange:
+            await self.exchange.close()

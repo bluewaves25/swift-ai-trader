@@ -8,23 +8,28 @@ import asyncio
 import json
 import time
 from typing import Dict, Any, Optional, List
-import redis
 import pandas as pd
-from .learning_layer.hybrid_training.external_strategy_validator import ExternalStrategyValidator
-from .learning_layer.internal.validation_learning import ValidationLearning
-from .logs.validations_logger import ValidationsLogger
+from engine_agents.shared_utils import (
+    get_shared_redis,
+    get_shared_logger,
+    get_agent_learner,
+    LearningType
+)
 
 class ValidationBridge:
     """Bridge between Rust validation agent and Python learning layer."""
     
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.redis_client = self._init_redis()
-        self.logger = ValidationsLogger("validation_bridge", self.redis_client)
         
-        # Initialize learning components
-        self.external_validator = ExternalStrategyValidator(config.get("external_validation", {}))
-        self.validation_learning = ValidationLearning(config.get("learning", {}))
+        # Initialize shared utilities (eliminates duplication)
+        self.redis_client = get_shared_redis(
+            host=config.get("redis_host", "localhost"),
+            port=config.get("redis_port", 6379),
+            db=config.get("redis_db", 0)
+        )
+        self.logger = get_shared_logger("validation", "bridge")
+        self.learner = get_agent_learner("validation", LearningType.DATA_QUALITY, 5)
         
         self.stats = {
             "validations_processed": 0,
@@ -35,17 +40,7 @@ class ValidationBridge:
         }
         self.is_running = False
 
-    def _init_redis(self) -> redis.Redis:
-        """Initialize Redis connection."""
-        try:
-            redis_url = self.config.get("redis_url", "redis://localhost:6379")
-            client = redis.from_url(redis_url, decode_responses=True)
-            client.ping()
-            self.logger.log("Redis connection established", "info")
-            return client
-        except Exception as e:
-            self.logger.log_error(f"Failed to connect to Redis: {e}")
-            raise
+    # _init_redis method removed - now using shared Redis connection from shared_utils
 
     async def start(self):
         """Start the validation bridge."""

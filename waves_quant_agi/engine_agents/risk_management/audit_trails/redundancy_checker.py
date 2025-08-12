@@ -1,19 +1,11 @@
 from typing import Dict, Any, List
 import time
-import redis
 import pandas as pd
-from ..logs.risk_management_logger import RiskManagementLogger
 
 class RedundancyChecker:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
+        self.connection_manager = connection_manager
         self.correlation_threshold = config.get("correlation_threshold", 0.9)  # 90% correlation for redundancy
 
     async def check_redundancy(self, risk_data: pd.DataFrame) -> List[Dict[str, Any]]:
@@ -38,8 +30,10 @@ class RedundancyChecker:
                                 "description": f"Redundant risk checks detected: {type1} and {type2} (Correlation {correlation:.2f})"
                             }
                             redundancies.append(redundancy)
-                            self.logger.log_risk_assessment("assessment", redundancy)
-                            self.redis_client.set(f"risk_management:redundancy:{type1}:{type2}", str(redundancy), ex=604800)
+                            # Store redundancy in Redis using connection manager
+                            redis_client = await self.connection_manager.get_redis_client()
+                            if redis_client:
+                                redis_client.set(f"risk_management:redundancy:{type1}:{type2}", str(redundancy), ex=604800)
 
             summary = {
                 "type": "redundancy_check_summary",
@@ -47,14 +41,15 @@ class RedundancyChecker:
                 "timestamp": int(time.time()),
                 "description": f"Detected {len(redundancies)} redundant risk checks"
             }
-            self.logger.log_risk_assessment("black_swan_summary", summary)
             await self.notify_core(summary)
             return redundancies
         except Exception as e:
-            self.logger.log_error(f"Error: {e}")
+            print(f"Error in redundancy checker: {e}")
             return []
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of redundancy check results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        print(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

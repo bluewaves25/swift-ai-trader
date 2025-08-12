@@ -4,6 +4,6 @@ Execution Module
 Rust-based execution agent with Python learning layer integration.
 """
 
-from .execution_agent import ExecutionAgent
+from .enhanced_execution_agent_v2 import EnhancedExecutionAgentV2
 
-__all__ = ['ExecutionAgent']
+__all__ = ['EnhancedExecutionAgentV2']

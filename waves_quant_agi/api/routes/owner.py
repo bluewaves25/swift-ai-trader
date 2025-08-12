@@ -23,7 +23,7 @@ import traceback
 from fastapi import status as http_status
 import logging
 from waves_quant_agi.api.deps import get_mt5_broker
-from waves_quant_agi.engine.brokers.mt5_plugin import MT5Broker
+from waves_quant_agi.engine_agents.adapters.brokers.mt5_plugin import MT5Broker
 
 # TODO: Use API/IPC/Redis to communicate with engine for strategy management
 

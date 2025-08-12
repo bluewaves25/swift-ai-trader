@@ -1,21 +1,13 @@
 from typing import Dict, Any, List
 import time
-import redis
 import pandas as pd
 import numpy as np
-from ....logs.risk_management_logger import RiskManagementLogger
 
 class SystemPredictor:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
-        self.performance_threshold = config.get("performance_threshold", 0.8)  # 80% performance score
+        self.connection_manager = connection_manager
+                self.performance_threshold = config.get("performance_threshold", 0.8)  # 80% performance score
 
     async def predict_performance(self, system_data: pd.DataFrame) -> List[Dict[str, Any]]:
         """Predict system performance for risk management."""
@@ -34,8 +26,10 @@ class SystemPredictor:
                         "description": f"Low performance predicted for {component}: Score {performance_score:.2f}"
                     }
                     performance_predictions.append(prediction)
-                    self.logger.log_risk_assessment("assessment", prediction)
-                    self.redis_client.set(f"risk_management:system_performance:{component}", str(prediction), ex=3600)
+                    
+                    redis_client = await self.connection_manager.get_redis_client()
+                        if redis_client:
+                            redis_client.set(f"risk_management:system_performance:{component}", str(prediction), ex=3600)
                     await self.notify_maintenance(prediction)
                 else:
                     prediction = {
@@ -46,7 +40,7 @@ class SystemPredictor:
                         "description": f"Stable performance predicted for {component}: Score {performance_score:.2f}"
                     }
                     performance_predictions.append(prediction)
-                    self.logger.log_risk_assessment("assessment", prediction)
+                    
 
             summary = {
                 "type": "system_performance_summary",
@@ -54,19 +48,23 @@ class SystemPredictor:
                 "timestamp": int(time.time()),
                 "description": f"Predicted performance for {len(performance_predictions)} components"
             }
-            self.logger.log_risk_assessment("black_swan_summary", summary)
+            
             await self.notify_core(summary)
             return performance_predictions
         except Exception as e:
-            self.logger.log_error(f"Error: {e}")
+            print(f"Error in {os.path.basename(file_path)}: {e}")
             return []
 
     async def notify_maintenance(self, prediction: Dict[str, Any]):
         """Notify Maintenance System of low performance predictions."""
-        self.logger.log(f"Notifying Maintenance System: {prediction.get('description', 'unknown')}")
-        self.redis_client.publish("maintenance_system", str(prediction))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("maintenance_system", str(prediction))
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of system performance predictions."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

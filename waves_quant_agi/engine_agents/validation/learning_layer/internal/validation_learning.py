@@ -326,34 +326,4 @@ class ValidationLearning:
         except Exception as e:
             self.logger.log_error(f"Error resetting learning: {e}")
 
-if __name__ == "__main__":
-    # Test the validation learning module
-    config = {
-        "min_samples": 10,
-        "learning_rate": 0.01,
-        "update_threshold": 0.1
-    }
-    
-    async def test_learning():
-        learning = ValidationLearning(config)
-        
-        # Create test data
-        test_data = pd.DataFrame({
-            "type": ["strategy", "risk", "market", "strategy", "risk"],
-            "status": ["valid", "invalid", "valid", "valid", "invalid"],
-            "reason": ["", "insufficient_capital", "", "", "risk_limit_exceeded"],
-            "processing_time": [0.1, 0.2, 0.15, 0.12, 0.18]
-        })
-        
-        # Update models
-        await learning.update_models(test_data)
-        
-        # Get stats
-        stats = learning.get_learning_stats()
-        print(f"Learning stats: {stats}")
-        
-        # Get patterns
-        patterns = learning.get_validation_patterns()
-        print(f"Validation patterns: {patterns}")
-    
-    asyncio.run(test_learning())
+

@@ -5,50 +5,126 @@
   "heartbeat_interval": 30,
   "restart_delay": 5,
   "max_restarts": 3,
+  
+  "_comment_timing": "4-TIER TIMING ARCHITECTURE - DO NOT MODIFY INTERVALS WITHOUT COORDINATION",
+  
+  "tier1_ultra_hft": {
+    "_comment": "TIER 1: Ultra-HFT (1ms-10ms) - Arbitrage & Market Making",
+    "arbitrage_execution_ms": 5,
+    "market_making_execution_ms": 1,
+    "ultra_fast_risk_ms": 1,
+    "hft_data_feed_ms": 1,
+    "latency_threshold_ms": 10
+  },
+  
+  "tier2_fast_execution": {
+    "_comment": "TIER 2: Fast Execution (100ms-1s) - Statistical & Trend",
+    "statistical_arbitrage_ms": 500,
+    "trend_following_ms": 1000,
+    "fast_risk_validation_ms": 100,
+    "fast_data_feeds_ms": 100,
+    "signal_processing_ms": 100
+  },
+  
+  "tier3_tactical": {
+    "_comment": "TIER 3: Tactical Intelligence (1s-60s) - Analysis & Conditions",
+    "market_anomaly_scan_s": 1,
+    "supply_demand_analysis_s": 5,
+    "intelligence_analysis_s": 5,
+    "news_driven_processing_s": 1,
+    "tactical_risk_assessment_s": 10
+  },
+  
+  "tier4_strategic": {
+    "_comment": "TIER 4: Strategic (1min-1hour) - Coordination & Learning",
+    "strategy_optimization_s": 10,
+    "performance_monitoring_s": 30,
+    "composition_trigger_s": 300,
+    "htf_strategy_execution_s": 60,
+    "learning_coordination_s": 300,
+    "system_health_s": 30
+  },
+  
+  "_comment_legacy": "LEGACY CONFIGS - BEING MIGRATED TO 4-TIER SYSTEM",
   "core": {
-    "cycle_interval": 60,
-    "monitoring_interval": 10,
-    "reporting_interval": 30
+    "signal_routing_realtime": true,
+    "health_monitoring_s": 30,
+    "learning_coordination_s": 300
   },
   "data_feeds": {
-    "update_interval": 1,
+    "hft_feeds_ms": 1,
+    "fast_feeds_ms": 100,
+    "tactical_feeds_s": 1,
+    "strategic_feeds_s": 60,
     "max_retries": 3,
     "retry_delay": 1
   },
   "market_conditions": {
-    "analysis_interval": 30,
+    "anomaly_scan_s": 1,
+    "regime_prediction_s": 30,
+    "strange_behavior_s": 60,
     "anomaly_threshold": 2.0
   },
   "intelligence": {
-    "learning_interval": 300,
-    "pattern_detection_interval": 60
+    "arbitrage_intelligence_ms": 10,
+    "statistical_intelligence_s": 1,
+    "trend_intelligence_s": 5,
+    "macro_intelligence_s": 60
   },
   "strategy_engine": {
-    "composition_interval": 300,
-    "performance_check_interval": 60
+    "application_focus_ms": 500,
+    "optimization_s": 10,
+    "performance_monitoring_s": 30,
+    "composition_trigger_s": 300
   },
   "risk_management": {
-    "evaluation_interval": 30,
+    "ultra_fast_ms": 1,
+    "fast_validation_ms": 100,
+    "tactical_assessment_s": 10,
+    "portfolio_analysis_s": 60,
     "risk_threshold": 0.8
   },
   "execution": {
-    "latency_threshold": 100,
+    "hft_execution_ms": 1,
+    "fast_execution_ms": 100,
+    "strategic_execution_s": 10,
+    "latency_threshold_ms": 10,
     "max_slippage": 0.001
   },
   "validation": {
-    "validation_interval": 60,
+    "real_time_validation_ms": 50,
+    "batch_validation_s": 60,
     "strict_mode": true
   },
   "fees_monitor": {
-    "optimization_interval": 300,
+    "cost_optimization_s": 300,
     "cost_threshold": 0.002
   },
   "adapters": {
-    "health_check_interval": 60,
+    "connection_health_s": 60,
     "connection_timeout": 30
   },
   "failure_prevention": {
-    "monitoring_interval": 30,
+    "system_monitoring_s": 30,
     "alert_threshold": 3
-  }
+  },
+  "brokers": {
+    "exness": {
+      "adapter_type": "mt5", 
+      "mt5_login": 248746257,
+      "mt5_password": "Stephen@55",
+      "mt5_server": "Exness-MT5Trial",
+      "enabled": true,
+      "max_position_size": 1.0,
+      "risk_per_trade": 0.02
+    }
+  },
+  "trading_pairs": [
+    "BTCUSD",
+    "ETHUSD", 
+    "XAUUSD",
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY"
+  ]
 }

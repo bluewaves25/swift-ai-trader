@@ -1,20 +1,12 @@
 from typing import Dict, Any, List
 import time
-import redis
 import pandas as pd
-from ....logs.risk_management_logger import RiskManagementLogger
 
 class SystemConfidence:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
-        self.confidence_threshold = config.get("confidence_threshold", 0.8)  # 80% confidence threshold
+        self.connection_manager = connection_manager
+                self.confidence_threshold = config.get("confidence_threshold", 0.8)  # 80% confidence threshold
 
     async def assess_confidence(self, system_data: pd.DataFrame) -> List[Dict[str, Any]]:
         """Assess system-wide confidence for risk decisions."""
@@ -33,8 +25,10 @@ class SystemConfidence:
                         "description": f"Low system confidence for {component}: Score {confidence_score:.2f}"
                     }
                     confidence_results.append(result)
-                    self.logger.log_risk_assessment("assessment", result)
-                    self.redis_client.set(f"risk_management:system_confidence:{component}", str(result), ex=3600)
+                    
+                    redis_client = await self.connection_manager.get_redis_client()
+                        if redis_client:
+                            redis_client.set(f"risk_management:system_confidence:{component}", str(result), ex=3600)
                     await self.notify_execution(result)
                 else:
                     result = {
@@ -45,7 +39,7 @@ class SystemConfidence:
                         "description": f"High system confidence for {component}: Score {confidence_score:.2f}"
                     }
                     confidence_results.append(result)
-                    self.logger.log_risk_assessment("assessment", result)
+                    
 
             summary = {
                 "type": "system_confidence_summary",
@@ -53,19 +47,23 @@ class SystemConfidence:
                 "timestamp": int(time.time()),
                 "description": f"Assessed confidence for {len(confidence_results)} components"
             }
-            self.logger.log_risk_assessment("black_swan_summary", summary)
+            
             await self.notify_core(summary)
             return confidence_results
         except Exception as e:
-            self.logger.log_error(f"Error: {e}")
+            print(f"Error in {os.path.basename(file_path)}: {e}")
             return []
 
     async def notify_execution(self, result: Dict[str, Any]):
         """Notify Executions Agent of low confidence signals."""
-        self.logger.log(f"Notifying Executions Agent: {result.get('description', 'unknown')}")
-        self.redis_client.publish("execution_agent", str(result))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("execution_agent", str(result))
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of system confidence results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

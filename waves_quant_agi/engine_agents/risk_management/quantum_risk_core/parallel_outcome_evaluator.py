@@ -1,20 +1,12 @@
 from typing import Dict, Any, List
 import time
-import redis
 import pandas as pd
 import numpy as np
-from ..logs.risk_management_logger import RiskManagementLogger
 
 class ParallelOutcomeEvaluator:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
+        self.connection_manager = connection_manager
         self.outcome_variance_threshold = config.get("outcome_variance_threshold", 0.1)  # 10% variance threshold
         self.num_simulations = config.get("num_simulations", 1000)
 
@@ -46,10 +38,12 @@ class ParallelOutcomeEvaluator:
                     }
 
                 outcomes.append(outcome)
-                self.logger.log_risk_assessment("assessment", outcome)
-                self.redis_client.set(f"risk_management:parallel_outcome:{symbol}", str(outcome), ex=3600)
-                if outcome["description"].startswith("High outcome variance"):
-                    await self.notify_execution(outcome)
+                # Store outcome in Redis using connection manager
+                redis_client = await self.connection_manager.get_redis_client()
+                if redis_client:
+                    redis_client.set(f"risk_management:parallel_outcome:{symbol}", str(outcome), ex=3600)
+                    if outcome["description"].startswith("High outcome variance"):
+                        await self.notify_execution(outcome)
 
             summary = {
                 "type": "parallel_outcome_summary",
@@ -57,19 +51,22 @@ class ParallelOutcomeEvaluator:
                 "timestamp": int(time.time()),
                 "description": f"Evaluated {len(outcomes)} parallel outcomes"
             }
-            self.logger.log_risk_assessment("black_swan_summary", summary)
             await self.notify_core(summary)
             return outcomes
         except Exception as e:
-            self.logger.log_error(f"Error: {e}")
+            print(f"Error in parallel outcome evaluator: {e}")
             return []
 
     async def notify_execution(self, outcome: Dict[str, Any]):
         """Notify Executions Agent of high variance outcomes."""
-        self.logger.log(f"Notifying Executions Agent: {outcome.get('description', 'unknown')}")
-        self.redis_client.publish("execution_agent", str(outcome))
+        print(f"Notifying Executions Agent: {outcome.get('description', 'unknown')}")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("execution_agent", str(outcome))
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of parallel outcome evaluation results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        print(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

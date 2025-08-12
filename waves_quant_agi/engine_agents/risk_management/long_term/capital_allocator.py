@@ -1,20 +1,12 @@
 from typing import Dict, Any, List
-import redis
 import pandas as pd
 import time
-from ..logs.risk_management_logger import RiskManagementLogger
 
 class CapitalAllocator:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
-        self.max_allocation = config.get("max_allocation", 0.2)  # Max 20% per strategy
+        self.connection_manager = connection_manager
+                self.max_allocation = config.get("max_allocation", 0.2)  # Max 20% per strategy
         self.total_capital = config.get("total_capital", 1000000.0)  # Default $1M
 
     async def allocate_capital(self, market_data: pd.DataFrame) -> Dict[str, Any]:
@@ -35,7 +27,9 @@ class CapitalAllocator:
                     "allocated_capital": allocated_capital,
                     "sharpe_ratio": sharpe_ratio
                 }
-                self.redis_client.set(f"risk_management:allocation:{strategy_id}", str(allocations[strategy_id]), ex=3600)
+                redis_client = await self.connection_manager.get_redis_client()
+                        if redis_client:
+                            redis_client.set(f"risk_management:allocation:{strategy_id}", str(allocations[strategy_id]), ex=3600)
 
             summary = {
                 "type": "capital_allocation_summary",
@@ -50,10 +44,12 @@ class CapitalAllocator:
                 "available_capital": self.total_capital - sum(a["allocated_capital"] for a in allocations.values())
             }
         except Exception as e:
-            self.logger.log_error(f"Error allocating capital: {e}")
+            print(f"Error in {os.path.basename(file_path)}: {e}")
             return {"allocations": {}, "available_capital": self.total_capital}
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of allocation results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

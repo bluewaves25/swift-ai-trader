@@ -21,19 +21,19 @@ Extract action and error logs from logs/*.log for behavior analysis.
 
 
 
-2. Simulating Scenarios
+2. Training Scenarios
 
-Signal Simulation:
-Generate test signals with varying strategies, amounts, and market conditions.
-Example: {"signal_id": "test1", "strategy": "momentum", "params": {"amount": 0.1, "base": "BTC", "quote": "USDT"}}.
-
-
-Failure Injection:
-Simulate risk violations or agent failures to train SignalFilter and FlowManager.
+Signal Analysis:
+Analyze signals with varying strategies, amounts, and market conditions.
+Example: {"signal_id": "signal1", "strategy": "momentum", "params": {"amount": 0.1, "base": "BTC", "quote": "USDT"}}.
 
 
-Edge Cases:
-Test invalid signals or extreme market conditions to ensure robustness.
+Failure Analysis:
+Analyze risk violations or agent failures to improve SignalFilter and FlowManager.
+
+
+Edge Case Analysis:
+Analyze invalid signals or extreme market conditions to ensure robustness.
 
 
 
@@ -86,8 +86,8 @@ research = ResearchEngine(context)
 training = TrainingModule(context)
 retraining = RetrainingLoop(training, context)
 
-# Simulate signals
-context.store_signal({"signal_id": "test1", "strategy": "momentum", "params": {"amount": 0.1}, "timestamp": 1234567890.0})
+# Store signals for analysis
+context.store_signal({"signal_id": "signal1", "strategy": "momentum", "params": {"amount": 0.1}, "timestamp": 1234567890.0})
 
 # Analyze behavior
 analysis = research.analyze_behavior()

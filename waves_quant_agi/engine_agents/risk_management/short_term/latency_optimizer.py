@@ -1,19 +1,11 @@
 from typing import Dict, Any, List
 import time
-import redis
 import pandas as pd
-from ..logs.risk_management_logger import RiskManagementLogger
 
 class LatencyOptimizer:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
+        self.connection_manager = connection_manager
         self.latency_threshold = config.get("latency_threshold", 10.0)  # 10ms max latency
         self.exchange_priority = config.get("exchange_priority", ["binance", "kraken"])  # Preferred exchanges
 
@@ -31,7 +23,11 @@ class LatencyOptimizer:
                     for exchange in self.exchange_priority:
                         if exchange != current_exchange:
                             # Placeholder: Check latency for alternative exchange
-                            new_latency = float(self.redis_client.get(f"exchange:{exchange}:latency") or latency)
+                            redis_client = await self.connection_manager.get_redis_client()
+                            if redis_client:
+                                new_latency = float(redis_client.get(f"exchange:{exchange}:latency") or latency)
+                            else:
+                                new_latency = latency
                             if new_latency < self.latency_threshold:
                                 optimal_exchange = exchange
                                 break
@@ -47,9 +43,11 @@ class LatencyOptimizer:
                             "description": f"Switched {symbol} to {optimal_exchange} due to latency {latency:.2f}ms"
                         }
                         optimizations.append(optimization)
-                        self.logger.log_risk_assessment("assessment", optimization)
-                        self.redis_client.set(f"risk_management:latency:{symbol}", str(optimization), ex=3600)
-                        await self.notify_execution(optimization)
+                        # Store optimization in Redis using connection manager
+                        redis_client = await self.connection_manager.get_redis_client()
+                        if redis_client:
+                            redis_client.set(f"risk_management:latency:{symbol}", str(optimization), ex=3600)
+                            await self.notify_execution(optimization)
 
             summary = {
                 "type": "latency_optimization_summary",
@@ -57,19 +55,22 @@ class LatencyOptimizer:
                 "timestamp": int(time.time()),
                 "description": f"Optimized latency for {len(optimizations)} trades"
             }
-            self.logger.log_risk_assessment("black_swan_summary", summary)
             await self.notify_core(summary)
             return optimizations
         except Exception as e:
-            self.logger.log_error(f"Error: {e}")
+            print(f"Error in latency optimizer: {e}")
             return []
 
     async def notify_execution(self, optimization: Dict[str, Any]):
         """Notify Executions Agent of latency optimizations."""
-        self.logger.log(f"Notifying Executions Agent: {optimization.get('description', 'unknown')}")
-        self.redis_client.publish("execution_agent", str(optimization))
+        print(f"Notifying Executions Agent: {optimization.get('description', 'unknown')}")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("execution_agent", str(optimization))
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of latency optimization results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        print(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

@@ -69,7 +69,7 @@ async def get_live_signals():
         
         if mt5_login and mt5_password:
             try:
-                from waves_quant_agi.engine.brokers.mt5_plugin import MT5Broker
+                from waves_quant_agi.engine_agents.adapters.brokers.mt5_plugin import MT5Broker
                 mt5 = MT5Broker(int(mt5_login), mt5_password, mt5_server)
                 mt5.connect()
                 

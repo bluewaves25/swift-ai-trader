@@ -1,20 +1,12 @@
 from typing import Dict, Any, List
 import time
-import redis
 import pandas as pd
-from ..logs.risk_management_logger import RiskManagementLogger
 
 class MacroExposureManager:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
-        self.macro_risk_threshold = config.get("macro_risk_threshold", 0.6)  # Macro risk score
+        self.connection_manager = connection_manager
+                self.macro_risk_threshold = config.get("macro_risk_threshold", 0.6)  # Macro risk score
 
     async def track_macro_alignment(self, macro_data: pd.DataFrame) -> List[Dict[str, Any]]:
         """Track portfolio alignment with macro themes."""
@@ -34,7 +26,9 @@ class MacroExposureManager:
                     }
                     alignments.append(alignment)
                     self.logger.log_risk_assessment("macro_alignment", alignment)
-                    self.redis_client.set(f"risk_management:macro:{symbol}", str(alignment), ex=3600)
+                    redis_client = await self.connection_manager.get_redis_client()
+                        if redis_client:
+                            redis_client.set(f"risk_management:macro:{symbol}", str(alignment), ex=3600)
                     await self.notify_execution(alignment)
 
             summary = {
@@ -47,15 +41,19 @@ class MacroExposureManager:
             await self.notify_core(summary)
             return alignments
         except Exception as e:
-            self.logger.log_error(f"Error tracking macro alignment: {e}")
+            print(f"Error in {os.path.basename(file_path)}: {e}")
             return []
 
     async def notify_execution(self, alignment: Dict[str, Any]):
         """Notify Executions Agent of macro risk adjustments."""
-        self.logger.log(f"Notifying Executions Agent: {alignment.get('description', 'unknown')}")
-        self.redis_client.publish("execution_agent", str(alignment))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("execution_agent", str(alignment))
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of macro alignment results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

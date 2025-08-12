@@ -1,6 +1,6 @@
 import requests
 from typing import Dict, Any, List
-from fees_monitor.logs.failure_agent_logger import FailureAgentLogger
+from ....logs.failure_agent_logger import FailureAgentLogger
 from ....memory.incident_cache import IncidentCache
 
 class ForumChecker:

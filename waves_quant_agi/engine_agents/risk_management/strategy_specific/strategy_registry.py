@@ -1,20 +1,12 @@
 from typing import Dict, Any, List
 import time
-import redis
 import pandas as pd
 import json
-from ..logs.risk_management_logger import RiskManagementLogger
 
 class StrategyRegistry:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
+        self.connection_manager = connection_manager
         self.risk_profiles = self._load_risk_profiles()
 
     def _load_risk_profiles(self) -> Dict[str, Any]:
@@ -24,7 +16,7 @@ class StrategyRegistry:
             with open(profile_path, "r") as f:
                 return json.load(f)
         except Exception as e:
-            self.logger.log(f"Error loading risk profiles: {e}")
+            print(f"Error loading risk profiles: {e}")
             return {
                 "arbitrage_based": {"max_drawdown": 0.03, "volatility_tolerance": 0.2},
                 "trend_following": {"max_drawdown": 0.05, "volatility_tolerance": 0.3},
@@ -54,8 +46,10 @@ class StrategyRegistry:
                     "description": f"Registered {strategy_id} ({strategy_type}) for {symbol}"
                 }
                 registrations.append(registration)
-                self.logger.log_risk_assessment("assessment", registration)
-                self.redis_client.set(f"risk_management:strategy:{strategy_id}", str(registration), ex=604800)
+                # Store registration in Redis using connection manager
+                redis_client = await self.connection_manager.get_redis_client()
+                if redis_client:
+                    redis_client.set(f"risk_management:strategy:{strategy_id}", str(registration), ex=604800)
 
             summary = {
                 "type": "strategy_registration_summary",
@@ -63,14 +57,15 @@ class StrategyRegistry:
                 "timestamp": int(time.time()),
                 "description": f"Registered {len(registrations)} strategies"
             }
-            self.logger.log_risk_assessment("black_swan_summary", summary)
             await self.notify_core(summary)
             return registrations
         except Exception as e:
-            self.logger.log_error(f"Error: {e}")
+            print(f"Error in strategy registry: {e}")
             return []
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of strategy registration results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        print(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))

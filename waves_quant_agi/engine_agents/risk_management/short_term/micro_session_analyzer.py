@@ -1,20 +1,12 @@
 from typing import Dict, Any, List
 import time
-import redis
 import pandas as pd
-from ..logs.risk_management_logger import RiskManagementLogger
 
 class MicroSessionAnalyzer:
-    def __init__(self, config: Dict[str, Any], logger: RiskManagementLogger):
+    def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
-        self.logger = logger
-        self.redis_client = redis.Redis(
-            host=config.get("redis_host", "localhost"),
-            port=config.get("redis_port", 6379),
-            db=config.get("redis_db", 0),
-            decode_responses=True
-        )
-        self.micro_session_size = config.get("micro_session_size", 100)  # 100 trades or 1 sec
+        self.connection_manager = connection_manager
+                self.micro_session_size = config.get("micro_session_size", 100)  # 100 trades or 1 sec
         self.loss_threshold = config.get("loss_threshold", 0.02)  # 2% loss per micro-session
         self.consecutive_loss_limit = config.get("consecutive_loss_limit", 3)  # 3 bad micro-sessions
 
@@ -42,8 +34,10 @@ class MicroSessionAnalyzer:
                             "description": f"Micro-session loss for {symbol}: {session_loss:.2%}"
                         }
                         alerts.append(alert)
-                        self.logger.log_risk_assessment("assessment", alert)
-                        self.redis_client.set(f"risk_management:micro_session:{symbol}", str(alert), ex=3600)
+                        
+                        redis_client = await self.connection_manager.get_redis_client()
+                        if redis_client:
+                            redis_client.set(f"risk_management:micro_session:{symbol}", str(alert), ex=3600)
                         if consecutive_losses >= self.consecutive_loss_limit:
                             await self.notify_execution({"type": "lockout", "symbol": symbol, "description": f"Lockout triggered: {consecutive_losses} bad micro-sessions"})
                     else:
@@ -55,19 +49,23 @@ class MicroSessionAnalyzer:
                 "timestamp": int(time.time()),
                 "description": f"Analyzed {len(micro_sessions)} micro-sessions, {len(alerts)} alerts"
             }
-            self.logger.log_risk_assessment("black_swan_summary", summary)
+            
             await self.notify_core(summary)
             return alerts
         except Exception as e:
-            self.logger.log_error(f"Error: {e}")
+            print(f"Error in {os.path.basename(file_path)}: {e}")
             return []
 
     async def notify_execution(self, alert: Dict[str, Any]):
         """Notify Executions Agent of micro-session alerts or lockouts."""
-        self.logger.log(f"Notifying Executions Agent: {alert.get('description', 'unknown')}")
-        self.redis_client.publish("execution_agent", str(alert))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("execution_agent", str(alert))
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of micro-session analysis results."""
-        self.logger.log(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-        self.redis_client.publish("risk_management_output", str(issue))
+        }")
+        redis_client = await self.connection_manager.get_redis_client()
+        if redis_client:
+            redis_client.publish("risk_management_output", str(issue))
