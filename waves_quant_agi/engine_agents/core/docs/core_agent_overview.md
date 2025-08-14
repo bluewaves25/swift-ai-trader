@@ -1,38 +1,54 @@
-Core Agent Overview
-Mission
-The Core Agent serves as the centralized logic and flow control layer, validating and routing trade commands, coordinating agents (Strategy, Risk, Adapter), managing context, and integrating learning without executing trades. It enforces a strict logic tree, ensures traceability, and adapts dynamically based on market context.
-Behavior
+# Core Agent Overview - SYSTEM COORDINATION ONLY
 
-Signal Validation: Filters signals using SignalFilter based on predefined rules.
-Logic Execution: Processes signals through LogicExecutor using conditional logic trees.
-Agent Coordination: Orchestrates agent interactions via FlowManager (Strategy → Risk → Adapter).
-Command Routing: Builds and sends trade commands to execution via ExecutionPipeline.
-Context Management: Stores signals, rejections, and PnL snapshots in RecentContext.
-Learning Integration: Feeds data to ResearchEngine, TrainingModule, and RetrainingLoop for optimization.
-Logging: Records all actions and errors using CoreAgentLogger.
+## Mission
+The Core Agent serves as the **SINGLE SOURCE OF TRUTH FOR SYSTEM COORDINATION**, managing system health monitoring, timing coordination, and agent coordination flows. It does NOT handle trading, strategy execution, or market operations - these are now consolidated in the Strategy Engine Agent.
 
-Dependencies
+## Behavior
 
-External Libraries:
-asyncio: For asynchronous retraining loops.
-logging: For persistent logging with rotation.
-dataclasses: For structured TradeCommand objects.
-collections.deque: For efficient context storage.
+- **System Health Monitoring**: Coordinates health checks across all agents using SystemSignalFilter
+- **Timing Coordination**: Manages 4-tier timing architecture (Ultra-HFT, Fast, Tactical, Strategic) via SystemCoordinationFlowManager
+- **Agent Coordination**: Orchestrates system-wide coordination flows using SystemCoordinationLogicExecutor
+- **System Command Routing**: Builds and routes system coordination commands via SystemCoordinationPipeline
+- **Context Management**: Stores health checks, timing syncs, and coordination events in SystemCoordinationContext
+- **Coordination Learning**: Feeds coordination data to SystemCoordinationResearchEngine for system optimization
+- **Logging**: Records all coordination actions and errors using CoreAgentLogger
 
+## Dependencies
 
-Internal Modules:
-controller/: Logic execution, signal filtering, and flow management.
-interfaces/: Trade command model and agent communication.
-pipeline/: Command packaging and routing.
-memory/: Context storage for signals and rejections.
-learning_layer/: Research, training, and retraining logic.
-logs/: Logging infrastructure.
+### External Libraries:
+- `asyncio`: For asynchronous coordination loops
+- `logging`: For persistent logging with rotation
+- `redis`: For inter-agent communication
+- `time`: For timing coordination and health monitoring
 
+### Internal Modules:
+- `controller/`: System coordination logic execution, signal filtering, and flow management
+- `interfaces/`: System coordination communication interface
+- `pipeline/`: Coordination request packaging and routing
+- `memory/`: Context storage for health checks, timing syncs, and coordination events
+- `learning_layer/`: System coordination research, training, and retraining logic
+- `logs/`: Logging infrastructure
 
+## Scalability
 
-Scalability
+- Modular design supports adding new coordination types via SystemCoordinationIO
+- SystemCoordinationContext uses fixed-size deques for memory efficiency
+- SystemCoordinationRetrainingLoop runs periodically to adapt to new coordination patterns
+- Logging uses rotating files to manage disk space
+- Redis-based communication scales horizontally across multiple agent instances
 
-Modular design supports adding new strategies or agents via AgentIO.
-RecentContext uses fixed-size deques for memory efficiency.
-RetrainingLoop runs periodically to adapt to new data.
-Logging uses rotating files to manage disk space.
+## Key Differences from Previous Version
+
+- **REMOVED**: All trading signal processing, trade command creation, and execution routing
+- **REMOVED**: Strategy approval, risk compliance checking, and market data handling
+- **REMOVED**: PnL tracking, trade rejection handling, and market context management
+- **ADDED**: System health monitoring, timing coordination, and agent status management
+- **ADDED**: Coordination flow management and system command routing
+- **ADDED**: System coordination learning and pattern analysis
+
+## Integration Points
+
+- **Strategy Engine Agent**: Receives system coordination commands and health status updates
+- **All Other Agents**: Send health checks, timing syncs, and status updates to Core Agent
+- **Redis**: Central communication hub for all system coordination messages
+- **System Clock**: Master timing reference for 4-tier architecture coordination

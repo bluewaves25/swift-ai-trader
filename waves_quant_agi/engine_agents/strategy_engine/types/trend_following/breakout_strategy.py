@@ -1,197 +1,274 @@
 #!/usr/bin/env python3
 """
-Breakout Strategy - Fixed and Enhanced
-Detects breakout opportunities after volatility contraction.
+Breakout Strategy - Trend Following
+Focuses purely on strategy-specific tasks, delegating risk management to the risk management agent.
 """
 
 from typing import Dict, Any, List, Optional
 import time
 import pandas as pd
-from engine_agents.shared_utils import get_shared_redis
+import numpy as np
+from datetime import datetime
+
+# Import consolidated trading components
+from ...trading.memory.trading_context import TradingContext
+from ...trading.learning.trading_research_engine import TradingResearchEngine
+
 
 class BreakoutStrategy:
-    """Breakout strategy for detecting price breakouts after volatility contraction."""
+    """Breakout strategy for trend following."""
     
     def __init__(self, config: Dict[str, Any], logger=None):
         self.config = config
         self.logger = logger
-        # Use shared Redis connection instead of creating new one
-        self.redis_conn = get_shared_redis()
-        self.breakout_threshold = config.get("breakout_threshold", 0.02)  # 2% breakout level
+        
+        # Initialize consolidated trading components
+        self.trading_context = TradingContext()
+        self.trading_research_engine = TradingResearchEngine()
         
         # Strategy parameters
-        self.min_volume_threshold = config.get("min_volume_threshold", 1.5)
-        self.confirmation_periods = config.get("confirmation_periods", 3)
-        self.volatility_lookback = config.get("volatility_lookback", 20)
+        self.breakout_threshold = config.get("breakout_threshold", 0.02)  # 2% breakout
+        self.lookback_period = config.get("lookback_period", 20)  # 20 periods
+        self.volume_threshold = config.get("volume_threshold", 1.5)  # 1.5x average volume
+        self.confirmation_periods = config.get("confirmation_periods", 3)  # 3 periods confirmation
+        
+        # Strategy state
+        self.last_signal_time = None
+        self.strategy_performance = {"total_signals": 0, "average_confidence": 0.0}
 
-    async def detect_breakout(self, market_data: pd.DataFrame) -> List[Dict[str, Any]]:
-        """Detect breakout opportunities after volatility contraction."""
+    async def initialize(self) -> bool:
+        """Initialize the strategy and trading components."""
         try:
+            await self.trading_context.initialize()
+            await self.trading_research_engine.initialize()
+            return True
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Failed to initialize breakout strategy: {e}")
+            return False
+
+    async def detect_opportunity(self, market_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Detect breakout opportunities."""
+        if not market_data or len(market_data) < self.lookback_period:
+            return []
+        
+        try:
+            # Convert to DataFrame for analysis
+            df = pd.DataFrame(market_data)
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            df = df.sort_values('timestamp').tail(self.lookback_period)
+            
             opportunities = []
             
-            if market_data.empty:
-                return opportunities
-                
-            for _, row in market_data.iterrows():
+            for _, row in df.iterrows():
                 symbol = row.get("symbol", "BTCUSD")
-                high = float(row.get("high", 0.0))
-                low = float(row.get("low", 0.0))
-                close = float(row.get("close", 0.0))
-                volume = float(row.get("volume", 0.0))
+                current_price = float(row.get("close", 0.0))
+                current_volume = float(row.get("volume", 0.0))
                 
-                # Get historical data for confirmation
+                # Get historical data for analysis
                 historical_data = await self._get_historical_data(symbol)
                 if not historical_data:
                     continue
                 
                 # Calculate breakout metrics
-                breakout_score = await self._calculate_breakout_score(
-                    high, low, close, volume, historical_data
+                breakout_metrics = await self._calculate_breakout_metrics(
+                    current_price, current_volume, historical_data
                 )
                 
-                if breakout_score > self.breakout_threshold:
-                    opportunity = {
-                        "type": "breakout_strategy",
-                        "strategy": "breakout",
-                        "symbol": symbol,
-                        "action": "buy" if close > high else "sell",
-                        "entry_price": close,
-                        "stop_loss": low * 0.995 if close > high else high * 1.005,
-                        "take_profit": close * 1.02 if close > high else close * 0.98,
-                        "confidence": min(breakout_score / self.breakout_threshold, 0.95),
-                        "breakout_level": high if close > high else low,
-                        "volume_confirmation": volume > self.min_volume_threshold,
-                        "timestamp": int(time.time()),
-                        "description": f"Breakout detected for {symbol}: Score {breakout_score:.4f}"
-                    }
-                    opportunities.append(opportunity)
-                    
-                    # Store in Redis for tracking with proper JSON serialization
-                    if self.redis_conn:
-                        try:
-                            import json
-                            self.redis_conn.set(
-                                f"strategy_engine:breakout:{symbol}:{int(time.time())}", 
-                                json.dumps(opportunity), 
-                                ex=3600
-                            )
-                        except json.JSONEncodeError as e:
-                            if self.logger:
-                                self.logger.error(f"JSON encoding error storing breakout opportunity: {e}")
-                        except ConnectionError as e:
-                            if self.logger:
-                                self.logger.error(f"Redis connection error storing breakout opportunity: {e}")
-                        except Exception as e:
-                            if self.logger:
-                                self.logger.error(f"Unexpected error storing breakout opportunity: {e}")
-                    
-                    # Log if logger available
-                    if self.logger:
-                        self.logger.info(f"Breakout opportunity: {opportunity['description']}")
-
+                # Check if breakout signal meets criteria
+                if self._is_valid_breakout_signal(breakout_metrics):
+                    signal = self._generate_breakout_signal(
+                        symbol, current_price, breakout_metrics
+                    )
+                    if signal:
+                        self.trading_context.store_signal(signal)
+                        opportunities.append(signal)
+                        
+                        # Update strategy performance
+                        self.strategy_performance["total_signals"] += 1
+                        self.strategy_performance["average_confidence"] = (
+                            (self.strategy_performance["average_confidence"] * 
+                             (self.strategy_performance["total_signals"] - 1) + signal["confidence"]) /
+                            self.strategy_performance["total_signals"]
+                        )
+                        
+                        self.last_signal_time = datetime.now()
+                        
+                        if self.logger:
+                            self.logger.info(f"Breakout signal generated: {signal['signal_type']} for {symbol}")
+            
             return opportunities
             
         except Exception as e:
             if self.logger:
-                self.logger.error(f"Error detecting breakout: {e}")
+                self.logger.error(f"Error detecting breakout opportunities: {e}")
             return []
 
     async def _get_historical_data(self, symbol: str) -> Optional[pd.DataFrame]:
-        """Get historical data for breakout confirmation."""
+        """Get historical data for breakout analysis."""
         try:
-            if not self.redis_conn:
+            # Get recent signals from trading context
+            signals = await self.trading_context.get_recent_signals(symbol, limit=self.lookback_period * 2)
+            
+            if not signals:
                 return None
-                
-            # Get recent market data from Redis
-            historical_key = f"market_data:{symbol}:history"
-            historical_data = self.redis_conn.get(historical_key)
             
-            if historical_data:
-                import json
-                try:
-                    # Handle both string and bytes responses from Redis
-                    if isinstance(historical_data, bytes):
-                        historical_data = historical_data.decode('utf-8')
-                    elif not isinstance(historical_data, str):
-                        return None
-                        
-                    parsed_data = json.loads(historical_data)
-                    if isinstance(parsed_data, list):
-                        return pd.DataFrame(parsed_data)
-                    else:
-                        return None
-                        
-                except json.JSONDecodeError as e:
-                    if self.logger:
-                        self.logger.error(f"JSON decode error for historical data: {e}")
-                    return None
-                except Exception as e:
-                    if self.logger:
-                        self.logger.error(f"Unexpected error parsing historical data: {e}")
-                    return None
+            # Convert signals to DataFrame
+            data = []
+            for signal in signals:
+                if "price" in signal:
+                    data.append({
+                        "timestamp": signal.get("timestamp", 0),
+                        "price": signal.get("price", 0.0),
+                        "volume": signal.get("volume", 0.0)
+                    })
             
-            return None
+            if not data:
+                return None
             
-        except ConnectionError as e:
-            if self.logger:
-                self.logger.error(f"Redis connection error getting historical data: {e}")
-            return None
+            # Create DataFrame and sort by timestamp
+            df = pd.DataFrame(data)
+            df = df.sort_values("timestamp").reset_index(drop=True)
+            
+            return df
+            
         except Exception as e:
             if self.logger:
-                self.logger.error(f"Unexpected error getting historical data: {e}")
+                self.logger.error(f"Error getting historical data: {e}")
             return None
 
-    async def _calculate_breakout_score(self, high: float, low: float, close: float, 
-                                      volume: float, historical_data: pd.DataFrame) -> float:
-        """Calculate breakout score based on multiple factors."""
+    async def _calculate_breakout_metrics(self, current_price: float, current_volume: float, 
+                                        historical_data: pd.DataFrame) -> Dict[str, Any]:
+        """Calculate breakout metrics."""
         try:
-            if historical_data.empty:
-                return 0.0
+            if historical_data.empty or len(historical_data) < self.lookback_period:
+                return {}
             
-            # Price breakout factor
-            prev_high = historical_data['high'].max()
-            prev_low = historical_data['low'].min()
-            prev_close = historical_data['close'].iloc[-1]
+            # Get recent prices and volumes
+            recent_prices = historical_data["price"].tail(self.lookback_period)
+            recent_volumes = historical_data["volume"].tail(self.lookback_period)
             
-            # Volume confirmation
-            avg_volume = historical_data['volume'].mean()
-            volume_factor = volume / avg_volume if avg_volume > 0 else 1.0
+            # Calculate resistance and support levels
+            resistance = recent_prices.max()
+            support = recent_prices.min()
             
-            # Volatility contraction
-            volatility = historical_data['close'].pct_change().std()
-            current_range = (high - low) / prev_close if prev_close > 0 else 0
+            # Calculate breakout levels
+            breakout_up = resistance * (1 + self.breakout_threshold)
+            breakout_down = support * (1 - self.breakout_threshold)
             
-            # Breakout score calculation
-            price_breakout = 1.0 if close > prev_high or close < prev_low else 0.5
-            volume_confirmation = min(volume_factor / self.min_volume_threshold, 1.0)
-            volatility_factor = 1.0 if current_range > volatility else 0.5
+            # Calculate volume metrics
+            avg_volume = recent_volumes.mean()
+            volume_ratio = current_volume / avg_volume if avg_volume > 0 else 0
             
-            # Weighted score
-            breakout_score = (
-                price_breakout * 0.4 +
-                volume_confirmation * 0.3 +
-                volatility_factor * 0.3
-            )
+            # Determine breakout direction
+            if current_price > breakout_up:
+                breakout_direction = "UP"
+                breakout_strength = (current_price - resistance) / resistance
+            elif current_price < breakout_down:
+                breakout_direction = "DOWN"
+                breakout_strength = (support - current_price) / support
+            else:
+                breakout_direction = "NONE"
+                breakout_strength = 0.0
             
-            return breakout_score
+            return {
+                "breakout_direction": breakout_direction,
+                "breakout_strength": breakout_strength,
+                "resistance": resistance,
+                "support": support,
+                "breakout_up": breakout_up,
+                "breakout_down": breakout_down,
+                "volume_ratio": volume_ratio,
+                "current_price": current_price
+            }
             
         except Exception as e:
             if self.logger:
-                self.logger.error(f"Error calculating breakout score: {e}")
-            return 0.0
+                self.logger.error(f"Error calculating breakout metrics: {e}")
+            return {}
 
-    def get_strategy_info(self) -> Dict[str, Any]:
-        """Get strategy information and parameters."""
-        return {
-            "name": "Breakout Strategy",
-            "type": "trend_following",
-            "description": "Detects breakout opportunities after volatility contraction",
-            "parameters": {
-                "breakout_threshold": self.breakout_threshold,
-                "min_volume_threshold": self.min_volume_threshold,
-                "confirmation_periods": self.confirmation_periods,
-                "volatility_lookback": self.volatility_lookback
-            },
-            "timeframe": "fast",  # 100ms tier
-            "asset_types": ["crypto", "forex", "indices", "stocks"]
-        }
+    def _is_valid_breakout_signal(self, metrics: Dict[str, Any]) -> bool:
+        """Check if breakout signal meets criteria."""
+        try:
+            if not metrics:
+                return False
+            
+            breakout_direction = metrics.get("breakout_direction", "NONE")
+            breakout_strength = metrics.get("breakout_strength", 0.0)
+            volume_ratio = metrics.get("volume_ratio", 0.0)
+            
+            # Check breakout direction
+            if breakout_direction == "NONE":
+                return False
+            
+            # Check breakout strength
+            if breakout_strength < self.breakout_threshold:
+                return False
+            
+            # Check volume confirmation
+            if volume_ratio < self.volume_threshold:
+                return False
+            
+            return True
+            
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Error validating breakout signal: {e}")
+            return False
+
+    def _generate_breakout_signal(self, symbol: str, current_price: float, 
+                                 metrics: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Generate breakout trading signal."""
+        try:
+            breakout_direction = metrics.get("breakout_direction", "NONE")
+            breakout_strength = metrics.get("breakout_strength", 0.0)
+            volume_ratio = metrics.get("volume_ratio", 0.0)
+            
+            if breakout_direction == "NONE":
+                return None
+            
+            # Determine signal type
+            if breakout_direction == "UP":
+                signal_type = "BREAKOUT_UP"
+                confidence = min(breakout_strength / self.breakout_threshold, 1.0)
+            else:
+                signal_type = "BREAKOUT_DOWN"
+                confidence = min(breakout_strength / self.breakout_threshold, 1.0)
+            
+            # Adjust confidence based on volume
+            volume_confidence = min(volume_ratio / self.volume_threshold, 1.0)
+            final_confidence = (confidence + volume_confidence) / 2
+            
+            signal = {
+                "signal_id": f"breakout_{int(time.time())}",
+                "strategy_id": "breakout_strategy",
+                "strategy_type": "trend_following",
+                "signal_type": signal_type,
+                "symbol": symbol,
+                "timestamp": datetime.now().isoformat(),
+                "price": current_price,
+                "confidence": final_confidence,
+                "metadata": {
+                    "breakout_direction": breakout_direction,
+                    "breakout_strength": breakout_strength,
+                    "volume_ratio": volume_ratio,
+                    "resistance": metrics.get("resistance", 0.0),
+                    "support": metrics.get("support", 0.0)
+                }
+            }
+            
+            return signal
+            
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Error generating breakout signal: {e}")
+            return None
+
+    async def cleanup(self):
+        """Cleanup strategy resources."""
+        try:
+            await self.trading_context.cleanup()
+            await self.trading_research_engine.cleanup()
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Error during strategy cleanup: {e}")

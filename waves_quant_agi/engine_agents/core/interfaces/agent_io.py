@@ -4,15 +4,15 @@ import asyncio
 from typing import Dict, Any, Optional, List
 from ..logs.core_agent_logger import CoreAgentLogger
 
-class AgentIO:
+class SystemCoordinationIO:
     """
-    Enhanced agent communication interface with Redis integration.
-    Handles communication between Core Agent and other agents.
+    System coordination communication interface with Redis integration.
+    Handles communication between Core Agent and other agents for system coordination ONLY.
     """
     
     def __init__(self, config: Dict[str, Any] = None):
         self.config = config or {}
-        self.logger = CoreAgentLogger("agent_io")
+        self.logger = CoreAgentLogger("system_coordination_io")
         
         # Redis configuration
         redis_host = self.config.get('redis_host', 'localhost')
@@ -28,381 +28,304 @@ class AgentIO:
                 decode_responses=True
             )
             self.redis_client.ping()  # Test connection
-            self.logger.log_info("AgentIO Redis connection established")
+            self.logger.log_info("SystemCoordinationIO Redis connection established")
         except Exception as e:
-            self.logger.log_error("Redis connection failed", str(e), "AgentIO")
+            self.logger.log_error("Redis connection failed", str(e), "SystemCoordinationIO")
             self.redis_client = None
         
-        # Agent communication channels
-        self.agent_channels = {
-            'strategy': 'strategy_agent:signals',
-            'risk': 'risk_agent:signals',
-            'execution': 'execution_agent:commands',
-            'intelligence': 'intelligence_agent:signals',
-            'validation': 'validation_agent:requests',
-            'market_conditions': 'market_conditions_agent:signals',
-            'fees_monitor': 'fees_monitor_agent:signals',
-            'data_feeds': 'data_feeds_agent:signals',
-            'adapters': 'adapters_agent:signals',
-            'failure_prevention': 'failure_prevention_agent:events'
+        # System coordination communication channels
+        self.coordination_channels = {
+            'system_health': 'system:health',
+            'timing_sync': 'system:timing',
+            'agent_status': 'system:agent_status',
+            'system_commands': 'system:commands',
+            'coordination_events': 'system:coordination'
         }
         
-        # Response tracking
-        self.pending_responses = {}
+        # Response tracking for coordination requests
+        self.pending_coordination_responses = {}
         self.response_timeout = self.config.get('response_timeout', 30.0)
         
-    async def send_to_strategy(self, signal: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Send signal to strategy agent for approval"""
+    async def send_health_check_request(self, target_agent: str, health_type: str = "general") -> Optional[Dict[str, Any]]:
+        """Send health check request to specific agent"""
         try:
-            signal_id = signal.get('signal_id', f"signal_{int(time.time())}")
+            request_id = f"health_{target_agent}_{int(time.time())}"
             
             self.logger.log_agent_coordination(
-                agent_type="strategy",
-                action="send_signal",
-                signal_id=signal_id,
+                agent_type=target_agent,
+                action="send_health_check",
+                request_id=request_id,
                 status="sending",
-                metadata=signal
+                metadata={"health_type": health_type}
             )
             
-            # Send to strategy agent via Redis
+            # Send health check request via Redis
             if self.redis_client:
                 message = {
                     'timestamp': int(time.time()),
-                    'signal_id': signal_id,
-                    'signal': signal,
+                    'request_id': request_id,
+                    'request_type': 'health_check',
+                    'health_type': health_type,
                     'source': 'core_agent'
                 }
                 
-                self.redis_client.publish(self.agent_channels['strategy'], str(message))
+                self.redis_client.publish(self.coordination_channels['system_health'], str(message))
                 
                 # Wait for response
-                response = await self._wait_for_response(signal_id, 'strategy')
+                response = await self._wait_for_coordination_response(request_id, target_agent)
                 
                 if response:
                     self.logger.log_agent_coordination(
-                        agent_type="strategy",
-                        action="receive_response",
-                        signal_id=signal_id,
+                        agent_type=target_agent,
+                        action="receive_health_response",
+                        request_id=request_id,
                         status="received",
                         response=response
                     )
                     return response
                 else:
                     self.logger.log_agent_coordination(
-                        agent_type="strategy",
-                        action="timeout",
-                        signal_id=signal_id,
+                        agent_type=target_agent,
+                        action="health_check_timeout",
+                        request_id=request_id,
                         status="timeout"
                     )
-                    return {"approved": False, "reason": "Strategy agent timeout"}
+                    return {"success": False, "reason": f"{target_agent} health check timeout"}
             
             # Fallback response
-            return {"approved": True, "signal_id": signal_id}
+            return {"success": True, "request_id": request_id, "health_status": "unknown"}
             
         except Exception as e:
-            self.logger.log_error("Failed to send to strategy", str(e), "AgentIO")
-            return {"approved": False, "reason": f"Error: {str(e)}"}
-
-    async def send_to_risk(self, signal: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Send signal to risk agent for compliance check"""
+            self.logger.log_error("Error sending health check request", str(e), "SystemCoordinationIO")
+            return {"success": False, "reason": f"System error: {str(e)}"}
+    
+    async def send_timing_sync_request(self, target_agent: str, timing_type: str = "sync") -> Optional[Dict[str, Any]]:
+        """Send timing synchronization request to specific agent"""
         try:
-            signal_id = signal.get('signal_id', f"risk_{int(time.time())}")
+            request_id = f"timing_{target_agent}_{int(time.time())}"
             
             self.logger.log_agent_coordination(
-                agent_type="risk",
-                action="send_signal",
-                signal_id=signal_id,
+                agent_type=target_agent,
+                action="send_timing_sync",
+                request_id=request_id,
                 status="sending",
-                metadata=signal
+                metadata={"timing_type": timing_type}
             )
             
-            # Send to risk agent via Redis
+            # Send timing sync request via Redis
             if self.redis_client:
                 message = {
                     'timestamp': int(time.time()),
-                    'signal_id': signal_id,
-                    'signal': signal,
+                    'request_id': request_id,
+                    'request_type': 'timing_sync',
+                    'timing_type': timing_type,
                     'source': 'core_agent'
                 }
                 
-                self.redis_client.publish(self.agent_channels['risk'], str(message))
+                self.redis_client.publish(self.coordination_channels['timing_sync'], str(message))
                 
                 # Wait for response
-                response = await self._wait_for_response(signal_id, 'risk')
+                response = await self._wait_for_coordination_response(request_id, target_agent)
                 
                 if response:
                     self.logger.log_agent_coordination(
-                        agent_type="risk",
-                        action="receive_response",
-                        signal_id=signal_id,
+                        agent_type=target_agent,
+                        action="receive_timing_response",
+                        request_id=request_id,
                         status="received",
                         response=response
                     )
                     return response
                 else:
                     self.logger.log_agent_coordination(
-                        agent_type="risk",
-                        action="timeout",
-                        signal_id=signal_id,
+                        agent_type=target_agent,
+                        action="timing_sync_timeout",
+                        request_id=request_id,
                         status="timeout"
                     )
-                    return {"passed": False, "reason": "Risk agent timeout"}
+                    return {"success": False, "reason": f"{target_agent} timing sync timeout"}
             
             # Fallback response
-            return {"passed": True, "signal_id": signal_id}
+            return {"success": True, "request_id": request_id, "timing_synced": True}
             
         except Exception as e:
-            self.logger.log_error("Failed to send to risk", str(e), "AgentIO")
-            return {"passed": False, "reason": f"Error: {str(e)}"}
-
-    async def send_to_execution(self, trade_command: Dict[str, Any]) -> bool:
-        """Send trade command to execution agent"""
+            self.logger.log_error("Error sending timing sync request", str(e), "SystemCoordinationIO")
+            return {"success": False, "reason": f"System error: {str(e)}"}
+    
+    async def send_agent_status_request(self, target_agent: str, status_type: str = "update") -> Optional[Dict[str, Any]]:
+        """Send agent status request to specific agent"""
         try:
-            command_id = trade_command.get('command_id', f"cmd_{int(time.time())}")
+            request_id = f"status_{target_agent}_{int(time.time())}"
             
-            self.logger.log_trade_command(
-                command_id=command_id,
-                command_type=trade_command.get('type', 'unknown'),
-                symbol=trade_command.get('symbol', 'unknown'),
-                action=trade_command.get('action', 'unknown'),
+            self.logger.log_agent_coordination(
+                agent_type=target_agent,
+                action="send_status_request",
+                request_id=request_id,
                 status="sending",
-                metadata=trade_command
+                metadata={"status_type": status_type}
             )
             
-            # Send to execution agent via Redis
+            # Send status request via Redis
             if self.redis_client:
                 message = {
                     'timestamp': int(time.time()),
-                    'command_id': command_id,
-                    'command': trade_command,
+                    'request_id': request_id,
+                    'request_type': 'agent_status',
+                    'status_type': status_type,
                     'source': 'core_agent'
                 }
                 
-                self.redis_client.publish(self.agent_channels['execution'], str(message))
+                self.redis_client.publish(self.coordination_channels['agent_status'], str(message))
                 
-                # Wait for confirmation
-                response = await self._wait_for_response(command_id, 'execution')
+                # Wait for response
+                response = await self._wait_for_coordination_response(request_id, target_agent)
                 
                 if response:
-                    self.logger.log_trade_command(
-                        command_id=command_id,
-                        command_type=trade_command.get('type', 'unknown'),
-                        symbol=trade_command.get('symbol', 'unknown'),
-                        action=trade_command.get('action', 'unknown'),
-                        status="confirmed",
-                        metadata=response
+                    self.logger.log_agent_coordination(
+                        agent_type=target_agent,
+                        action="receive_status_response",
+                        request_id=request_id,
+                        status="received",
+                        response=response
                     )
-                    return True
+                    return response
                 else:
-                    self.logger.log_trade_command(
-                        command_id=command_id,
-                        command_type=trade_command.get('type', 'unknown'),
-                        symbol=trade_command.get('symbol', 'unknown'),
-                        action=trade_command.get('action', 'unknown'),
+                    self.logger.log_agent_coordination(
+                        agent_type=target_agent,
+                        action="status_request_timeout",
+                        request_id=request_id,
                         status="timeout"
                     )
-                    return False
+                    return {"success": False, "reason": f"{target_agent} status request timeout"}
             
-            # Fallback success
+            # Fallback response
+            return {"success": True, "request_id": request_id, "status_updated": True}
+            
+        except Exception as e:
+            self.logger.log_error("Error sending agent status request", str(e), "SystemCoordinationIO")
+            return {"success": False, "reason": f"System error: {str(e)}"}
+    
+    async def broadcast_system_command(self, command: Dict[str, Any]) -> bool:
+        """Broadcast system command to all agents"""
+        try:
+            if not self.redis_client:
+                return False
+            
+            message = {
+                'timestamp': int(time.time()),
+                'command': command,
+                'source': 'core_agent'
+            }
+            
+            # Broadcast to system commands channel
+            self.redis_client.publish(self.coordination_channels['system_commands'], str(message))
+            
+            self.logger.log_agent_coordination(
+                agent_type="all",
+                action="broadcast_system_command",
+                request_id=command.get('command_id', 'unknown'),
+                status="sent",
+                metadata=command
+            )
+            
             return True
             
         except Exception as e:
-            self.logger.log_error("Failed to send to execution", str(e), "AgentIO")
+            self.logger.log_error("Error broadcasting system command", str(e), "SystemCoordinationIO")
             return False
-
-    async def send_to_intelligence(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Send data to intelligence agent for analysis"""
+    
+    async def publish_coordination_event(self, event: Dict[str, Any]) -> bool:
+        """Publish coordination event to coordination channel"""
         try:
-            request_id = data.get('request_id', f"intel_{int(time.time())}")
+            if not self.redis_client:
+                return False
+            
+            message = {
+                'timestamp': int(time.time()),
+                'event': event,
+                'source': 'core_agent'
+            }
+            
+            # Publish to coordination events channel
+            self.redis_client.publish(self.coordination_channels['coordination_events'], str(message))
             
             self.logger.log_agent_coordination(
-                agent_type="intelligence",
-                action="send_data",
-                signal_id=request_id,
-                status="sending",
-                metadata=data
+                agent_type="system",
+                action="publish_coordination_event",
+                request_id=event.get('event_id', 'unknown'),
+                status="published",
+                metadata=event
             )
             
-            # Send to intelligence agent via Redis
-            if self.redis_client:
-                message = {
-                    'timestamp': int(time.time()),
-                    'request_id': request_id,
-                    'data': data,
-                    'source': 'core_agent'
-                }
-                
-                self.redis_client.publish(self.agent_channels['intelligence'], str(message))
-                
-                # Wait for response
-                response = await self._wait_for_response(request_id, 'intelligence')
-                
-                if response:
-                    self.logger.log_agent_coordination(
-                        agent_type="intelligence",
-                        action="receive_response",
-                        signal_id=request_id,
-                        status="received",
-                        response=response
-                    )
-                    return response
-            
-            return None
+            return True
             
         except Exception as e:
-            self.logger.log_error("Failed to send to intelligence", str(e), "AgentIO")
-            return None
-
-    async def send_to_validation(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Send validation request to validation agent"""
-        try:
-            request_id = request.get('request_id', f"val_{int(time.time())}")
-            
-            self.logger.log_agent_coordination(
-                agent_type="validation",
-                action="send_request",
-                signal_id=request_id,
-                status="sending",
-                metadata=request
-            )
-            
-            # Send to validation agent via Redis
-            if self.redis_client:
-                message = {
-                    'timestamp': int(time.time()),
-                    'request_id': request_id,
-                    'request': request,
-                    'source': 'core_agent'
-                }
-                
-                self.redis_client.publish(self.agent_channels['validation'], str(message))
-                
-                # Wait for response
-                response = await self._wait_for_response(request_id, 'validation')
-                
-                if response:
-                    self.logger.log_agent_coordination(
-                        agent_type="validation",
-                        action="receive_response",
-                        signal_id=request_id,
-                        status="received",
-                        response=response
-                    )
-                    return response
-            
-            return None
-            
-        except Exception as e:
-            self.logger.log_error("Failed to send to validation", str(e), "AgentIO")
-            return None
-
-    async def broadcast_to_all_agents(self, message: Dict[str, Any]) -> Dict[str, bool]:
-        """Broadcast message to all agents"""
-        try:
-            results = {}
-            
-            for agent_name, channel in self.agent_channels.items():
-                try:
-                    if self.redis_client:
-                        self.redis_client.publish(channel, str(message))
-                        results[agent_name] = True
-                    else:
-                        results[agent_name] = False
-                except Exception as e:
-                    self.logger.log_error(f"Failed to broadcast to {agent_name}", str(e), "AgentIO")
-                    results[agent_name] = False
-            
-            self.logger.log_system_operation(
-                operation="broadcast",
-                component="all_agents",
-                status="completed",
-                metadata={'results': results}
-            )
-            
-            return results
-            
-        except Exception as e:
-            self.logger.log_error("Failed to broadcast to all agents", str(e), "AgentIO")
-            return {}
-
-    async def _wait_for_response(self, request_id: str, agent_type: str) -> Optional[Dict[str, Any]]:
-        """Wait for response from specific agent"""
+            self.logger.log_error("Error publishing coordination event", str(e), "SystemCoordinationIO")
+            return False
+    
+    # ============= PRIVATE METHODS =============
+    
+    async def _wait_for_coordination_response(self, request_id: str, target_agent: str) -> Optional[Dict[str, Any]]:
+        """Wait for coordination response from target agent"""
         try:
             start_time = time.time()
             
             while time.time() - start_time < self.response_timeout:
-                # Check for response in Redis
-                if self.redis_client:
-                    response_key = f"core_agent:response:{agent_type}:{request_id}"
-                    response = self.redis_client.get(response_key)
-                    
-                    if response:
-                        # Clean up response
-                        self.redis_client.delete(response_key)
-                        return eval(response)  # Convert string back to dict
+                # Check if response is available
+                if request_id in self.pending_coordination_responses:
+                    response = self.pending_coordination_responses.pop(request_id)
+                    return response
                 
-                await asyncio.sleep(0.1)  # Small delay
+                await asyncio.sleep(0.1)  # 100ms polling interval
             
             return None
             
         except Exception as e:
-            self.logger.log_error(f"Error waiting for response from {agent_type}", str(e), "AgentIO")
+            self.logger.log_error(f"Error waiting for coordination response: {str(e)}", str(e), "SystemCoordinationIO")
             return None
-
-    def get_agent_status(self) -> Dict[str, Any]:
-        """Get status of all agents"""
+    
+    def _store_coordination_response(self, request_id: str, response: Dict[str, Any]):
+        """Store coordination response for waiting requests"""
         try:
-            status = {
-                'redis_connected': self.redis_client is not None,
-                'agent_channels': list(self.agent_channels.keys()),
-                'pending_responses': len(self.pending_responses),
-                'response_timeout': self.response_timeout
-            }
-            
-            # Check agent availability via Redis
-            if self.redis_client:
-                agent_status = {}
-                for agent_name, channel in self.agent_channels.items():
-                    try:
-                        # Try to publish a ping message
-                        self.redis_client.publish(f"{channel}:ping", "ping")
-                        agent_status[agent_name] = "available"
-                    except Exception:
-                        agent_status[agent_name] = "unavailable"
-                
-                status['agent_availability'] = agent_status
-            
-            return status
-            
+            self.pending_coordination_responses[request_id] = response
         except Exception as e:
-            self.logger.log_error("Failed to get agent status", str(e), "AgentIO")
-            return {'error': str(e)}
-
-    def get_communication_stats(self) -> Dict[str, Any]:
-        """Get communication statistics"""
+            self.logger.log_error(f"Error storing coordination response: {str(e)}", str(e), "SystemCoordinationIO")
+    
+    # ============= PUBLIC INTERFACE METHODS =============
+    
+    def get_coordination_status(self) -> Dict[str, Any]:
+        """Get system coordination communication status"""
         try:
-            if not self.redis_client:
-                return {"error": "Redis not connected"}
-            
-            stats = {
-                'total_messages_sent': self.redis_client.llen('core_agent:message_history'),
-                'total_responses_received': self.redis_client.llen('core_agent:response_history'),
-                'pending_requests': len(self.pending_responses),
-                'agent_channels': len(self.agent_channels)
+            return {
+                "redis_connected": self.redis_client is not None,
+                "active_channels": len(self.coordination_channels),
+                "pending_responses": len(self.pending_coordination_responses),
+                "response_timeout": self.response_timeout,
+                "timestamp": time.time()
             }
-            
-            return stats
-            
         except Exception as e:
-            self.logger.log_error("Failed to get communication stats", str(e), "AgentIO")
-            return {'error': str(e)}
-
+            self.logger.log_error("Error getting coordination status", str(e), "SystemCoordinationIO")
+            return {"error": str(e)}
+    
     def is_connected(self) -> bool:
-        """Check if Redis is connected"""
+        """Check if system coordination IO is connected"""
         try:
-            if self.redis_client:
-                self.redis_client.ping()
-                return True
-            return False
+            return self.redis_client is not None and self.redis_client.ping()
         except:
             return False
+    
+    def cleanup_pending_responses(self):
+        """Cleanup expired pending responses"""
+        try:
+            current_time = time.time()
+            expired_requests = []
+            
+            for request_id, response in self.pending_coordination_responses.items():
+                if current_time - response.get('timestamp', 0) > self.response_timeout:
+                    expired_requests.append(request_id)
+            
+            for request_id in expired_requests:
+                self.pending_coordination_responses.pop(request_id, None)
+                
+        except Exception as e:
+            self.logger.log_error("Error cleaning up pending responses", str(e), "SystemCoordinationIO")

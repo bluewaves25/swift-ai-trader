@@ -1,469 +1,311 @@
 #!/usr/bin/env python3
 """
-Performance Monitor - Real-time performance tracking and optimization
-Monitors system performance metrics and provides optimization recommendations
-Implements performance alerts and trend analysis
+Performance Monitor - Risk Management Performance Tracking
+Provides comprehensive performance monitoring and alerting for risk management operations.
 """
 
 import time
 import asyncio
-import numpy as np
-from typing import Dict, Any, List, Optional, Callable
-from dataclasses import dataclass
+from typing import Dict, Any, List, Optional
 from enum import Enum
+from ...shared_utils import get_shared_logger
 
 class MetricType(Enum):
     """Types of performance metrics."""
     LATENCY = "latency"
     THROUGHPUT = "throughput"
     ERROR_RATE = "error_rate"
-    CACHE_HIT_RATE = "cache_hit_rate"
+    SUCCESS_RATE = "success_rate"
     MEMORY_USAGE = "memory_usage"
     CPU_USAGE = "cpu_usage"
-    QUEUE_SIZE = "queue_size"
-
-@dataclass
-class PerformanceMetric:
-    """Individual performance metric."""
-    metric_type: MetricType
-    value: float
-    timestamp: float
-    component: str
-    metadata: Dict[str, Any]
 
 class PerformanceAlert:
-    """Performance alert structure."""
+    """Performance alert with severity and details."""
     
-    def __init__(self, alert_type: str, message: str, severity: str, 
-                 component: str, current_value: float, threshold: float):
+    def __init__(self, alert_type: str, message: str, severity: str = "warning", 
+                 threshold: float = 0.0, current_value: float = 0.0):
         self.alert_type = alert_type
         self.message = message
-        self.severity = severity  # low, medium, high, critical
-        self.component = component
-        self.current_value = current_value
+        self.severity = severity
         self.threshold = threshold
+        self.current_value = current_value
         self.timestamp = time.time()
         self.acknowledged = False
+
+class PerformanceMetric:
+    """Individual performance metric with history."""
     
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert alert to dictionary."""
-        return {
-            'alert_type': self.alert_type,
-            'message': self.message,
-            'severity': self.severity,
-            'component': self.component,
-            'current_value': self.current_value,
-            'threshold': self.threshold,
-            'timestamp': self.timestamp,
-            'acknowledged': self.acknowledged
-        }
+    def __init__(self, name: str, metric_type: MetricType, unit: str = ""):
+        self.name = name
+        self.metric_type = metric_type
+        self.unit = unit
+        self.values = []
+        self.timestamps = []
+        self.count = 0
+        self.sum = 0.0
+        self.min_value = float('inf')
+        self.max_value = float('-inf')
+        self.last_update = time.time()
+    
+    def add_value(self, value: float):
+        """Add a new value to the metric."""
+        current_time = time.time()
+        
+        self.values.append(value)
+        self.timestamps.append(current_time)
+        self.count += 1
+        self.sum += value
+        self.min_value = min(self.min_value, value)
+        self.max_value = max(self.max_value, value)
+        self.last_update = current_time
+        
+        # Keep only last 1000 values to prevent memory bloat
+        if len(self.values) > 1000:
+            self.values.pop(0)
+            self.timestamps.pop(0)
+    
+    def get_average(self) -> float:
+        """Get average value."""
+        return self.sum / self.count if self.count > 0 else 0.0
+    
+    def get_recent_average(self, window_seconds: int = 60) -> float:
+        """Get average value over recent time window."""
+        current_time = time.time()
+        recent_values = [
+            value for value, timestamp in zip(self.values, self.timestamps)
+            if current_time - timestamp <= window_seconds
+        ]
+        return sum(recent_values) / len(recent_values) if recent_values else 0.0
 
 class PerformanceMonitor:
-    """Comprehensive performance monitoring system."""
+    """Performance monitoring system for risk management operations."""
     
     def __init__(self, config: Dict[str, Any]):
         self.config = config
+        self.logger = get_shared_logger("risk_management", "performance_monitor")
         
-        # Performance thresholds
-        self.thresholds = config.get('performance_thresholds', {
-            'max_latency_ms': 100,
-            'min_throughput_per_sec': 1000,
-            'max_error_rate': 0.01,
-            'min_cache_hit_rate': 0.9,
-            'max_memory_usage_percent': 80,
-            'max_cpu_usage_percent': 80,
-            'max_queue_size': 1000
+        # Performance metrics
+        self.metrics: Dict[str, PerformanceMetric] = {}
+        self.alerts: List[PerformanceAlert] = []
+        
+        # Configuration
+        self.alert_thresholds = config.get("performance_thresholds", {
+            "latency_critical": 1000.0,  # ms
+            "latency_warning": 500.0,    # ms
+            "error_rate_critical": 0.1,  # 10%
+            "error_rate_warning": 0.05,  # 5%
+            "memory_critical": 0.9,      # 90%
+            "memory_warning": 0.8,       # 80%
         })
         
-        # Metrics storage
-        self.metrics: Dict[MetricType, List[PerformanceMetric]] = {
-            metric_type: [] for metric_type in MetricType
-        }
+        # Initialize default metrics
+        self._initialize_default_metrics()
         
-        # Alerts
-        self.alerts: List[PerformanceAlert] = []
-        self.max_alerts = config.get('max_alerts', 1000)
+        # Monitoring state
+        self.is_monitoring = False
+        self.monitoring_task = None
         
-        # Performance tracking
-        self.performance_history = []
-        self.max_history = config.get('max_history', 10000)
-        
-        # Alert callbacks
-        self.alert_callbacks: List[Callable] = []
-        
-        # Statistics
-        self.total_metrics_recorded = 0
-        self.total_alerts_generated = 0
-        
-        # Performance trends
-        self.trend_analysis_window = config.get('trend_analysis_window', 3600)  # 1 hour
+        self.logger.info("Performance Monitor initialized")
     
-    async def record_operation(self, operation_type: str, duration_ms: float, 
-                              success: bool, component: str = "unknown", 
-                              metadata: Dict[str, Any] = None):
-        """Record operation performance metrics."""
-        try:
-            timestamp = time.time()
-            
-            # Record latency
-            latency_metric = PerformanceMetric(
-                metric_type=MetricType.LATENCY,
-                value=duration_ms,
-                timestamp=timestamp,
-                component=component,
-                metadata=metadata or {}
-            )
-            self._add_metric(MetricType.LATENCY, latency_metric)
-            
-            # Record throughput (operations per second)
-            throughput = 1000 / max(duration_ms, 1)  # ops/sec
-            throughput_metric = PerformanceMetric(
-                metric_type=MetricType.THROUGHPUT,
-                value=throughput,
-                timestamp=timestamp,
-                component=component,
-                metadata=metadata or {}
-            )
-            self._add_metric(MetricType.THROUGHPUT, throughput_metric)
-            
-            # Record error rate
-            error_rate = 0 if success else 1
-            error_metric = PerformanceMetric(
-                metric_type=MetricType.ERROR_RATE,
-                value=error_rate,
-                timestamp=timestamp,
-                component=component,
-                metadata=metadata or {}
-            )
-            self._add_metric(MetricType.ERROR_RATE, error_metric)
-            
-            # Update performance history
-            self._update_performance_history(operation_type, duration_ms, success, component)
-            
-            # Check for performance issues
-            await self._check_performance_alerts(component)
-            
-            self.total_metrics_recorded += 1
-            
-        except Exception as e:
-            print(f"Error recording operation: {e}")
+    def _initialize_default_metrics(self):
+        """Initialize default performance metrics."""
+        default_metrics = [
+            ("risk_calculation_latency", MetricType.LATENCY, "ms"),
+            ("risk_validation_latency", MetricType.LATENCY, "ms"),
+            ("risk_operations_per_second", MetricType.THROUGHPUT, "ops/sec"),
+            ("risk_validation_error_rate", MetricType.ERROR_RATE, "%"),
+            ("risk_calculation_error_rate", MetricType.ERROR_RATE, "%"),
+            ("memory_usage", MetricType.MEMORY_USAGE, "%"),
+            ("cpu_usage", MetricType.CPU_USAGE, "%"),
+        ]
+        
+        for name, metric_type, unit in default_metrics:
+            self.metrics[name] = PerformanceMetric(name, metric_type, unit)
     
-    def _add_metric(self, metric_type: MetricType, metric: PerformanceMetric):
-        """Add metric to storage."""
-        self.metrics[metric_type].append(metric)
+    async def start_monitoring(self):
+        """Start performance monitoring."""
+        if self.is_monitoring:
+            return
         
-        # Keep only recent metrics
-        if len(self.metrics[metric_type]) > self.max_history:
-            self.metrics[metric_type] = self.metrics[metric_type][-self.max_history:]
+        self.is_monitoring = True
+        self.monitoring_task = asyncio.create_task(self._monitoring_loop())
+        self.logger.info("Performance monitoring started")
     
-    def _update_performance_history(self, operation_type: str, duration_ms: float, 
-                                   success: bool, component: str):
-        """Update performance history for trend analysis."""
-        history_entry = {
-            'operation_type': operation_type,
-            'duration_ms': duration_ms,
-            'success': success,
-            'component': component,
-            'timestamp': time.time()
-        }
-        
-        self.performance_history.append(history_entry)
-        
-        # Keep only recent history
-        if len(self.performance_history) > self.max_history:
-            self.performance_history = self.performance_history[-self.max_history:]
-    
-    async def _check_performance_alerts(self, component: str):
-        """Check for performance issues and generate alerts."""
-        try:
-            # Check latency
-            await self._check_latency_alerts(component)
-            
-            # Check throughput
-            await self._check_throughput_alerts(component)
-            
-            # Check error rate
-            await self._check_error_rate_alerts(component)
-            
-            # Check cache hit rate
-            await self._check_cache_alerts(component)
-            
-        except Exception as e:
-            print(f"Error checking performance alerts: {e}")
-    
-    async def _check_latency_alerts(self, component: str):
-        """Check for latency issues."""
-        recent_latencies = self._get_recent_metrics(MetricType.LATENCY, component, 100)
-        
-        if recent_latencies:
-            avg_latency = np.mean([m.value for m in recent_latencies])
-            max_threshold = self.thresholds['max_latency_ms']
-            
-            if avg_latency > max_threshold:
-                alert = PerformanceAlert(
-                    alert_type="high_latency",
-                    message=f"High latency detected for {component}: {avg_latency:.2f}ms > {max_threshold}ms",
-                    severity="high" if avg_latency > max_threshold * 1.5 else "medium",
-                    component=component,
-                    current_value=avg_latency,
-                    threshold=max_threshold
-                )
-                await self._add_alert(alert)
-    
-    async def _check_throughput_alerts(self, component: str):
-        """Check for throughput issues."""
-        recent_throughput = self._get_recent_metrics(MetricType.THROUGHPUT, component, 100)
-        
-        if recent_throughput:
-            avg_throughput = np.mean([m.value for m in recent_throughput])
-            min_threshold = self.thresholds['min_throughput_per_sec']
-            
-            if avg_throughput < min_threshold:
-                alert = PerformanceAlert(
-                    alert_type="low_throughput",
-                    message=f"Low throughput detected for {component}: {avg_throughput:.2f}/sec < {min_threshold}/sec",
-                    severity="high" if avg_throughput < min_threshold * 0.5 else "medium",
-                    component=component,
-                    current_value=avg_throughput,
-                    threshold=min_threshold
-                )
-                await self._add_alert(alert)
-    
-    async def _check_error_rate_alerts(self, component: str):
-        """Check for error rate issues."""
-        recent_errors = self._get_recent_metrics(MetricType.ERROR_RATE, component, 100)
-        
-        if recent_errors:
-            error_rate = np.mean([m.value for m in recent_errors])
-            max_threshold = self.thresholds['max_error_rate']
-            
-            if error_rate > max_threshold:
-                alert = PerformanceAlert(
-                    alert_type="high_error_rate",
-                    message=f"High error rate detected for {component}: {error_rate:.2%} > {max_threshold:.2%}",
-                    severity="critical" if error_rate > max_threshold * 2 else "high",
-                    component=component,
-                    current_value=error_rate,
-                    threshold=max_threshold
-                )
-                await self._add_alert(alert)
-    
-    async def _check_cache_alerts(self, component: str):
-        """Check for cache performance issues."""
-        recent_cache = self._get_recent_metrics(MetricType.CACHE_HIT_RATE, component, 100)
-        
-        if recent_cache:
-            cache_hit_rate = np.mean([m.value for m in recent_cache])
-            min_threshold = self.thresholds['min_cache_hit_rate']
-            
-            if cache_hit_rate < min_threshold:
-                alert = PerformanceAlert(
-                    alert_type="low_cache_hit_rate",
-                    message=f"Low cache hit rate for {component}: {cache_hit_rate:.2%} < {min_threshold:.2%}",
-                    severity="medium",
-                    component=component,
-                    current_value=cache_hit_rate,
-                    threshold=min_threshold
-                )
-                await self._add_alert(alert)
-    
-    def _get_recent_metrics(self, metric_type: MetricType, component: str, 
-                           count: int) -> List[PerformanceMetric]:
-        """Get recent metrics for a specific type and component."""
-        all_metrics = self.metrics[metric_type]
-        
-        # Filter by component and get recent ones
-        component_metrics = [m for m in all_metrics if m.component == component]
-        return component_metrics[-count:] if component_metrics else []
-    
-    async def _add_alert(self, alert: PerformanceAlert):
-        """Add performance alert."""
-        self.alerts.append(alert)
-        self.total_alerts_generated += 1
-        
-        # Keep only recent alerts
-        if len(self.alerts) > self.max_alerts:
-            self.alerts = self.alerts[-self.max_alerts:]
-        
-        # Trigger alert callbacks
-        for callback in self.alert_callbacks:
+    async def stop_monitoring(self):
+        """Stop performance monitoring."""
+        self.is_monitoring = False
+        if self.monitoring_task:
+            self.monitoring_task.cancel()
             try:
-                if asyncio.iscoroutinefunction(callback):
-                    await callback(alert)
-                else:
-                    callback(alert)
+                await self.monitoring_task
+            except asyncio.CancelledError:
+                pass
+        self.logger.info("Performance monitoring stopped")
+    
+    async def _monitoring_loop(self):
+        """Main monitoring loop."""
+        while self.is_monitoring:
+            try:
+                # Check for alerts
+                await self._check_performance_alerts()
+                
+                # Clean up old alerts
+                await self._cleanup_old_alerts()
+                
+                await asyncio.sleep(5.0)  # Check every 5 seconds
+                
             except Exception as e:
-                print(f"Error in alert callback: {e}")
+                self.logger.error(f"Error in monitoring loop: {e}")
+                await asyncio.sleep(5.0)
     
-    def add_alert_callback(self, callback: Callable):
-        """Add callback function for performance alerts."""
-        self.alert_callbacks.append(callback)
-    
-    def get_performance_summary(self, component: str = None, 
-                               time_window: float = 3600) -> Dict[str, Any]:
-        """Get performance summary for a component and time window."""
+    async def _check_performance_alerts(self):
+        """Check for performance alerts based on thresholds."""
         try:
-            cutoff_time = time.time() - time_window
-            
-            summary = {}
-            
-            for metric_type in MetricType:
-                metrics = self.metrics[metric_type]
+            for metric_name, metric in self.metrics.items():
+                current_value = metric.get_recent_average(60)  # 1 minute window
                 
-                # Filter by time and component
-                if component:
-                    filtered_metrics = [m for m in metrics 
-                                      if m.timestamp > cutoff_time and m.component == component]
-                else:
-                    filtered_metrics = [m for m in metrics if m.timestamp > cutoff_time]
+                if metric.metric_type == MetricType.LATENCY:
+                    if current_value > self.alert_thresholds["latency_critical"]:
+                        await self._create_alert(metric_name, "critical", current_value, 
+                                               self.alert_thresholds["latency_critical"])
+                    elif current_value > self.alert_thresholds["latency_warning"]:
+                        await self._create_alert(metric_name, "warning", current_value, 
+                                               self.alert_thresholds["latency_warning"])
                 
-                if filtered_metrics:
-                    values = [m.value for m in filtered_metrics]
-                    summary[metric_type.value] = {
-                        'count': len(values),
-                        'min': min(values),
-                        'max': max(values),
-                        'mean': np.mean(values),
-                        'median': np.median(values),
-                        'std': np.std(values) if len(values) > 1 else 0
-                    }
-                else:
-                    summary[metric_type.value] = None
-            
-            return summary
-            
+                elif metric.metric_type == MetricType.ERROR_RATE:
+                    if current_value > self.alert_thresholds["error_rate_critical"]:
+                        await self._create_alert(metric_name, "critical", current_value, 
+                                               self.alert_thresholds["error_rate_critical"])
+                    elif current_value > self.alert_thresholds["error_rate_warning"]:
+                        await self._create_alert(metric_name, "warning", current_value, 
+                                               self.alert_thresholds["error_rate_warning"])
+                
+                elif metric.metric_type == MetricType.MEMORY_USAGE:
+                    if current_value > self.alert_thresholds["memory_critical"]:
+                        await self._create_alert(metric_name, "critical", current_value, 
+                                               self.alert_thresholds["memory_critical"])
+                    elif current_value > self.alert_thresholds["memory_warning"]:
+                        await self._create_alert(metric_name, "warning", current_value, 
+                                               self.alert_thresholds["memory_warning"])
+        
         except Exception as e:
-            print(f"Error getting performance summary: {e}")
+            self.logger.error(f"Error checking performance alerts: {e}")
+    
+    async def _create_alert(self, metric_name: str, severity: str, current_value: float, threshold: float):
+        """Create a new performance alert."""
+        try:
+            # Check if similar alert already exists
+            existing_alert = next(
+                (alert for alert in self.alerts 
+                 if alert.alert_type == metric_name and not alert.acknowledged), None
+            )
+            
+            if not existing_alert:
+                message = f"{metric_name} exceeded {severity} threshold: {current_value:.2f} > {threshold:.2f}"
+                alert = PerformanceAlert(
+                    alert_type=metric_name,
+                    message=message,
+                    severity=severity,
+                    threshold=threshold,
+                    current_value=current_value
+                )
+                self.alerts.append(alert)
+                self.logger.warning(f"Performance alert: {message}")
+        
+        except Exception as e:
+            self.logger.error(f"Error creating alert: {e}")
+    
+    async def _cleanup_old_alerts(self):
+        """Clean up old acknowledged alerts."""
+        try:
+            current_time = time.time()
+            self.alerts = [
+                alert for alert in self.alerts
+                if not alert.acknowledged or (current_time - alert.timestamp) < 3600  # Keep for 1 hour
+            ]
+        except Exception as e:
+            self.logger.error(f"Error cleaning up old alerts: {e}")
+    
+    def record_metric(self, metric_name: str, value: float):
+        """Record a performance metric value."""
+        try:
+            if metric_name in self.metrics:
+                self.metrics[metric_name].add_value(value)
+            else:
+                # Create new metric if it doesn't exist
+                self.metrics[metric_name] = PerformanceMetric(metric_name, MetricType.LATENCY)
+                self.metrics[metric_name].add_value(value)
+        
+        except Exception as e:
+            self.logger.error(f"Error recording metric {metric_name}: {e}")
+    
+    def record_latency(self, operation_name: str, latency_ms: float):
+        """Record operation latency."""
+        metric_name = f"{operation_name}_latency"
+        self.record_metric(metric_name, latency_ms)
+    
+    def record_throughput(self, operation_name: str, operations_per_second: float):
+        """Record operation throughput."""
+        metric_name = f"{operation_name}_throughput"
+        self.record_metric(metric_name, operations_per_second)
+    
+    def record_error_rate(self, operation_name: str, error_rate: float):
+        """Record operation error rate."""
+        metric_name = f"{operation_name}_error_rate"
+        self.record_metric(metric_name, error_rate)
+    
+    def get_metric_summary(self) -> Dict[str, Any]:
+        """Get summary of all metrics."""
+        try:
+            summary = {}
+            for metric_name, metric in self.metrics.items():
+                summary[metric_name] = {
+                    "current": metric.get_recent_average(60),
+                    "average": metric.get_average(),
+                    "min": metric.min_value if metric.min_value != float('inf') else 0.0,
+                    "max": metric.max_value if metric.max_value != float('-inf') else 0.0,
+                    "count": metric.count,
+                    "unit": metric.unit
+                }
+            return summary
+        
+        except Exception as e:
+            self.logger.error(f"Error getting metric summary: {e}")
             return {}
     
-    def get_performance_trends(self, component: str = None, 
-                              time_window: float = 3600) -> Dict[str, Any]:
-        """Analyze performance trends over time."""
+    def get_active_alerts(self) -> List[Dict[str, Any]]:
+        """Get active (unacknowledged) alerts."""
         try:
-            cutoff_time = time.time() - time_window
-            
-            # Get recent performance history
-            recent_history = [h for h in self.performance_history 
-                            if h['timestamp'] > cutoff_time]
-            
-            if component:
-                recent_history = [h for h in recent_history if h['component'] == component]
-            
-            if not recent_history:
-                return {'trend': 'insufficient_data', 'message': 'No data available'}
-            
-            # Analyze trends
-            latencies = [h['duration_ms'] for h in recent_history]
-            success_rates = [1 if h['success'] else 0 for h in recent_history]
-            
-            # Calculate trend indicators
-            if len(latencies) > 10:
-                # Split data into two halves for trend comparison
-                mid_point = len(latencies) // 2
-                first_half = latencies[:mid_point]
-                second_half = latencies[mid_point:]
-                
-                first_avg = np.mean(first_half)
-                second_avg = np.mean(second_half)
-                
-                if second_avg < first_avg * 0.9:
-                    latency_trend = "improving"
-                elif second_avg > first_avg * 1.1:
-                    latency_trend = "degrading"
-                else:
-                    latency_trend = "stable"
-            else:
-                latency_trend = "insufficient_data"
-            
-            # Success rate trend
-            if len(success_rates) > 10:
-                mid_point = len(success_rates) // 2
-                first_half = success_rates[:mid_point]
-                second_half = success_rates[mid_point:]
-                
-                first_avg = np.mean(first_half)
-                second_avg = np.mean(second_half)
-                
-                if second_avg > first_avg * 1.05:
-                    success_trend = "improving"
-                elif second_avg < first_avg * 0.95:
-                    success_trend = "degrading"
-                else:
-                    success_trend = "stable"
-            else:
-                success_trend = "insufficient_data"
-            
-            return {
-                'latency_trend': latency_trend,
-                'success_trend': success_trend,
-                'overall_trend': self._determine_overall_trend(latency_trend, success_trend),
-                'data_points': len(recent_history),
-                'time_window': time_window
-            }
-            
+            return [
+                {
+                    "alert_type": alert.alert_type,
+                    "message": alert.message,
+                    "severity": alert.severity,
+                    "threshold": alert.threshold,
+                    "current_value": alert.current_value,
+                    "timestamp": alert.timestamp
+                }
+                for alert in self.alerts if not alert.acknowledged
+            ]
         except Exception as e:
-            print(f"Error analyzing performance trends: {e}")
-            return {'trend': 'error', 'message': str(e)}
+            self.logger.error(f"Error getting active alerts: {e}")
+            return []
     
-    def _determine_overall_trend(self, latency_trend: str, success_trend: str) -> str:
-        """Determine overall performance trend."""
-        if latency_trend == "improving" and success_trend == "improving":
-            return "strongly_improving"
-        elif latency_trend == "improving" or success_trend == "improving":
-            return "improving"
-        elif latency_trend == "degrading" and success_trend == "degrading":
-            return "strongly_degrading"
-        elif latency_trend == "degrading" or success_trend == "degrading":
-            return "degrading"
-        else:
-            return "stable"
+    def acknowledge_alert(self, alert_type: str):
+        """Acknowledge an alert."""
+        try:
+            for alert in self.alerts:
+                if alert.alert_type == alert_type and not alert.acknowledged:
+                    alert.acknowledged = True
+                    self.logger.info(f"Alert acknowledged: {alert_type}")
+                    break
+        except Exception as e:
+            self.logger.error(f"Error acknowledging alert: {e}")
     
-    def get_alerts(self, severity: str = None, component: str = None, 
-                   acknowledged: bool = None) -> List[PerformanceAlert]:
-        """Get performance alerts with optional filtering."""
-        filtered_alerts = self.alerts
-        
-        if severity:
-            filtered_alerts = [a for a in filtered_alerts if a.severity == severity]
-        
-        if component:
-            filtered_alerts = [a for a in filtered_alerts if a.component == component]
-        
-        if acknowledged is not None:
-            filtered_alerts = [a for a in filtered_alerts if a.acknowledged == acknowledged]
-        
-        return filtered_alerts
-    
-    def acknowledge_alert(self, alert_index: int):
-        """Acknowledge a performance alert."""
-        if 0 <= alert_index < len(self.alerts):
-            self.alerts[alert_index].acknowledged = True
-    
-    def get_monitor_stats(self) -> Dict[str, Any]:
-        """Get monitor statistics."""
-        return {
-            'total_metrics_recorded': self.total_metrics_recorded,
-            'total_alerts_generated': self.total_alerts_generated,
-            'current_alerts': len(self.alerts),
-            'unacknowledged_alerts': len([a for a in self.alerts if not a.acknowledged]),
-            'metrics_storage': {metric_type.value: len(metrics) for metric_type, metrics in self.metrics.items()},
-            'performance_history_size': len(self.performance_history),
-            'alert_callbacks': len(self.alert_callbacks),
-            'timestamp': time.time()
-        }
-    
-    def clear_metrics(self, metric_type: MetricType = None):
-        """Clear metrics storage."""
-        if metric_type:
-            self.metrics[metric_type].clear()
-        else:
-            for metrics_list in self.metrics.values():
-                metrics_list.clear()
-    
-    def clear_alerts(self):
-        """Clear all alerts."""
-        self.alerts.clear()
-    
-    def clear_history(self):
-        """Clear performance history."""
-        self.performance_history.clear()
+    async def cleanup(self):
+        """Cleanup resources."""
+        try:
+            await self.stop_monitoring()
+            self.logger.info("Performance Monitor cleaned up")
+        except Exception as e:
+            self.logger.error(f"Error during cleanup: {e}")

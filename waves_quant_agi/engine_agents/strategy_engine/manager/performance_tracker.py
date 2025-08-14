@@ -1,51 +1,81 @@
 #!/usr/bin/env python3
 """
-Performance Tracker - Fixed and Enhanced
-Tracks strategy performance metrics and flags underperforming strategies.
+Performance Tracker
+Tracks strategy performance metrics (PnL, Sharpe, drawdowns).
 """
 
-from typing import Dict, Any, List, Optional
+import asyncio
 import time
 import numpy as np
-from engine_agents.shared_utils import get_shared_redis, get_shared_logger
+from typing import Dict, Any, List, Optional, Tuple
+from engine_agents.shared_utils import get_shared_logger, get_shared_redis
+
+# Import consolidated trading functionality
+from ..trading.memory.trading_context import TradingContext
+from ..trading.learning.trading_research_engine import TradingResearchEngine
 
 class PerformanceTracker:
-    """Performance tracker for monitoring strategy performance."""
-    
+    """Tracks and analyzes strategy performance metrics."""
+
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.logger = get_shared_logger("strategy_engine", "performance_tracker")
         self.redis_conn = get_shared_redis()
-        
-        # Performance thresholds
-        self.sharpe_threshold = config.get("sharpe_threshold", 1.0)
-        self.drawdown_threshold = config.get("drawdown_threshold", 0.1)
-        self.return_threshold = config.get("return_threshold", 0.05)
-        self.volatility_threshold = config.get("volatility_threshold", 0.3)
-        
-        # Performance tracking state
-        self.performance_history: Dict[str, List[Dict[str, Any]]] = {}
-        self.alert_history: List[Dict[str, Any]] = []
-        
+
+        # Initialize consolidated trading components
+        self.trading_context = TradingContext(config)
+        self.trading_research_engine = TradingResearchEngine(config)
+
+        # Performance tracking configuration
+        self.tracking_interval = config.get("tracking_interval", 30)  # 30 seconds
+        self.max_history = config.get("max_history", 1000)
+        self.alert_thresholds = config.get("alert_thresholds", {
+            "max_drawdown": -0.1,  # 10% max drawdown
+            "min_sharpe": 0.5,     # Minimum Sharpe ratio
+            "max_loss_rate": 0.4    # Maximum 40% loss rate
+        })
+
+        # Performance data storage
+        self.performance_history: List[Dict[str, Any]] = []
+        self.strategy_metrics: Dict[str, Dict[str, Any]] = {}
+        self.alerts: List[Dict[str, Any]] = []
+
+        # Tracking statistics
         self.stats = {
+            "performance_checks": 0,
+            "alerts_generated": 0,
             "strategies_tracked": 0,
-            "performance_alerts": 0,
-            "metrics_calculated": 0,
-            "errors": 0,
+            "tracking_errors": 0,
             "start_time": time.time()
         }
+
+    async def initialize(self) -> bool:
+        """Initialize the performance tracker."""
+        try:
+            self.logger.info("Initializing Performance Tracker...")
+            
+            # Initialize trading components
+            await self.trading_context.initialize()
+            await self.trading_research_engine.initialize()
+            
+            self.logger.info("Performance Tracker initialized successfully")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to initialize performance tracker: {e}")
+            return False
 
     async def track_performance(self, strategy_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Track strategy performance metrics (PnL, Sharpe, drawdowns)."""
         try:
-            performances = []
+            tracked_results = []
             
             for data in strategy_data:
                 strategy_id = data.get("strategy_id", "unknown")
                 symbol = data.get("symbol", "unknown")
                 strategy_type = data.get("type", "unknown")
                 
-                # Get historical performance data
+                # Get historical performance data from trading context
                 historical_data = await self._get_strategy_history(strategy_id)
                 
                 # Calculate performance metrics
@@ -53,213 +83,193 @@ class PerformanceTracker:
                     strategy_id, symbol, strategy_type, historical_data
                 )
                 
-                if performance_metrics:
-                    performances.append(performance_metrics)
-                    
-                    # Store performance metrics
-                    await self._store_performance_metrics(strategy_id, performance_metrics)
-                    
-                    # Check for performance alerts
-                    if await self._check_performance_alerts(performance_metrics):
-                        await self._flag_strategy(strategy_id, symbol, performance_metrics)
-                    
-                    self.stats["strategies_tracked"] += 1
-                    self.stats["metrics_calculated"] += 1
-
-            self.logger.info(f"Tracked performance for {len(performances)} strategies")
-            return performances
+                # Store performance data in trading context
+                await self.trading_context.store_pnl_snapshot({
+                    "strategy_id": strategy_id,
+                    "symbol": symbol,
+                    "strategy_type": strategy_type,
+                    "performance_metrics": performance_metrics,
+                    "timestamp": int(time.time())
+                })
+                
+                # Check for performance alerts
+                if await self._check_performance_alerts(performance_metrics):
+                    alert = await self._flag_strategy(strategy_id, symbol, performance_metrics)
+                    if alert:
+                        self.alerts.append(alert)
+                        self.stats["alerts_generated"] += 1
+                
+                # Update strategy metrics
+                self.strategy_metrics[strategy_id] = performance_metrics
+                
+                tracked_results.append({
+                    "strategy_id": strategy_id,
+                    "symbol": symbol,
+                    "strategy_type": strategy_type,
+                    "performance_metrics": performance_metrics,
+                    "timestamp": int(time.time())
+                })
+                
+                self.stats["performance_checks"] += 1
+            
+            # Store performance history
+            self.performance_history.extend(tracked_results)
+            
+            # Limit history size
+            if len(self.performance_history) > self.max_history:
+                self.performance_history = self.performance_history[-self.max_history:]
+            
+            self.logger.info(f"Tracked performance for {len(tracked_results)} strategies")
+            return tracked_results
             
         except Exception as e:
             self.logger.error(f"Error tracking performance: {e}")
-            self.stats["errors"] += 1
+            self.stats["tracking_errors"] += 1
             return []
 
     async def _get_strategy_history(self, strategy_id: str) -> List[Dict[str, Any]]:
         """Get historical performance data for a strategy."""
         try:
-            # Get from Redis
-            history_key = f"strategy_engine:performance_history:{strategy_id}"
-            history_data = self.redis_conn.get(history_key)
+            # Get recent signals and execution results from trading context
+            signals = await self.trading_context.get_recent_signals(strategy_id, limit=100)
+            execution_results = await self.trading_context.get_recent_execution_results(strategy_id, limit=100)
+            pnl_snapshots = await self.trading_context.get_recent_pnl_snapshots(strategy_id, limit=100)
             
-            if history_data:
-                import json
-                return json.loads(history_data)
-            
-            return []
+            return signals + execution_results + pnl_snapshots
             
         except Exception as e:
-            self.logger.error(f"Error getting strategy history: {e}")
+            self.logger.error(f"Error getting strategy history for {strategy_id}: {e}")
             return []
 
     async def _calculate_performance_metrics(self, strategy_id: str, symbol: str, 
-                                           strategy_type: str, historical_data: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+                                           strategy_type: str, historical_data: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Calculate comprehensive performance metrics."""
         try:
             if not historical_data:
-                return None
+                return {
+                    "strategy_id": strategy_id,
+                    "symbol": symbol,
+                    "strategy_type": strategy_type,
+                    "total_pnl": 0.0,
+                    "sharpe_ratio": 0.0,
+                    "max_drawdown": 0.0,
+                    "win_rate": 0.0,
+                    "profit_factor": 0.0,
+                    "total_trades": 0,
+                    "successful_trades": 0,
+                    "average_trade": 0.0,
+                    "volatility": 0.0,
+                    "calmar_ratio": 0.0
+                }
             
-            # Extract returns and other metrics
-            returns = [data.get("return", 0.0) for data in historical_data]
-            pnl_values = [data.get("pnl", 0.0) for data in historical_data]
-            volumes = [data.get("volume", 0.0) for data in historical_data]
+            # Extract PnL data
+            pnl_data = []
+            trade_results = []
             
-            if not returns or all(r == 0.0 for r in returns):
-                return None
+            for data in historical_data:
+                if "pnl" in data:
+                    pnl_data.append(data["pnl"])
+                if "success" in data:
+                    trade_results.append(data["success"])
+                if "execution_data" in data and "pnl" in data["execution_data"]:
+                    pnl_data.append(data["execution_data"]["pnl"])
+                if "performance_data" in data and "total_pnl" in data["performance_data"]:
+                    pnl_data.append(data["performance_data"]["total_pnl"])
+            
+            if not pnl_data:
+                return {
+                    "strategy_id": strategy_id,
+                    "symbol": symbol,
+                    "strategy_type": strategy_type,
+                    "total_pnl": 0.0,
+                    "sharpe_ratio": 0.0,
+                    "max_drawdown": 0.0,
+                    "win_rate": 0.0,
+                    "profit_factor": 0.0,
+                    "total_trades": 0,
+                    "successful_trades": 0,
+                    "average_trade": 0.0,
+                    "volatility": 0.0,
+                    "calmar_ratio": 0.0
+                }
             
             # Calculate basic metrics
-            sharpe_ratio = self._calculate_sharpe(returns)
-            max_drawdown = self._calculate_max_drawdown(returns)
-            total_return = sum(returns)
-            avg_return = np.mean(returns)
-            volatility = np.std(returns) if len(returns) > 1 else 0.0
+            total_pnl = sum(pnl_data)
+            total_trades = len(pnl_data)
+            successful_trades = len([p for p in pnl_data if p > 0])
+            win_rate = successful_trades / total_trades if total_trades > 0 else 0.0
+            average_trade = total_pnl / total_trades if total_trades > 0 else 0.0
             
-            # Calculate advanced metrics
-            win_rate = self._calculate_win_rate(returns)
-            profit_factor = self._calculate_profit_factor(returns)
-            max_consecutive_losses = self._calculate_max_consecutive_losses(returns)
+            # Calculate Sharpe ratio
+            if len(pnl_data) > 1:
+                returns = np.diff(pnl_data)
+                if len(returns) > 0:
+                    sharpe_ratio = np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0.0
+                    volatility = np.std(returns)
+                else:
+                    sharpe_ratio = 0.0
+                    volatility = 0.0
+            else:
+                sharpe_ratio = 0.0
+                volatility = 0.0
             
-            # Calculate position sizing metrics
-            avg_position_size = np.mean(volumes) if volumes else 0.0
-            position_efficiency = self._calculate_position_efficiency(pnl_values, volumes)
+            # Calculate max drawdown
+            cumulative_pnl = np.cumsum(pnl_data)
+            running_max = np.maximum.accumulate(cumulative_pnl)
+            drawdowns = cumulative_pnl - running_max
+            max_drawdown = np.min(drawdowns) if len(drawdowns) > 0 else 0.0
             
-            performance = {
-                "type": "performance_metrics",
+            # Calculate profit factor
+            gross_profit = sum([p for p in pnl_data if p > 0])
+            gross_loss = abs(sum([p for p in pnl_data if p < 0]))
+            profit_factor = gross_profit / gross_loss if gross_loss > 0 else float('inf')
+            
+            # Calculate Calmar ratio
+            calmar_ratio = total_pnl / abs(max_drawdown) if max_drawdown != 0 else 0.0
+            
+            return {
                 "strategy_id": strategy_id,
                 "symbol": symbol,
                 "strategy_type": strategy_type,
-                "sharpe_ratio": sharpe_ratio,
-                "max_drawdown": max_drawdown,
-                "total_return": total_return,
-                "avg_return": avg_return,
-                "volatility": volatility,
-                "win_rate": win_rate,
-                "profit_factor": profit_factor,
-                "max_consecutive_losses": max_consecutive_losses,
-                "avg_position_size": avg_position_size,
-                "position_efficiency": position_efficiency,
-                "timestamp": int(time.time()),
-                "description": f"Performance for {strategy_id} ({symbol}): Sharpe {sharpe_ratio:.2f}, Return {total_return:.4f}"
+                "total_pnl": float(total_pnl),
+                "sharpe_ratio": float(sharpe_ratio),
+                "max_drawdown": float(max_drawdown),
+                "win_rate": float(win_rate),
+                "profit_factor": float(profit_factor),
+                "total_trades": total_trades,
+                "successful_trades": successful_trades,
+                "average_trade": float(average_trade),
+                "volatility": float(volatility),
+                "calmar_ratio": float(calmar_ratio),
+                "last_calculation": int(time.time())
             }
             
-            return performance
-            
         except Exception as e:
-            self.logger.error(f"Error calculating performance metrics: {e}")
-            return None
+            self.logger.error(f"Error calculating performance metrics for {strategy_id}: {e}")
+            return {
+                "strategy_id": strategy_id,
+                "symbol": symbol,
+                "strategy_type": strategy_type,
+                "error": str(e)
+            }
 
-    def _calculate_sharpe(self, returns: List[float]) -> float:
-        """Calculate Sharpe ratio for strategy returns."""
-        try:
-            if not returns or len(returns) < 2:
-                return 0.0
-            
-            mean_return = np.mean(returns)
-            std_return = np.std(returns)
-            
-            if std_return == 0:
-                return 0.0
-            
-            # Annualized Sharpe ratio (assuming daily returns)
-            return (mean_return / std_return) * np.sqrt(252)
-            
-        except Exception as e:
-            self.logger.error(f"Error calculating Sharpe ratio: {e}")
-            return 0.0
-
-    def _calculate_max_drawdown(self, returns: List[float]) -> float:
-        """Calculate maximum drawdown from returns."""
-        try:
-            if not returns:
-                return 0.0
-            
-            cumulative = np.cumsum(returns)
-            peak = np.maximum.accumulate(cumulative)
-            drawdown = (peak - cumulative) / peak
-            
-            return float(np.max(drawdown)) if len(drawdown) > 0 else 0.0
-            
-        except Exception as e:
-            self.logger.error(f"Error calculating max drawdown: {e}")
-            return 0.0
-
-    def _calculate_win_rate(self, returns: List[float]) -> float:
-        """Calculate win rate (percentage of positive returns)."""
-        try:
-            if not returns:
-                return 0.0
-            
-            positive_returns = sum(1 for r in returns if r > 0)
-            return positive_returns / len(returns)
-            
-        except Exception as e:
-            self.logger.error(f"Error calculating win rate: {e}")
-            return 0.0
-
-    def _calculate_profit_factor(self, returns: List[float]) -> float:
-        """Calculate profit factor (gross profit / gross loss)."""
-        try:
-            if not returns:
-                return 0.0
-            
-            gross_profit = sum(r for r in returns if r > 0)
-            gross_loss = abs(sum(r for r in returns if r < 0))
-            
-            return gross_profit / gross_loss if gross_loss > 0 else 0.0
-            
-        except Exception as e:
-            self.logger.error(f"Error calculating profit factor: {e}")
-            return 0.0
-
-    def _calculate_max_consecutive_losses(self, returns: List[float]) -> int:
-        """Calculate maximum consecutive losses."""
-        try:
-            if not returns:
-                return 0
-            
-            max_consecutive = 0
-            current_consecutive = 0
-            
-            for return_val in returns:
-                if return_val < 0:
-                    current_consecutive += 1
-                    max_consecutive = max(max_consecutive, current_consecutive)
-                else:
-                    current_consecutive = 0
-            
-            return max_consecutive
-            
-        except Exception as e:
-            self.logger.error(f"Error calculating max consecutive losses: {e}")
-            return 0
-
-    def _calculate_position_efficiency(self, pnl_values: List[float], volumes: List[float]) -> float:
-        """Calculate position efficiency (PnL per unit of volume)."""
-        try:
-            if not pnl_values or not volumes or len(pnl_values) != len(volumes):
-                return 0.0
-            
-            total_pnl = sum(pnl_values)
-            total_volume = sum(volumes)
-            
-            return total_pnl / total_volume if total_volume > 0 else 0.0
-            
-        except Exception as e:
-            self.logger.error(f"Error calculating position efficiency: {e}")
-            return 0.0
-
-    async def _check_performance_alerts(self, performance: Dict[str, Any]) -> bool:
+    async def _check_performance_alerts(self, performance_metrics: Dict[str, Any]) -> bool:
         """Check if performance metrics trigger alerts."""
         try:
-            sharpe = performance.get("sharpe_ratio", 0.0)
-            drawdown = performance.get("max_drawdown", 0.0)
-            total_return = performance.get("total_return", 0.0)
-            volatility = performance.get("volatility", 0.0)
+            max_drawdown = performance_metrics.get("max_drawdown", 0.0)
+            sharpe_ratio = performance_metrics.get("sharpe_ratio", 0.0)
+            win_rate = performance_metrics.get("win_rate", 0.0)
             
-            # Check various thresholds
-            if (sharpe < self.sharpe_threshold or 
-                drawdown > self.drawdown_threshold or 
-                total_return < -self.return_threshold or
-                volatility > self.volatility_threshold):
+            # Check drawdown threshold
+            if max_drawdown < self.alert_thresholds["max_drawdown"]:
+                return True
+            
+            # Check Sharpe ratio threshold
+            if sharpe_ratio < self.alert_thresholds["min_sharpe"]:
+                return True
+            
+            # Check loss rate threshold
+            if (1 - win_rate) > self.alert_thresholds["max_loss_rate"]:
                 return True
             
             return False
@@ -268,183 +278,74 @@ class PerformanceTracker:
             self.logger.error(f"Error checking performance alerts: {e}")
             return False
 
-    async def _flag_strategy(self, strategy_id: str, symbol: str, performance: Dict[str, Any]):
-        """Flag underperforming strategies for review."""
+    async def _flag_strategy(self, strategy_id: str, symbol: str, 
+                           performance_metrics: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Flag a strategy for poor performance."""
         try:
-            issue = {
-                "type": "strategy_flagged",
+            alert = {
+                "type": "performance_alert",
                 "strategy_id": strategy_id,
                 "symbol": symbol,
-                "sharpe_ratio": performance.get("sharpe_ratio", 0.0),
-                "max_drawdown": performance.get("max_drawdown", 0.0),
-                "total_return": performance.get("total_return", 0.0),
-                "volatility": performance.get("volatility", 0.0),
-                "timestamp": int(time.time()),
-                "description": f"Flagged {strategy_id} for {symbol}: Sharpe {performance.get('sharpe_ratio', 0.0):.2f}, Drawdown {performance.get('max_drawdown', 0.0):.2f}"
+                "alert_timestamp": int(time.time()),
+                "performance_metrics": performance_metrics,
+                "alert_reasons": []
             }
             
-            # Store alert
-            self.alert_history.append(issue)
+            # Determine alert reasons
+            if performance_metrics.get("max_drawdown", 0.0) < self.alert_thresholds["max_drawdown"]:
+                alert["alert_reasons"].append("excessive_drawdown")
             
-            # Store alert with proper JSON serialization
-            try:
-                import json
-                self.redis_conn.set(
-                    f"strategy_engine:performance_alert:{strategy_id}:{int(time.time())}", 
-                    json.dumps(issue), 
-                    ex=604800
-                )
-                
-            except json.JSONEncodeError as e:
-                self.logger.error(f"JSON encoding error storing performance alert: {e}")
-            except ConnectionError as e:
-                self.logger.error(f"Redis connection error storing performance alert: {e}")
-            except Exception as e:
-                self.logger.error(f"Unexpected error storing performance alert: {e}")
+            if performance_metrics.get("sharpe_ratio", 0.0) < self.alert_thresholds["min_sharpe"]:
+                alert["alert_reasons"].append("low_sharpe_ratio")
             
-            self.logger.warning(f"Performance alert: {issue['description']}")
-            self.stats["performance_alerts"] += 1
+            if (1 - performance_metrics.get("win_rate", 0.0)) > self.alert_thresholds["max_loss_rate"]:
+                alert["alert_reasons"].append("high_loss_rate")
             
-            # Notify core
-            await self.notify_core(issue)
+            # Store alert in trading context
+            await self.trading_context.store_signal({
+                "type": "performance_alert",
+                "alert_data": alert,
+                "timestamp": int(time.time())
+            })
+            
+            self.logger.warning(f"Performance alert generated for strategy {strategy_id}: {alert['alert_reasons']}")
+            return alert
             
         except Exception as e:
-            self.logger.error(f"Error flagging strategy: {e}")
+            self.logger.error(f"Error flagging strategy {strategy_id}: {e}")
+            return None
 
-    async def _store_performance_metrics(self, strategy_id: str, performance: Dict[str, Any]):
-        """Store performance metrics in Redis."""
+    async def get_performance_summary(self) -> Dict[str, Any]:
+        """Get comprehensive performance summary."""
         try:
-            if not isinstance(performance, dict):
-                self.logger.error(f"Invalid performance type: {type(performance)}, expected dict")
-                return
-                
-            # Store current metrics with proper JSON serialization
-            try:
-                import json
-                self.redis_conn.set(
-                    f"strategy_engine:performance:{strategy_id}", 
-                    json.dumps(performance), 
-                    ex=604800
-                )
-                
-            except json.JSONEncodeError as e:
-                self.logger.error(f"JSON encoding error storing performance metrics: {e}")
-                return
-            except ConnectionError as e:
-                self.logger.error(f"Redis connection error storing performance metrics: {e}")
-                return
-            except Exception as e:
-                self.logger.error(f"Unexpected error storing performance metrics: {e}")
-                return
+            # Use trading research engine to analyze performance patterns
+            performance_analysis = await self.trading_research_engine.analyze_trading_performance(
+                self.performance_history
+            )
             
-            # Add to history
-            history_key = f"strategy_engine:performance_history:{strategy_id}"
-            current_history = await self._get_strategy_history(strategy_id)
-            current_history.append(performance)
-            
-            # Keep only last 100 entries
-            if len(current_history) > 100:
-                current_history = current_history[-100:]
-            
-            # Store history with proper JSON serialization
-            try:
-                self.redis_conn.set(
-                    history_key, 
-                    json.dumps(current_history), 
-                    ex=604800
-                )
-                
-            except json.JSONEncodeError as e:
-                self.logger.error(f"JSON encoding error storing performance history: {e}")
-            except ConnectionError as e:
-                self.logger.error(f"Redis connection error storing performance history: {e}")
-            except Exception as e:
-                self.logger.error(f"Unexpected error storing performance history: {e}")
+            return {
+                "stats": self.stats,
+                "performance_history_count": len(self.performance_history),
+                "strategies_tracked_count": len(self.strategy_metrics),
+                "alerts_count": len(self.alerts),
+                "performance_analysis": performance_analysis,
+                "alert_thresholds": self.alert_thresholds,
+                "uptime": time.time() - self.stats["start_time"]
+            }
             
         except Exception as e:
-            self.logger.error(f"Unexpected error in _store_performance_metrics: {e}")
+            self.logger.error(f"Error getting performance summary: {e}")
+            return {"error": str(e)}
 
     async def get_strategy_performance(self, strategy_id: str) -> Optional[Dict[str, Any]]:
         """Get performance metrics for a specific strategy."""
-        try:
-            if not isinstance(strategy_id, str):
-                self.logger.error(f"Invalid strategy_id type: {type(strategy_id)}, expected string")
-                return None
-                
-            performance_key = f"strategy_engine:performance:{strategy_id}"
-            performance_data = self.redis_conn.get(performance_key)
-            
-            if performance_data:
-                import json
-                try:
-                    # Handle both string and bytes responses from Redis
-                    if isinstance(performance_data, bytes):
-                        performance_data = performance_data.decode('utf-8')
-                    elif not isinstance(performance_data, str):
-                        self.logger.warning(f"Invalid performance data type: {type(performance_data)}")
-                        return None
-                        
-                    parsed_data = json.loads(performance_data)
-                    if isinstance(parsed_data, dict):
-                        return parsed_data
-                    else:
-                        self.logger.warning(f"Invalid performance data format: expected dict, got {type(parsed_data)}")
-                        return None
-                        
-                except json.JSONDecodeError as e:
-                    self.logger.error(f"JSON decode error for strategy performance: {e}")
-                    return None
-                except Exception as e:
-                    self.logger.error(f"Unexpected error parsing strategy performance: {e}")
-                    return None
-            
-            return None
-            
-        except ConnectionError as e:
-            self.logger.error(f"Redis connection error getting strategy performance: {e}")
-            return None
-        except Exception as e:
-            self.logger.error(f"Unexpected error getting strategy performance: {e}")
-            return None
+        return self.strategy_metrics.get(strategy_id)
 
-    async def get_performance_alerts(self) -> List[Dict[str, Any]]:
-        """Get all performance alerts."""
+    async def cleanup(self):
+        """Clean up resources."""
         try:
-            return self.alert_history.copy()
+            await self.trading_context.cleanup()
+            await self.trading_research_engine.cleanup()
+            self.logger.info("Performance Tracker cleaned up successfully")
         except Exception as e:
-            self.logger.error(f"Error getting performance alerts: {e}")
-            return []
-
-    def get_performance_stats(self) -> Dict[str, Any]:
-        """Get performance tracker statistics."""
-        return {
-            **self.stats,
-            "uptime": time.time() - self.stats["start_time"]
-        }
-
-    async def notify_core(self, issue: Dict[str, Any]):
-        """Notify Core Agent of performance metrics."""
-        try:
-            if not isinstance(issue, dict):
-                self.logger.error(f"Invalid issue type: {type(issue)}, expected dict")
-                return
-                
-            self.logger.info(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-            
-            # Publish with proper JSON serialization
-            try:
-                import json
-                self.redis_conn.publish("strategy_engine_output", json.dumps(issue))
-            except json.JSONEncodeError as e:
-                self.logger.error(f"JSON encoding error notifying core: {e}")
-                self.stats["errors"] += 1
-            except ConnectionError as e:
-                self.logger.error(f"Redis connection error notifying core: {e}")
-                self.stats["errors"] += 1
-            except Exception as e:
-                self.logger.error(f"Unexpected error notifying core: {e}")
-                self.stats["errors"] += 1
-                
-        except Exception as e:
-            self.logger.error(f"Unexpected error in notify_core: {e}")
-            self.stats["errors"] += 1
+            self.logger.error(f"Error during cleanup: {e}")

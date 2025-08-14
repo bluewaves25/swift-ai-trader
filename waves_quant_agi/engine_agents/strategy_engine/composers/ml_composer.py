@@ -1,450 +1,634 @@
 #!/usr/bin/env python3
 """
-ML Composer - Fixed and Enhanced
-Generates ML-based strategy blueprints using machine learning models.
+ML Composer - Strategy ML Composition Component
+Composes new trading strategies using machine learning and integrates with consolidated trading functionality.
+Focuses purely on strategy-specific ML composition, delegating risk management to the risk management agent.
 """
 
-from typing import Dict, Any, List, Optional
-import time
-import numpy as np
 import asyncio
-from engine_agents.shared_utils import get_shared_redis, get_shared_logger
+import time
+import json
+from typing import Dict, Any, List, Optional
+from dataclasses import dataclass
+from collections import deque
+
+# Import consolidated trading functionality
+from ..trading.memory.trading_context import TradingContext
+from ..trading.learning.trading_research_engine import TradingResearchEngine
+from ..trading.learning.trading_training_module import TradingTrainingModule
+
+@dataclass
+class MLCompositionRequest:
+    """A machine learning composition request."""
+    request_id: str
+    composition_type: str  # pattern_based, performance_optimized, hybrid
+    target_symbols: List[str]
+    target_metrics: Dict[str, float]
+    constraints: Dict[str, Any]
+    priority: int = 5
+    created_at: float = None
+    status: str = "pending"
+    
+    def __post_init__(self):
+        if self.created_at is None:
+            self.created_at = time.time()
+
+@dataclass
+class MLCompositionResult:
+    """Result of ML strategy composition."""
+    result_id: str
+    request_id: str
+    composition_type: str
+    composed_strategy: Dict[str, Any]
+    performance_metrics: Dict[str, float]
+    confidence_score: float
+    composition_duration: float
+    timestamp: float
+    success: bool
 
 class MLComposer:
-    """ML-based strategy composer using machine learning models."""
+    """Composes new trading strategies using machine learning.
+    
+    Focuses purely on strategy-specific ML composition:
+    - Pattern-based strategy generation
+    - Performance-optimized strategy creation
+    - Hybrid strategy composition
+    - ML model training and validation
+    
+    Risk management is delegated to the risk management agent.
+    """
     
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.logger = get_shared_logger("strategy_engine", "ml_composer")
-        self.redis_conn = get_shared_redis()
         
-        # ML model configuration
-        self.confidence_threshold = config.get("confidence_threshold", 0.7)
-        self.min_data_points = config.get("min_data_points", 50)
-        self.model_update_frequency = config.get("model_update_frequency", 3600)  # 1 hour
+        # Initialize consolidated trading components
+        self.trading_context = TradingContext(config)
+        self.trading_research_engine = TradingResearchEngine(config)
+        self.trading_training_module = TradingTrainingModule(config)
         
-        # Strategy composition state
-        self.composed_strategies: Dict[str, Dict[str, Any]] = {}
-        self.model_performance: Dict[str, float] = {}
+        # ML composition state
+        self.composition_queue: deque = deque(maxlen=100)
+        self.active_compositions: Dict[str, MLCompositionRequest] = {}
+        self.composition_results: Dict[str, List[MLCompositionResult]] = {}
+        self.composition_history: deque = deque(maxlen=1000)
         
-        # ML model state (placeholder for actual model)
-        self.model_ready = False
-        self.last_model_update = 0
-        
-        self.stats = {
-            "strategies_composed": 0,
-            "high_confidence_strategies": 0,
-            "model_predictions": 0,
-            "model_errors": 0,
-            "start_time": time.time()
-        }
-
-    async def initialize_model(self) -> bool:
-        """Initialize the ML model."""
-        try:
-            # Check if we have enough data
-            training_data = await self._get_training_data()
-            
-            if len(training_data) < self.min_data_points:
-                self.logger.warning(f"Insufficient training data: {len(training_data)} < {self.min_data_points}")
-                return False
-            
-            # Initialize model (placeholder for actual ML model)
-            self.model_ready = True
-            self.last_model_update = time.time()
-            
-            self.logger.info("ML model initialized successfully")
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Error initializing ML model: {e}")
-            return False
-
-    async def compose_strategy(self, market_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Generate ML-based strategy blueprints based on market conditions."""
-        try:
-            if not self.model_ready:
-                if not await self.initialize_model():
-                    self.logger.warning("ML model not ready, skipping strategy composition")
-                    return []
-            
-            # Check if model needs updating
-            if time.time() - self.last_model_update > self.model_update_frequency:
-                await self._update_model()
-            
-            strategies = []
-            
-            for data in market_data:
-                symbol = data.get("symbol", "unknown")
-                strategy_type = data.get("type", "unknown")
-                
-                # Extract features for ML model
-                features = await self._extract_features(data)
-                if features is None:
-                    continue
-                
-                # Generate ML prediction
-                prediction = await self._generate_prediction(features)
-                if prediction is None:
-                    continue
-                
-                self.stats["model_predictions"] += 1
-                
-                # Check confidence threshold
-                if prediction["confidence"] > self.confidence_threshold:
-                    strategy = await self._create_ml_strategy(symbol, strategy_type, prediction, data)
-                    if strategy:
-                        strategies.append(strategy)
-                        
-                        # Store composed strategy
-                        await self._store_composed_strategy(strategy)
-                        
-                        self.stats["strategies_composed"] += 1
-                        if prediction["confidence"] > 0.8:
-                            self.stats["high_confidence_strategies"] += 1
-
-            self.logger.info(f"Composed {len(strategies)} ML-based strategies")
-            return strategies
-            
-        except Exception as e:
-            self.logger.error(f"Error composing ML strategies: {e}")
-            self.stats["model_errors"] += 1
-            return []
-
-    async def _get_training_data(self) -> List[Dict[str, Any]]:
-        """Get training data for the ML model."""
-        try:
-            # Get historical strategy performance data
-            training_key = "strategy_engine:training_data"
-            training_data = self.redis_conn.get(training_key)
-            
-            if training_data:
-                import json
-                try:
-                    # Handle both string and bytes responses from Redis
-                    if isinstance(training_data, bytes):
-                        training_data = training_data.decode('utf-8')
-                    elif not isinstance(training_data, str):
-                        self.logger.warning(f"Invalid training data type: {type(training_data)}")
-                        return []
-                        
-                    parsed_data = json.loads(training_data)
-                    if isinstance(parsed_data, list):
-                        return parsed_data
-                    else:
-                        self.logger.warning(f"Invalid training data format: expected list, got {type(parsed_data)}")
-                        return []
-                        
-                except json.JSONDecodeError as e:
-                    self.logger.error(f"JSON decode error for training data: {e}")
-                    return []
-                except Exception as e:
-                    self.logger.error(f"Unexpected error parsing training data: {e}")
-                    return []
-            
-            # Fallback: get from performance history
-            performance_data = []
-            try:
-                for key in self.redis_conn.scan_iter("strategy_engine:performance_history:*"):
-                    try:
-                        data = self.redis_conn.get(key)
-                        if data:
-                            # Handle both string and bytes responses from Redis
-                            if isinstance(data, bytes):
-                                data = data.decode('utf-8')
-                            elif not isinstance(data, str):
-                                continue
-                                
-                            parsed_data = json.loads(data)
-                            if isinstance(parsed_data, list):
-                                performance_data.extend(parsed_data)
-                            elif isinstance(parsed_data, dict):
-                                performance_data.append(parsed_data)
-                    except (json.JSONDecodeError, Exception) as e:
-                        self.logger.warning(f"Error parsing performance data from key {key}: {e}")
-                        continue
-                        
-            except Exception as e:
-                self.logger.error(f"Error scanning performance history: {e}")
-            
-            return performance_data
-            
-        except ConnectionError as e:
-            self.logger.error(f"Redis connection error getting training data: {e}")
-            return []
-        except Exception as e:
-            self.logger.error(f"Unexpected error getting training data: {e}")
-            return []
-
-    async def _extract_features(self, market_data: Dict[str, Any]) -> Optional[np.ndarray]:
-        """Extract features for ML model."""
-        try:
-            # Extract relevant features
-            features = []
-            
-            # Price-based features
-            close_price = float(market_data.get("close", 0.0))
-            if close_price <= 0:
-                return None
-            
-            # Volatility features
-            volatility = float(market_data.get("volatility", 0.0))
-            features.append(volatility)
-            
-            # Trend features
-            trend_score = float(market_data.get("trend_score", 0.0))
-            features.append(trend_score)
-            
-            # Volume features
-            volume = float(market_data.get("volume", 0.0))
-            avg_volume = float(market_data.get("avg_volume", volume))
-            volume_ratio = volume / avg_volume if avg_volume > 0 else 1.0
-            features.append(volume_ratio)
-            
-            # Technical indicators
-            rsi = float(market_data.get("rsi", 50.0)) / 100.0  # Normalize to 0-1
-            features.append(rsi)
-            
-            macd = float(market_data.get("macd", 0.0))
-            features.append(macd)
-            
-            # Market regime features
-            market_regime = market_data.get("market_regime", "normal")
-            regime_encoding = {"normal": 0.0, "volatile": 0.5, "trending": 1.0}.get(market_regime, 0.0)
-            features.append(regime_encoding)
-            
-            # Ensure we have enough features
-            if len(features) < 5:
-                return None
-            
-            return np.array(features)
-            
-        except Exception as e:
-            self.logger.error(f"Error extracting features: {e}")
-            return None
-
-    async def _generate_prediction(self, features: np.ndarray) -> Optional[Dict[str, Any]]:
-        """Generate ML prediction for strategy composition."""
-        try:
-            if features is None or len(features) == 0:
-                return None
-            
-            # Simple ML model (placeholder for actual model)
-            # In production, this would use a trained model like RandomForest, Neural Network, etc.
-            
-            # Calculate prediction based on features
-            volatility = features[0] if len(features) > 0 else 0.0
-            trend_score = features[1] if len(features) > 1 else 0.0
-            volume_ratio = features[2] if len(features) > 2 else 1.0
-            rsi = features[3] if len(features) > 3 else 0.5
-            macd = features[4] if len(features) > 4 else 0.0
-            
-            # Simple scoring algorithm
-            score = 0.0
-            
-            # Volatility component (higher volatility = higher opportunity)
-            if 0.1 <= volatility <= 0.5:
-                score += 0.3
-            elif volatility > 0.5:
-                score += 0.2
-            
-            # Trend component
-            if abs(trend_score) > 0.6:
-                score += 0.3
-            
-            # Volume component
-            if volume_ratio > 1.5:
-                score += 0.2
-            
-            # RSI component (oversold/overbought conditions)
-            if rsi < 0.3 or rsi > 0.7:
-                score += 0.2
-            
-            # MACD component
-            if abs(macd) > 0.1:
-                score += 0.1
-            
-            # Normalize score to 0-1
-            score = min(score, 1.0)
-            
-            # Determine strategy type based on features
-            strategy_type = self._determine_strategy_type(features, score)
-            
-            # Calculate confidence
-            confidence = score * 0.8 + 0.2  # Base confidence of 20%
-            
-            return {
-                "score": score,
-                "confidence": confidence,
-                "strategy_type": strategy_type,
-                "features": features.tolist()
+        # ML composition settings (strategy-specific only)
+        self.composition_settings = {
+            "max_concurrent_compositions": 3,
+            "composition_timeout": 3600,  # 1 hour
+            "min_confidence_threshold": 0.7,
+            "ml_models": ["pattern_recognition", "performance_optimization", "hybrid"],
+            "strategy_parameters": {
+                "max_components": 5,
+                "min_data_points": 1000,
+                "validation_split": 0.2
             }
+        }
+        
+        # ML composition statistics
+        self.composition_stats = {
+            "total_compositions": 0,
+            "successful_compositions": 0,
+            "failed_compositions": 0,
+            "total_strategies_generated": 0,
+            "average_confidence": 0.0,
+            "total_composition_time": 0.0
+        }
+        
+    async def initialize(self):
+        """Initialize the ML composer."""
+        try:
+            # Initialize trading components
+            await self.trading_context.initialize()
+            await self.trading_research_engine.initialize()
+            await self.trading_training_module.initialize()
+            
+            # Load composition settings
+            await self._load_composition_settings()
+            
+            print("✅ ML Composer initialized")
             
         except Exception as e:
-            self.logger.error(f"Error generating prediction: {e}")
-            return None
-
-    def _determine_strategy_type(self, features: np.ndarray, score: float) -> str:
-        """Determine strategy type based on features and score."""
+            print(f"❌ Error initializing ML Composer: {e}")
+            raise
+    
+    async def _load_composition_settings(self):
+        """Load ML composition settings from configuration."""
         try:
-            if score < 0.3:
-                return "market_making"  # Low opportunity, stable conditions
-            
-            # Analyze feature patterns
-            volatility = features[0] if len(features) > 0 else 0.0
-            trend_score = features[1] if len(features) > 1 else 0.0
-            rsi = features[3] if len(features) > 3 else 0.5
-            
-            if volatility > 0.4 and abs(trend_score) > 0.7:
-                return "trend_following"  # High volatility + strong trend
-            
-            if rsi < 0.3 or rsi > 0.7:
-                return "mean_reversion"  # Oversold/overbought conditions
-            
-            if volatility < 0.2 and trend_score < 0.3:
-                return "statistical_arbitrage"  # Low volatility, sideways market
-            
-            return "adaptive"  # Default adaptive strategy
-            
+            ml_config = self.config.get("strategy_engine", {}).get("ml_composition", {})
+            self.composition_settings.update(ml_config)
         except Exception as e:
-            self.logger.error(f"Error determining strategy type: {e}")
-            return "adaptive"
+            print(f"❌ Error loading ML composition settings: {e}")
 
-    async def _create_ml_strategy(self, symbol: str, strategy_type: str, 
-                                 prediction: Dict[str, Any], market_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Create ML-based strategy from prediction."""
+    async def add_composition_request(self, composition_type: str, target_symbols: List[str], 
+                                    target_metrics: Dict[str, float], constraints: Dict[str, Any] = None) -> str:
+        """Add an ML composition request to the queue."""
         try:
-            strategy = {
-                "type": "ml_composed",
-                "symbol": symbol,
-                "strategy_type": prediction["strategy_type"],
-                "confidence": prediction["confidence"],
-                "ml_score": prediction["score"],
-                "features": prediction["features"],
-                "market_conditions": {
-                    "volatility": float(market_data.get("volatility", 0.0)),
-                    "trend_score": float(market_data.get("trend_score", 0.0)),
-                    "volume_ratio": float(market_data.get("volume", 0.0)) / float(market_data.get("avg_volume", 1.0)) if market_data.get("avg_volume", 0) > 0 else 1.0
+            request_id = f"ml_comp_{composition_type}_{int(time.time())}"
+            
+            request = MLCompositionRequest(
+                request_id=request_id,
+                composition_type=composition_type,
+                target_symbols=target_symbols,
+                target_metrics=target_metrics,
+                constraints=constraints or {}
+            )
+            
+            # Add to composition queue
+            self.composition_queue.append(request)
+            
+            # Store request in trading context
+            await self.trading_context.store_signal({
+                "type": "ml_composition_request",
+                "request_id": request_id,
+                "composition_data": {
+                    "type": composition_type,
+                    "target_symbols": target_symbols,
+                    "target_metrics": target_metrics,
+                    "constraints": constraints
                 },
-                "timestamp": int(time.time()),
-                "description": f"ML-composed {prediction['strategy_type']} strategy for {symbol}: confidence {prediction['confidence']:.2f}"
+                "timestamp": int(time.time())
+            })
+            
+            print(f"✅ Added ML composition request: {request_id}")
+            return request_id
+            
+        except Exception as e:
+            print(f"❌ Error adding ML composition request: {e}")
+            return ""
+
+    async def process_composition_queue(self) -> List[MLCompositionResult]:
+        """Process the ML composition queue."""
+        try:
+            results = []
+            
+            while self.composition_queue and len(self.active_compositions) < self.composition_settings["max_concurrent_compositions"]:
+                request = self.composition_queue.popleft()
+                result = await self._execute_ml_composition(request)
+                if result:
+                    results.append(result)
+            
+            return results
+            
+        except Exception as e:
+            print(f"❌ Error processing ML composition queue: {e}")
+            return []
+
+    async def _execute_ml_composition(self, request: MLCompositionRequest) -> Optional[MLCompositionResult]:
+        """Execute a single ML composition request."""
+        start_time = time.time()
+        
+        try:
+            # Mark as active
+            self.active_compositions[request.request_id] = request
+            request.status = "running"
+            
+            # Execute composition based on type
+            if request.composition_type == "pattern_based":
+                composed_strategy = await self._compose_pattern_based_strategy(request)
+            elif request.composition_type == "performance_optimized":
+                composed_strategy = await self._compose_performance_optimized_strategy(request)
+            elif request.composition_type == "hybrid":
+                composed_strategy = await self._compose_hybrid_strategy(request)
+            else:
+                raise ValueError(f"Unknown composition type: {request.composition_type}")
+            
+            if not composed_strategy:
+                raise ValueError("Strategy composition failed")
+            
+            # Calculate performance metrics and confidence
+            performance_metrics = await self._calculate_strategy_performance(composed_strategy, request.target_symbols)
+            confidence_score = await self._calculate_confidence_score(composed_strategy, performance_metrics)
+            
+            # Create composition result
+            result = MLCompositionResult(
+                result_id=f"result_{request.request_id}",
+                request_id=request.request_id,
+                composition_type=request.composition_type,
+                composed_strategy=composed_strategy,
+                performance_metrics=performance_metrics,
+                confidence_score=confidence_score,
+                composition_duration=time.time() - start_time,
+                timestamp=time.time(),
+                success=True
+            )
+            
+            # Store result
+            if request.composition_type not in self.composition_results:
+                self.composition_results[request.composition_type] = []
+            self.composition_results[request.composition_type].append(result)
+            
+            # Update statistics
+            self.composition_stats["total_compositions"] += 1
+            self.composition_stats["successful_compositions"] += 1
+            self.composition_stats["total_strategies_generated"] += 1
+            self.composition_stats["total_composition_time"] += result.composition_duration
+            
+            # Store result in trading context
+            await self.trading_context.store_signal({
+                "type": "ml_composition_result",
+                "composition_type": request.composition_type,
+                "result_data": {
+                    "strategy": composed_strategy,
+                    "performance_metrics": performance_metrics,
+                    "confidence_score": confidence_score
+                },
+                "timestamp": int(time.time())
+            })
+            
+            print(f"✅ ML composition completed: {request.request_id}")
+            return result
+            
+        except Exception as e:
+            print(f"❌ Error executing ML composition: {e}")
+            self.composition_stats["failed_compositions"] += 1
+            
+            # Return failed result
+            return MLCompositionResult(
+                result_id=f"failed_{request.request_id}",
+                request_id=request.request_id,
+                composition_type=request.composition_type,
+                composed_strategy={},
+                performance_metrics={},
+                confidence_score=0.0,
+                composition_duration=time.time() - start_time,
+                timestamp=time.time(),
+                success=False
+            )
+        finally:
+            # Remove from active compositions
+            self.active_compositions.pop(request.request_id, None)
+
+    async def _compose_pattern_based_strategy(self, request: MLCompositionRequest) -> Optional[Dict[str, Any]]:
+        """Compose a pattern-based strategy using ML."""
+        try:
+            # Get market data for target symbols
+            market_data = await self._get_market_data_for_symbols(request.target_symbols)
+            
+            # Analyze patterns using trading research engine
+            pattern_analysis = await self.trading_research_engine.analyze_trading_patterns(market_data)
+            
+            # Identify key patterns
+            key_patterns = self._identify_key_patterns(pattern_analysis)
+            
+            # Generate strategy components based on patterns
+            strategy_components = self._generate_pattern_based_components(key_patterns)
+            
+            # Compose strategy
+            strategy = {
+                "strategy_id": f"pattern_{request.request_id}",
+                "name": f"Pattern-Based Strategy {request.request_id}",
+                "description": "ML-generated pattern-based trading strategy",
+                "strategy_type": "pattern_based",
+                "symbols": request.target_symbols,
+                "components": strategy_components,
+                "parameters": self._generate_strategy_parameters(strategy_components),
+                "confidence_threshold": 0.7,
+                "created_at": time.time()
             }
             
             return strategy
             
         except Exception as e:
-            self.logger.error(f"Error creating ML strategy: {e}")
+            print(f"❌ Error composing pattern-based strategy: {e}")
             return None
 
-    async def _store_composed_strategy(self, strategy: Dict[str, Any]):
-        """Store composed strategy in Redis."""
+    async def _compose_performance_optimized_strategy(self, request: MLCompositionRequest) -> Optional[Dict[str, Any]]:
+        """Compose a performance-optimized strategy using ML."""
         try:
-            if not isinstance(strategy, dict):
-                self.logger.error(f"Invalid strategy type: {type(strategy)}, expected dict")
-                return
-                
-            strategy_id = f"{strategy['type']}:{strategy.get('symbol', 'unknown')}:{strategy['timestamp']}"
+            # Get historical performance data
+            performance_data = await self._get_historical_performance_data(request.target_symbols)
             
-            # Store in Redis with proper JSON serialization
-            try:
-                import json
-                self.redis_conn.set(
-                    f"strategy_engine:ml_strategy:{strategy_id}", 
-                    json.dumps(strategy), 
-                    ex=604800
-                )
-                
-                # Store in local cache
-                self.composed_strategies[strategy_id] = strategy
-                
-                # Update model performance
-                await self._update_model_performance(strategy)
-                
-            except json.JSONEncodeError as e:
-                self.logger.error(f"JSON encoding error storing ML strategy: {e}")
-            except ConnectionError as e:
-                self.logger.error(f"Redis connection error storing ML strategy: {e}")
-            except Exception as e:
-                self.logger.error(f"Unexpected error storing ML strategy: {e}")
+            # Train performance optimization model
+            training_result = await self.trading_training_module.train_trading_model({
+                "type": "performance_optimization",
+                "data": performance_data,
+                "target_metrics": request.target_metrics
+            })
+            
+            if not training_result.get("success", False):
+                raise ValueError("Model training failed")
+            
+            # Generate optimized strategy components
+            strategy_components = self._generate_performance_optimized_components(training_result)
+            
+            # Compose strategy
+            strategy = {
+                "strategy_id": f"perf_opt_{request.request_id}",
+                "name": f"Performance-Optimized Strategy {request.request_id}",
+                "description": "ML-generated performance-optimized trading strategy",
+                "strategy_type": "performance_optimized",
+                "symbols": request.target_symbols,
+                "components": strategy_components,
+                "parameters": self._generate_strategy_parameters(strategy_components),
+                "confidence_threshold": 0.8,
+                "created_at": time.time()
+            }
+            
+            return strategy
             
         except Exception as e:
-            self.logger.error(f"Unexpected error in _store_composed_strategy: {e}")
+            print(f"❌ Error composing performance-optimized strategy: {e}")
+            return None
 
-    async def _update_model_performance(self, strategy: Dict[str, Any]):
-        """Update model performance metrics."""
+    async def _compose_hybrid_strategy(self, request: MLCompositionRequest) -> Optional[Dict[str, Any]]:
+        """Compose a hybrid strategy using ML."""
         try:
-            strategy_type = strategy.get("strategy_type", "unknown")
-            confidence = strategy.get("confidence", 0.0)
+            # Combine pattern-based and performance-optimized approaches
+            pattern_strategy = await self._compose_pattern_based_strategy(request)
+            perf_strategy = await self._compose_performance_optimized_strategy(request)
             
-            if strategy_type not in self.model_performance:
-                self.model_performance[strategy_type] = []
+            if not pattern_strategy or not perf_strategy:
+                raise ValueError("Failed to compose base strategies")
             
-            self.model_performance[strategy_type].append(confidence)
+            # Merge strategy components
+            hybrid_components = self._merge_strategy_components(
+                pattern_strategy["components"], 
+                perf_strategy["components"]
+            )
             
-            # Keep only last 100 predictions per strategy type
-            if len(self.model_performance[strategy_type]) > 100:
-                self.model_performance[strategy_type] = self.model_performance[strategy_type][-100:]
+            # Compose hybrid strategy
+            strategy = {
+                "strategy_id": f"hybrid_{request.request_id}",
+                "name": f"Hybrid ML Strategy {request.request_id}",
+                "description": "ML-generated hybrid trading strategy",
+                "strategy_type": "hybrid",
+                "symbols": request.target_symbols,
+                "components": hybrid_components,
+                "parameters": self._generate_strategy_parameters(hybrid_components),
+                "confidence_threshold": 0.75,
+                "created_at": time.time()
+            }
+            
+            return strategy
             
         except Exception as e:
-            self.logger.error(f"Error updating model performance: {e}")
+            print(f"❌ Error composing hybrid strategy: {e}")
+            return None
 
-    async def _update_model(self):
-        """Update the ML model with new data."""
+    async def _get_market_data_for_symbols(self, symbols: List[str]) -> List[Dict[str, Any]]:
+        """Get market data for target symbols."""
         try:
-            self.logger.info("Updating ML model...")
+            market_data = []
             
-            # Get latest training data
-            training_data = await self._get_training_data()
-            
-            if len(training_data) >= self.min_data_points:
-                # Update model (placeholder for actual model update)
-                self.last_model_update = time.time()
-                self.logger.info("ML model updated successfully")
-            else:
-                self.logger.warning("Insufficient data for model update")
+            for symbol in symbols:
+                # Get recent signals and PnL snapshots from trading context
+                signals = await self.trading_context.get_recent_signals(symbol, limit=500)
+                pnl_snapshots = await self.trading_context.get_recent_pnl_snapshots(symbol, limit=500)
                 
+                market_data.extend(signals + pnl_snapshots)
+            
+            return market_data
+            
         except Exception as e:
-            self.logger.error(f"Error updating ML model: {e}")
-
-    async def get_composed_strategies(self) -> List[Dict[str, Any]]:
-        """Get all composed strategies."""
-        try:
-            return list(self.composed_strategies.values())
-        except Exception as e:
-            self.logger.error(f"Error getting composed strategies: {e}")
+            print(f"❌ Error getting market data: {e}")
             return []
 
-    async def get_model_performance(self) -> Dict[str, Any]:
-        """Get ML model performance metrics."""
+    async def _get_historical_performance_data(self, symbols: List[str]) -> List[Dict[str, Any]]:
+        """Get historical performance data for target symbols."""
         try:
-            performance = {}
-            for strategy_type, confidences in self.model_performance.items():
-                if confidences:
-                    performance[strategy_type] = {
-                        "avg_confidence": np.mean(confidences),
-                        "total_predictions": len(confidences),
-                        "high_confidence_rate": sum(1 for c in confidences if c > 0.8) / len(confidences)
-                    }
+            performance_data = []
             
-            return performance
+            for symbol in symbols:
+                # Get historical performance from trading context
+                signals = await self.trading_context.get_recent_signals(symbol, limit=1000)
+                pnl_snapshots = await self.trading_context.get_recent_pnl_snapshots(symbol, limit=1000)
+                
+                performance_data.extend(signals + pnl_snapshots)
+            
+            return performance_data
             
         except Exception as e:
-            self.logger.error(f"Error getting model performance: {e}")
+            print(f"❌ Error getting historical performance data: {e}")
+            return []
+
+    def _identify_key_patterns(self, pattern_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Identify key patterns from analysis."""
+        try:
+            key_patterns = []
+            
+            # Extract key patterns from analysis
+            if "trend_patterns" in pattern_analysis:
+                key_patterns.extend(pattern_analysis["trend_patterns"])
+            
+            if "volatility_patterns" in pattern_analysis:
+                key_patterns.extend(pattern_analysis["volatility_patterns"])
+            
+            if "correlation_patterns" in pattern_analysis:
+                key_patterns.extend(pattern_analysis["correlation_patterns"])
+            
+            # Filter and rank patterns by significance
+            significant_patterns = [p for p in key_patterns if p.get("significance", 0.0) > 0.6]
+            
+            return significant_patterns[:10]  # Return top 10 patterns
+            
+        except Exception as e:
+            print(f"❌ Error identifying key patterns: {e}")
+            return []
+
+    def _generate_pattern_based_components(self, key_patterns: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate strategy components based on patterns."""
+        try:
+            components = []
+            
+            for pattern in key_patterns:
+                component = {
+                    "component_id": f"pattern_{pattern.get('id', 'unknown')}",
+                    "name": f"Pattern Component {pattern.get('id', 'unknown')}",
+                    "component_type": "pattern_recognition",
+                    "parameters": {
+                        "pattern_type": pattern.get("type", "unknown"),
+                        "significance": pattern.get("significance", 0.0),
+                        "confidence": pattern.get("confidence", 0.0)
+                    },
+                    "weight": pattern.get("significance", 0.0)
+                }
+                components.append(component)
+            
+            return components
+            
+        except Exception as e:
+            print(f"❌ Error generating pattern-based components: {e}")
+            return []
+
+    def _generate_performance_optimized_components(self, training_result: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Generate strategy components based on performance optimization."""
+        try:
+            components = []
+            
+            # Extract optimized parameters from training result
+            optimized_params = training_result.get("optimized_parameters", {})
+            
+            for param_name, param_value in optimized_params.items():
+                component = {
+                    "component_id": f"perf_opt_{param_name}",
+                    "name": f"Performance Optimized {param_name}",
+                    "component_type": "performance_optimization",
+                    "parameters": {
+                        "parameter": param_name,
+                        "optimized_value": param_value,
+                        "improvement": training_result.get("improvement", 0.0)
+                    },
+                    "weight": 1.0
+                }
+                components.append(component)
+            
+            return components
+            
+        except Exception as e:
+            print(f"❌ Error generating performance-optimized components: {e}")
+            return []
+
+    def _merge_strategy_components(self, pattern_components: List[Dict[str, Any]], 
+                                 perf_components: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Merge components from different strategy types."""
+        try:
+            merged_components = []
+            
+            # Add pattern components
+            merged_components.extend(pattern_components)
+            
+            # Add performance components
+            merged_components.extend(perf_components)
+            
+            # Adjust weights to balance components
+            total_components = len(merged_components)
+            for component in merged_components:
+                component["weight"] = component["weight"] / total_components
+            
+            return merged_components
+            
+        except Exception as e:
+            print(f"❌ Error merging strategy components: {e}")
+            return []
+
+    def _generate_strategy_parameters(self, components: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Generate strategy parameters from components."""
+        try:
+            parameters = {
+                "confidence_threshold": 0.7,
+                "execution_timeout": 60,
+                "max_position_size": 100000
+            }
+            
+            # Add component-specific parameters
+            for component in components:
+                component_params = component.get("parameters", {})
+                for param_name, param_value in component_params.items():
+                    if param_name not in parameters:
+                        parameters[f"{component['component_id']}_{param_name}"] = param_value
+            
+            return parameters
+            
+        except Exception as e:
+            print(f"❌ Error generating strategy parameters: {e}")
             return {}
 
-    def get_composer_stats(self) -> Dict[str, Any]:
-        """Get ML composer statistics."""
-        return {
-            **self.stats,
-            "model_ready": self.model_ready,
-            "composed_strategies": len(self.composed_strategies),
-            "uptime": time.time() - self.stats["start_time"]
-        }
-
-    async def force_model_update(self):
-        """Force immediate model update."""
+    async def _calculate_strategy_performance(self, strategy: Dict[str, Any], 
+                                            target_symbols: List[str]) -> Dict[str, float]:
+        """Calculate expected performance metrics for the strategy."""
         try:
-            await self._update_model()
-            self.logger.info("Forced model update completed")
+            # Simple performance calculation based on strategy components
+            performance_metrics = {
+                "expected_return": 0.0,
+                "expected_volatility": 0.0,
+                "expected_sharpe_ratio": 0.0,
+                "expected_win_rate": 0.0
+            }
+            
+            # Calculate metrics based on component weights and types
+            total_weight = 0.0
+            weighted_metrics = {"return": 0.0, "volatility": 0.0, "sharpe": 0.0, "win_rate": 0.0}
+            
+            for component in strategy.get("components", []):
+                weight = component.get("weight", 1.0)
+                total_weight += weight
+                
+                # Simple metric calculation based on component type
+                if component["component_type"] == "pattern_recognition":
+                    weighted_metrics["return"] += weight * 0.05  # 5% expected return
+                    weighted_metrics["volatility"] += weight * 0.15  # 15% expected volatility
+                    weighted_metrics["sharpe"] += weight * 0.33  # 0.33 expected Sharpe ratio
+                    weighted_metrics["win_rate"] += weight * 0.55  # 55% expected win rate
+                
+                elif component["component_type"] == "performance_optimization":
+                    weighted_metrics["return"] += weight * 0.08  # 8% expected return
+                    weighted_metrics["volatility"] += weight * 0.12  # 12% expected volatility
+                    weighted_metrics["sharpe"] += weight * 0.67  # 0.67 expected Sharpe ratio
+                    weighted_metrics["win_rate"] += weight * 0.65  # 65% expected win rate
+            
+            # Normalize by total weight
+            if total_weight > 0:
+                performance_metrics["expected_return"] = weighted_metrics["return"] / total_weight
+                performance_metrics["expected_volatility"] = weighted_metrics["volatility"] / total_weight
+                performance_metrics["expected_sharpe_ratio"] = weighted_metrics["sharpe"] / total_weight
+                performance_metrics["expected_win_rate"] = weighted_metrics["win_rate"] / total_weight
+            
+            return performance_metrics
+            
         except Exception as e:
-            self.logger.error(f"Error in forced model update: {e}")
+            print(f"❌ Error calculating strategy performance: {e}")
+            return {}
+
+    async def _calculate_confidence_score(self, strategy: Dict[str, Any], 
+                                        performance_metrics: Dict[str, float]) -> float:
+        """Calculate confidence score for the composed strategy."""
+        try:
+            confidence_score = 0.0
+            
+            # Base confidence from component quality
+            components = strategy.get("components", [])
+            if components:
+                component_confidence = sum(c.get("weight", 0.0) for c in components)
+                confidence_score += component_confidence * 0.4
+            
+            # Performance-based confidence
+            if performance_metrics:
+                if performance_metrics.get("expected_sharpe_ratio", 0.0) > 0.5:
+                    confidence_score += 0.3
+                if performance_metrics.get("expected_win_rate", 0.0) > 0.6:
+                    confidence_score += 0.3
+            
+            return min(1.0, max(0.0, confidence_score))
+            
+        except Exception as e:
+            print(f"❌ Error calculating confidence score: {e}")
+            return 0.0
+
+    async def get_composition_status(self, composition_type: str = None) -> Dict[str, Any]:
+        """Get ML composition status and statistics."""
+        if composition_type:
+            return {
+                "composition_type": composition_type,
+                "active_compositions": len([r for r in self.active_compositions.values() if r.composition_type == composition_type]),
+                "composition_results": len(self.composition_results.get(composition_type, [])),
+                "last_composition": self.composition_results.get(composition_type, [{}])[-1] if self.composition_results.get(composition_type) else {}
+            }
+        else:
+            # Calculate average confidence
+            if self.composition_stats["successful_compositions"] > 0:
+                avg_confidence = self.composition_stats["total_composition_time"] / self.composition_stats["successful_compositions"]
+            else:
+                avg_confidence = 0.0
+            
+            return {
+                "stats": {**self.composition_stats, "average_confidence": avg_confidence},
+                "queue_size": len(self.composition_queue),
+                "active_compositions": len(self.active_compositions),
+                "composition_history_size": len(self.composition_history),
+                "composition_settings": self.composition_settings
+            }
+
+    async def get_composition_results(self, composition_type: str) -> List[MLCompositionResult]:
+        """Get ML composition results for a specific type."""
+        return self.composition_results.get(composition_type, [])
+
+    async def cleanup(self):
+        """Clean up resources."""
+        try:
+            await self.trading_context.cleanup()
+            await self.trading_research_engine.cleanup()
+            await self.trading_training_module.cleanup()
+            print("✅ ML Composer cleaned up")
+        except Exception as e:
+            print(f"❌ Error cleaning up ML Composer: {e}")

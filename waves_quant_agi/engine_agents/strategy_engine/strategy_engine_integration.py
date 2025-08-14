@@ -18,6 +18,18 @@ from .core.strategy_applicator import StrategyApplicator
 from .composers.ml_composer import MLComposer
 from .composers.online_generator import OnlineGenerator
 
+# Import consolidated trading functionality
+from .trading.signal_processor import TradingSignalProcessor
+from .trading.flow_manager import TradingFlowManager
+from .trading.logic_executor import TradingLogicExecutor
+from .trading.interfaces.trade_model import TradeCommand
+from .trading.interfaces.agent_io import TradingAgentIO
+from .trading.pipeline.execution_pipeline import TradingExecutionPipeline
+from .trading.memory.trading_context import TradingContext
+from .trading.learning.trading_research_engine import TradingResearchEngine
+from .trading.learning.trading_training_module import TradingTrainingModule
+from .trading.learning.trading_retraining_loop import TradingRetrainingLoop
+
 class StrategyEngineIntegration:
     """Integration manager for all strategy engine components."""
     
@@ -34,7 +46,18 @@ class StrategyEngineIntegration:
         self.strategy_applicator = StrategyApplicator(config)
         self.ml_composer = MLComposer(config)
         self.online_generator = OnlineGenerator(config)
-        
+
+        # Initialize consolidated trading components
+        self.trading_signal_processor = TradingSignalProcessor(config)
+        self.trading_flow_manager = TradingFlowManager(config)
+        self.trading_logic_executor = TradingLogicExecutor(config)
+        self.trading_agent_io = TradingAgentIO(config)
+        self.trading_execution_pipeline = TradingExecutionPipeline(config)
+        self.trading_context = TradingContext(config)
+        self.trading_research_engine = TradingResearchEngine(config)
+        self.trading_training_module = TradingTrainingModule(config)
+        self.trading_retraining_loop = TradingRetrainingLoop(config)
+
         # Integration state
         self.integration_stats = {
             "strategies_registered": 0,
@@ -42,89 +65,58 @@ class StrategyEngineIntegration:
             "performance_checks": 0,
             "ml_compositions": 0,
             "online_generations": 0,
+            "trading_signals_processed": 0,
+            "trading_flows_executed": 0,
+            "trading_logic_executions": 0,
             "integration_errors": 0,
             "start_time": time.time()
         }
         
         # Component health status
         self.component_health = {
-            "strategy_registry": False,
-            "performance_tracker": False,
-            "deployment_manager": False,
-            "strategy_composer": False,
-            "strategy_applicator": False,
-            "ml_composer": False,
-            "online_generator": False
+            "strategy_registry": "unknown",
+            "performance_tracker": "unknown",
+            "deployment_manager": "unknown",
+            "strategy_composer": "unknown",
+            "strategy_applicator": "unknown",
+            "ml_composer": "unknown",
+            "online_generator": "unknown",
+            "trading_signal_processor": "unknown",
+            "trading_flow_manager": "unknown",
+            "trading_logic_executor": "unknown",
+            "trading_agent_io": "unknown",
+            "trading_execution_pipeline": "unknown",
+            "trading_context": "unknown",
+            "trading_research_engine": "unknown",
+            "trading_training_module": "unknown",
+            "trading_retraining_loop": "unknown"
         }
 
-    async def initialize_integration(self) -> bool:
+    async def initialize_all_components(self) -> bool:
         """Initialize all strategy engine components."""
         try:
-            self.logger.info("Initializing Strategy Engine Integration...")
+            self.logger.info("Initializing all strategy engine components...")
             
-            # Initialize ML composer
-            ml_ready = await self.ml_composer.initialize_model()
-            self.component_health["ml_composer"] = ml_ready
+            # Initialize core components
+            await self.strategy_composer.initialize()
+            await self.strategy_applicator.initialize()
             
-            # Check Redis connectivity for all components
-            redis_healthy = await self._check_redis_connectivity()
-            if not redis_healthy:
-                self.logger.error("Redis connectivity check failed")
-                return False
+            # Initialize trading components
+            await self.trading_signal_processor.initialize()
+            await self.trading_flow_manager.initialize()
+            await self.trading_logic_executor.initialize()
+            await self.trading_agent_io.initialize()
+            await self.trading_execution_pipeline.initialize()
+            await self.trading_context.initialize()
+            await self.trading_research_engine.initialize()
+            await self.trading_training_module.initialize()
+            await self.trading_retraining_loop.initialize()
             
-            # Initialize component health
-            self.component_health["strategy_registry"] = True
-            self.component_health["performance_tracker"] = True
-            self.component_health["deployment_manager"] = True
-            self.component_health["strategy_composer"] = True
-            self.component_health["strategy_applicator"] = True
-            self.component_health["online_generator"] = True
-            
-            self.logger.info("Strategy Engine Integration initialized successfully")
+            self.logger.info("All components initialized successfully")
             return True
             
         except Exception as e:
-            self.logger.error(f"Error initializing integration: {e}")
-            return False
-
-    async def _check_redis_connectivity(self) -> bool:
-        """Check Redis connectivity for all components."""
-        try:
-            # Test basic Redis operations
-            test_key = "strategy_engine:integration_test"
-            test_value = {"test": True, "timestamp": time.time()}
-            
-            # Set test value with proper JSON serialization
-            import json
-            self.redis_conn.set(test_key, json.dumps(test_value), ex=60)
-            
-            # Get test value
-            retrieved_value = self.redis_conn.get(test_key)
-            
-            # Clean up
-            self.redis_conn.delete(test_key)
-            
-            if retrieved_value:
-                # Parse the JSON back
-                parsed_value = json.loads(retrieved_value)
-                if parsed_value.get("test") and parsed_value.get("timestamp"):
-                    self.logger.info("Redis connectivity check passed")
-                    return True
-                else:
-                    self.logger.error("Redis connectivity check failed - data corruption detected")
-                    return False
-            else:
-                self.logger.error("Redis connectivity check failed - no data retrieved")
-                return False
-                
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Redis JSON serialization error: {e}")
-            return False
-        except ConnectionError as e:
-            self.logger.error(f"Redis connection error: {e}")
-            return False
-        except Exception as e:
-            self.logger.error(f"Redis connectivity check error: {e}")
+            self.logger.error(f"Failed to initialize components: {e}")
             return False
 
     async def process_market_data(self, market_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -135,89 +127,29 @@ class StrategyEngineIntegration:
             
             self.logger.info(f"Processing {len(market_data)} market data points")
             
-            # Step 1: Apply existing strategies
-            try:
-                applied_signals = await self.strategy_applicator.apply_strategy("comprehensive", market_data)
-            except ConnectionError as e:
-                self.logger.error(f"Redis connection error in strategy application: {e}")
-                self.integration_stats["integration_errors"] += 1
-                return []
-            except ValueError as e:
-                self.logger.error(f"Invalid market data format: {e}")
-                self.integration_stats["integration_errors"] += 1
-                return []
-            except Exception as e:
-                self.logger.error(f"Unexpected error in strategy application: {e}")
-                self.integration_stats["integration_errors"] += 1
-                return []
+            # Step 1: Process through trading signal processor
+            processed_signals = []
+            for data in market_data:
+                signal = await self.trading_signal_processor.process_trading_signal(data)
+                if signal:
+                    processed_signals.append(signal)
+                    self.integration_stats["trading_signals_processed"] += 1
             
-            # Step 2: Generate new strategies if needed
-            ml_strategies = []
-            online_strategies = []
-            
-            try:
-                ml_strategies = await self.ml_composer.compose_strategy(market_data)
-            except Exception as e:
-                self.logger.error(f"ML composer error: {e}")
-                # Continue with other strategies
+            # Step 2: Execute trading logic
+            if processed_signals:
+                logic_results = await self.trading_logic_executor.execute_trading_logic_tree(processed_signals)
+                self.integration_stats["trading_logic_executions"] += 1
                 
-            try:
-                online_strategies = await self.online_generator.generate_strategy(market_data)
-            except Exception as e:
-                self.logger.error(f"Online generator error: {e}")
-                # Continue with other strategies
+                # Step 3: Execute trading flow
+                flow_results = await self.trading_flow_manager.process_trading_signal(logic_results)
+                self.integration_stats["trading_flows_executed"] += 1
+                
+                return flow_results
             
-            # Step 3: Register new strategies
-            all_strategies = applied_signals + ml_strategies + online_strategies
-            
-            registered_strategies = []
-            for strategy in all_strategies:
-                try:
-                    if await self.strategy_registry.register_strategy(strategy):
-                        registered_strategies.append(strategy)
-                        self.integration_stats["strategies_registered"] += 1
-                except Exception as e:
-                    self.logger.error(f"Failed to register strategy {strategy.get('name', 'unknown')}: {e}")
-                    continue
-            
-            # Step 4: Track performance for existing strategies
-            if registered_strategies:
-                try:
-                    performance_metrics = await self.performance_tracker.track_performance(registered_strategies)
-                    self.integration_stats["performance_checks"] += 1
-                except Exception as e:
-                    self.logger.error(f"Performance tracking error: {e}")
-                    # Continue without performance tracking
-            
-            # Step 5: Deploy strategies
-            deployed_strategies = []
-            for strategy in registered_strategies:
-                try:
-                    if await self.deployment_manager.deploy_strategy(strategy):
-                        deployed_strategies.append(strategy)
-                        self.integration_stats["strategies_deployed"] += 1
-                except Exception as e:
-                    self.logger.error(f"Failed to deploy strategy {strategy.get('name', 'unknown')}: {e}")
-                    continue
-            
-            # Update stats
-            self.integration_stats["ml_compositions"] += len(ml_strategies)
-            self.integration_stats["online_generations"] += len(online_strategies)
-            
-            self.logger.info(f"Pipeline processed: {len(applied_signals)} applied, {len(ml_strategies)} ML, {len(online_strategies)} online, {len(deployed_strategies)} deployed")
-            
-            return deployed_strategies
-            
-        except ConnectionError as e:
-            self.logger.error(f"Redis connection error in market data processing: {e}")
-            self.integration_stats["integration_errors"] += 1
             return []
-        except ValueError as e:
-            self.logger.error(f"Data validation error in market data processing: {e}")
-            self.integration_stats["integration_errors"] += 1
-            return []
+            
         except Exception as e:
-            self.logger.error(f"Unexpected error in market data processing: {e}")
+            self.logger.error(f"Error processing market data: {e}")
             self.integration_stats["integration_errors"] += 1
             return []
 
@@ -444,6 +376,15 @@ class StrategyEngineIntegration:
             **self.integration_stats,
             "uptime": time.time() - self.integration_stats["start_time"],
             "component_health": self.component_health
+        }
+
+    async def get_integration_status(self) -> Dict[str, Any]:
+        """Get comprehensive integration status."""
+        return {
+            "component_health": self.component_health,
+            "integration_stats": self.integration_stats,
+            "uptime": time.time() - self.integration_stats["start_time"],
+            "status": "operational" if self.integration_stats["integration_errors"] < 10 else "degraded"
         }
 
     async def shutdown(self):

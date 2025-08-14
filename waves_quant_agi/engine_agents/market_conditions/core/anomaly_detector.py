@@ -12,7 +12,7 @@ REFACTORED FOR SIMPLICITY:
 
 import time
 from typing import Dict, Any, List, Optional, Tuple
-from ...shared_utils import get_shared_logger, get_agent_learner, LearningType
+from shared_utils import get_shared_logger, get_agent_learner, LearningType
 
 class AnomalyDetector:
     """
@@ -321,7 +321,7 @@ class AnomalyDetector:
                 target = 0.0
             
             # Learn for future detection improvement
-            from ...shared_utils import LearningData
+            from shared_utils import LearningData
             learning_data = LearningData(
                 agent_name="market_conditions",
                 learning_type=LearningType.MARKET_PREDICTION,
@@ -393,3 +393,23 @@ class AnomalyDetector:
             "false_positives": 0,
             "detection_accuracy": 0.0
         }
+    
+    async def cleanup(self):
+        """Cleanup resources."""
+        try:
+            # Reset statistics
+            self.reset_stats()
+            
+            # Clear any cached data
+            self.market_baseline = {
+                "normal_volatility": 0.02,
+                "normal_volume": 1000000,
+                "normal_spread": 0.001,
+                "normal_correlation": 0.3,
+                "normal_liquidity": 1.0
+            }
+            
+            self.logger.info("AnomalyDetector cleanup completed")
+            
+        except Exception as e:
+            self.logger.error(f"Error during cleanup: {e}")

@@ -6,8 +6,8 @@ class TemporalLimitGuard:
     def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
         self.connection_manager = connection_manager
-                self.hourly_drawdown_limit = config.get("hourly_drawdown_limit", 0.01)  # 1% per hour
-        self.daily_drawdown_limit = config.get("daily_drawdown_limit", 0.03)  # 3% per day
+        self.hourly_drawdown_limit = config.get("hourly_drawdown_limit", 0.01)  # 1% per hour
+        self.daily_drawdown_limit = config.get("daily_drawdown_limit", 0.02)  # 2% per day - USER REQUIREMENT
         self.weekly_drawdown_limit = config.get("weekly_drawdown_limit", 0.05)  # 5% per week
 
     async def enforce_drawdown_limits(self, performance_data: pd.DataFrame) -> List[Dict[str, Any]]:
@@ -41,8 +41,8 @@ class TemporalLimitGuard:
                     limits.append(limit)
                     
                     redis_client = await self.connection_manager.get_redis_client()
-                        if redis_client:
-                            redis_client.set(f"risk_management:drawdown_limit:{symbol}", str(limit), ex=3600)
+                    if redis_client:
+                        redis_client.set(f"risk_management:drawdown_limit:{symbol}", str(limit), ex=3600)
                     await self.notify_execution(limit)
 
             summary = {
@@ -60,14 +60,12 @@ class TemporalLimitGuard:
 
     async def notify_execution(self, limit: Dict[str, Any]):
         """Notify Executions Agent of drawdown limit triggers."""
-        }")
         redis_client = await self.connection_manager.get_redis_client()
         if redis_client:
             redis_client.publish("execution_agent", str(limit))
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of drawdown limit results."""
-        }")
         redis_client = await self.connection_manager.get_redis_client()
         if redis_client:
             redis_client.publish("risk_management_output", str(issue))

@@ -12,7 +12,7 @@ REFACTORED FOR SIMPLICITY:
 
 import time
 from typing import Dict, Any, List, Optional
-from ...shared_utils import get_shared_redis, get_shared_logger
+from shared_utils import get_shared_redis, get_shared_logger
 
 class EarlyWarningSystem:
     """

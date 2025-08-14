@@ -13,7 +13,7 @@ REFACTORED FOR SIMPLICITY:
 import time
 import numpy as np
 from typing import Dict, Any, List, Optional, Tuple
-from ...shared_utils import get_shared_logger, get_agent_learner, LearningType
+from ...shared_utils import get_shared_logger
 
 class PatternAnalyzer:
     """
@@ -24,7 +24,7 @@ class PatternAnalyzer:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.logger = get_shared_logger("intelligence", "pattern_analyzer")
-        self.learner = get_agent_learner("intelligence", LearningType.PATTERN_RECOGNITION, 10)
+        # self.learner = get_agent_learner("intelligence", LearningType.PATTERN_RECOGNITION, 10)
         
         # Pattern analysis state
         self.analysis_stats = {
@@ -73,8 +73,8 @@ class PatternAnalyzer:
             # Enhance with market intelligence
             intelligence_analysis = await self._add_market_intelligence(pattern_analysis, market_data)
             
-            # Learn from analysis
-            await self._learn_from_analysis(market_data, intelligence_analysis, start_time)
+            # Learn from analysis (removed - handled by Strategy Engine)
+            # await self._learn_from_analysis(market_data, intelligence_analysis, start_time)
             
             # Cache results
             self._cache_result(cache_key, intelligence_analysis)
@@ -530,38 +530,10 @@ class PatternAnalyzer:
                            key=lambda k: self.pattern_cache[k][1])
             del self.pattern_cache[oldest_key]
     
-    async def _learn_from_analysis(self, market_data: Dict[str, Any], 
-                                 analysis: Dict[str, Any], start_time: float):
-        """Learn from pattern analysis for improvement."""
-        try:
-            # Create learning features
-            features = [
-                market_data.get("price", 0) / 10000.0,  # Normalize price
-                market_data.get("volatility", 0),
-                market_data.get("volume_ratio", 1.0),
-                analysis.get("patterns_found", 0) / 10.0,  # Normalize
-                analysis.get("pattern_strength", 0.0),
-                analysis.get("analysis_confidence", 0.0),
-                time.time() - start_time,  # Analysis time
-                len(analysis.get("intelligence", {}).get("trading_opportunities", [])) / 5.0  # Normalize
-            ]
-            
-            # Target is pattern strength (for learning)
-            target = analysis.get("pattern_strength", 0.0)
-            
-            # Learn for future pattern recognition
-            from ...shared_utils import LearningData
-            learning_data = LearningData(
-                agent_name="intelligence",
-                learning_type=LearningType.PATTERN_RECOGNITION,
-                input_features=features,
-                target_value=target
-            )
-            
-            self.learner.learn(learning_data)
-            
-        except Exception as e:
-            self.logger.warning(f"Learning error: {e}")
+    # async def _learn_from_analysis(self, market_data: Dict[str, Any], 
+    #                              analysis: Dict[str, Any], start_time: float):
+    #     """Learn from pattern analysis for improvement (removed - handled by Strategy Engine)."""
+    #     pass
     
     # ============= UTILITY METHODS =============
     

@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """
-Sentiment Analysis Strategy - Fixed and Enhanced
-News-driven trading using sentiment analysis.
+Sentiment Analysis Strategy - News Driven
+Focuses purely on strategy-specific tasks, delegating risk management to the risk management agent.
 """
 
 from typing import Dict, Any, List, Optional
 import time
 import pandas as pd
 import numpy as np
-from engine_agents.shared_utils import get_shared_redis
+from datetime import datetime
+
+# Import consolidated trading components
+from ....trading.memory.trading_context import TradingContext
+from ....trading.learning.trading_research_engine import TradingResearchEngine
+
 
 class SentimentAnalysisStrategy:
     """Sentiment analysis strategy for news-driven trading."""
@@ -16,302 +21,223 @@ class SentimentAnalysisStrategy:
     def __init__(self, config: Dict[str, Any], logger=None):
         self.config = config
         self.logger = logger
-        # Use shared Redis connection
-        self.redis_conn = get_shared_redis()
+        
+        # Initialize consolidated trading components
+        self.trading_context = TradingContext()
+        self.trading_research_engine = TradingResearchEngine()
         
         # Strategy parameters
-        self.sentiment_threshold = config.get("sentiment_threshold", 0.6)  # 60% sentiment threshold
-        self.confidence_threshold = config.get("confidence_threshold", 0.7)  # 70% confidence threshold
-        self.news_impact_duration = config.get("news_impact_duration", 3600)  # 1 hour impact
-        self.min_volume_spike = config.get("min_volume_spike", 2.0)  # 2x volume spike
-        self.sentiment_decay_rate = config.get("sentiment_decay_rate", 0.1)  # 10% decay per hour
+        self.sentiment_threshold = config.get("sentiment_threshold", 0.6)  # 0.6 sentiment score
+        self.news_impact_threshold = config.get("news_impact_threshold", 0.05)  # 5% price impact
+        self.volume_confirmation = config.get("volume_confirmation", 1.5)  # 1.5x average volume
+        self.lookback_period = config.get("lookback_period", 50)  # 50 periods
         
-        # Sentiment sources
-        self.sentiment_sources = ["news", "social_media", "earnings_calls", "fed_speeches"]
+        # Strategy state
+        self.last_signal_time = None
+        self.strategy_performance = {"total_signals": 0, "average_confidence": 0.0}
+
+    async def initialize(self) -> bool:
+        """Initialize the strategy and trading components."""
+        try:
+            await self.trading_context.initialize()
+            await self.trading_research_engine.initialize()
+            return True
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Failed to initialize sentiment analysis strategy: {e}")
+            return False
 
     async def detect_opportunity(self, market_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Detect sentiment-based trading opportunities."""
+        """Detect sentiment analysis opportunities."""
+        if not market_data or len(market_data) < self.lookback_period:
+            return []
+        
         try:
+            # Convert to DataFrame for analysis
+            df = pd.DataFrame(market_data)
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            df = df.sort_values('timestamp').tail(self.lookback_period)
+            
             opportunities = []
             
-            if not market_data:
-                return opportunities
-            
-            for data in market_data:
-                symbol = data.get("symbol", "")
-                if not symbol:
-                    continue
+            for _, row in df.iterrows():
+                symbol = row.get("symbol", "BTCUSD")
+                current_price = float(row.get("close", 0.0))
+                current_volume = float(row.get("volume", 0.0))
+                sentiment_score = float(row.get("sentiment_score", 0.0))
+                news_impact = float(row.get("news_impact", 0.0))
                 
-                opportunity = await self._check_sentiment_opportunity(symbol, data)
-                if opportunity:
-                    opportunities.append(opportunity)
+                # Calculate sentiment metrics
+                sentiment_metrics = await self._calculate_sentiment_metrics(
+                    current_price, current_volume, sentiment_score, news_impact, market_data
+                )
+                
+                # Check if sentiment signal meets criteria
+                if self._is_valid_sentiment_signal(sentiment_metrics):
+                    signal = self._generate_sentiment_signal(
+                        symbol, current_price, sentiment_metrics
+                    )
+                    if signal:
+                        self.trading_context.store_signal(signal)
+                        opportunities.append(signal)
+                        
+                        # Update strategy performance
+                        self.strategy_performance["total_signals"] += 1
+                        self.strategy_performance["average_confidence"] = (
+                            (self.strategy_performance["average_confidence"] * 
+                             (self.strategy_performance["total_signals"] - 1) + signal["confidence"]) /
+                            self.strategy_performance["total_signals"]
+                        )
+                        
+                        self.last_signal_time = datetime.now()
+                        
+                        if self.logger:
+                            self.logger.info(f"Sentiment signal generated: {signal['signal_type']} for {symbol}")
             
             return opportunities
             
         except Exception as e:
             if self.logger:
-                self.logger.error(f"Error detecting sentiment opportunities: {e}")
+                self.logger.error(f"Error detecting sentiment analysis opportunities: {e}")
             return []
 
-    async def _check_sentiment_opportunity(self, symbol: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Check for sentiment-based opportunity in a specific symbol."""
+    async def _calculate_sentiment_metrics(self, current_price: float, current_volume: float, 
+                                         sentiment_score: float, news_impact: float, 
+                                         market_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Calculate sentiment metrics for analysis."""
         try:
-            close_price = float(data.get("close", 0.0))
-            volume = float(data.get("volume", 0.0))
+            # Calculate volume metrics
+            volumes = [float(d.get("volume", 0)) for d in market_data if d.get("volume")]
+            avg_volume = np.mean(volumes) if volumes else current_volume
+            volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1.0
             
-            if close_price <= 0:
-                return None
+            # Calculate sentiment strength
+            sentiment_strength = abs(sentiment_score - 0.5) * 2  # Convert to 0-1 scale
             
-            # Get sentiment data
-            sentiment_data = await self._get_sentiment_data(symbol)
-            if not sentiment_data:
-                return None
+            # Calculate news impact strength
+            news_impact_strength = abs(news_impact) / self.news_impact_threshold if self.news_impact_threshold > 0 else 0
             
-            # Calculate sentiment metrics
-            sentiment_metrics = await self._calculate_sentiment_metrics(
-                symbol, sentiment_data, volume
-            )
-            
-            if not sentiment_metrics['opportunity_detected']:
-                return None
-            
-            # Determine trade direction
-            if sentiment_metrics['sentiment_score'] > self.sentiment_threshold:
-                action = "buy"  # Positive sentiment
-                entry_price = close_price
-                stop_loss = close_price * (1 - sentiment_metrics['stop_loss'])
-                take_profit = close_price * (1 + sentiment_metrics['take_profit'])
+            # Calculate price momentum
+            prices = [float(d.get("close", 0)) for d in market_data if d.get("close")]
+            if len(prices) > 1:
+                price_momentum = (current_price - prices[0]) / prices[0] if prices[0] > 0 else 0
             else:
-                action = "sell"  # Negative sentiment
-                entry_price = close_price
-                stop_loss = close_price * (1 + sentiment_metrics['stop_loss'])
-                take_profit = close_price * (1 - sentiment_metrics['take_profit'])
+                price_momentum = 0.0
             
-            opportunity = {
-                "type": "sentiment_analysis",
-                "strategy": "news_driven",
-                "symbol": symbol,
-                "action": action,
-                "entry_price": entry_price,
-                "stop_loss": stop_loss,
-                "take_profit": take_profit,
-                "confidence": sentiment_metrics['confidence'],
-                "sentiment_score": sentiment_metrics['sentiment_score'],
-                "sentiment_confidence": sentiment_metrics['sentiment_confidence'],
-                "news_impact": sentiment_metrics['news_impact'],
-                "volume_spike": sentiment_metrics['volume_spike'],
-                "impact_duration": self.news_impact_duration,
-                "timestamp": int(time.time()),
-                "description": f"Sentiment opportunity for {symbol}: Score {sentiment_metrics['sentiment_score']:.3f}, Action {action}"
-            }
-            
-            # Store in Redis
-            if self.redis_conn:
-                try:
-                    import json
-                    self.redis_conn.set(
-                        f"strategy_engine:sentiment:{symbol}:{int(time.time())}", 
-                        json.dumps(opportunity), 
-                        ex=3600
-                    )
-                except json.JSONEncodeError as e:
-                    if self.logger:
-                        self.logger.error(f"JSON encoding error storing sentiment opportunity: {e}")
-                except ConnectionError as e:
-                    if self.logger:
-                        self.logger.error(f"Redis connection error storing sentiment opportunity: {e}")
-                except Exception as e:
-                    if self.logger:
-                        self.logger.error(f"Unexpected error storing sentiment opportunity: {e}")
-            
-            if self.logger:
-                self.logger.info(f"Sentiment analysis opportunity: {opportunity['description']}")
-            
-            return opportunity
-            
-        except Exception as e:
-            if self.logger:
-                self.logger.error(f"Error checking sentiment opportunity: {e}")
-            return None
-
-    async def _get_sentiment_data(self, symbol: str) -> Optional[Dict[str, Any]]:
-        """Get sentiment data for a symbol."""
-        try:
-            if not self.redis_conn:
-                return None
-            
-            # Get sentiment from multiple sources
-            sentiment_data = {}
-            
-            for source in self.sentiment_sources:
-                source_key = f"sentiment:{source}:{symbol}"
-                source_data = self.redis_conn.get(source_key)
-                
-                if source_data:
-                    import json
-                    try:
-                        sentiment_data[source] = json.loads(source_data)
-                    except:
-                        continue
-            
-            return sentiment_data if sentiment_data else None
-            
-        except Exception as e:
-            if self.logger:
-                self.logger.error(f"Error getting sentiment data: {e}")
-            return None
-
-    async def _calculate_sentiment_metrics(self, symbol: str, sentiment_data: Dict[str, Any], 
-                                        volume: float) -> Dict[str, Any]:
-        """Calculate sentiment metrics and detect opportunities."""
-        try:
-            # Calculate composite sentiment score
-            sentiment_scores = []
-            confidence_scores = []
-            
-            for source, data in sentiment_data.items():
-                if isinstance(data, dict):
-                    score = data.get("sentiment_score", 0.5)
-                    confidence = data.get("confidence", 0.5)
-                    timestamp = data.get("timestamp", 0)
-                    
-                    # Apply time decay
-                    if timestamp > 0:
-                        time_diff = time.time() - timestamp
-                        decay_factor = 1.0 / (1.0 + self.sentiment_decay_rate * time_diff / 3600)
-                        score = 0.5 + (score - 0.5) * decay_factor
-                    
-                    sentiment_scores.append(score)
-                    confidence_scores.append(confidence)
-            
-            if not sentiment_scores:
-                return {
-                    "opportunity_detected": False,
-                    "sentiment_score": 0.5,
-                    "sentiment_confidence": 0.0,
-                    "news_impact": 0.0,
-                    "volume_spike": 1.0,
-                    "stop_loss": 0.02,
-                    "take_profit": 0.03
-                }
-            
-            # Calculate weighted average sentiment
-            composite_sentiment = np.average(sentiment_scores, weights=confidence_scores)
-            composite_confidence = np.mean(confidence_scores)
-            
-            # Get volume spike
-            volume_spike = await self._calculate_volume_spike(symbol, volume)
-            
-            # Calculate news impact
-            news_impact = await self._calculate_news_impact(sentiment_data)
-            
-            # Determine if opportunity exists
-            sentiment_threshold_met = abs(composite_sentiment - 0.5) > (self.sentiment_threshold - 0.5)
-            confidence_threshold_met = composite_confidence > self.confidence_threshold
-            volume_threshold_met = volume_spike > self.min_volume_spike
-            
-            opportunity_detected = (sentiment_threshold_met and 
-                                 confidence_threshold_met and 
-                                 volume_threshold_met)
-            
-            # Calculate position sizing parameters
-            sentiment_strength = abs(composite_sentiment - 0.5) * 2  # 0 to 1
-            stop_loss = 0.02 + (1 - sentiment_strength) * 0.03  # 2% to 5%
-            take_profit = 0.03 + sentiment_strength * 0.04  # 3% to 7%
+            # Calculate sentiment consistency
+            sentiment_scores = [float(d.get("sentiment_score", 0.5)) for d in market_data if d.get("sentiment_score")]
+            if len(sentiment_scores) > 1:
+                sentiment_consistency = 1.0 - np.std(sentiment_scores)  # Higher consistency = lower std
+            else:
+                sentiment_consistency = 0.5
             
             return {
-                "opportunity_detected": opportunity_detected,
-                "sentiment_score": composite_sentiment,
-                "sentiment_confidence": composite_confidence,
+                "sentiment_score": sentiment_score,
+                "sentiment_strength": sentiment_strength,
                 "news_impact": news_impact,
-                "volume_spike": volume_spike,
-                "stop_loss": stop_loss,
-                "take_profit": take_profit
+                "news_impact_strength": news_impact_strength,
+                "volume_ratio": volume_ratio,
+                "price_momentum": price_momentum,
+                "sentiment_consistency": sentiment_consistency,
+                "current_price": current_price,
+                "current_volume": current_volume
             }
             
         except Exception as e:
             if self.logger:
                 self.logger.error(f"Error calculating sentiment metrics: {e}")
-            return {
-                "opportunity_detected": False,
-                "sentiment_score": 0.5,
-                "sentiment_confidence": 0.0,
-                "news_impact": 0.0,
-                "volume_spike": 1.0,
-                "stop_loss": 0.02,
-                "take_profit": 0.03
+            return {}
+
+    def _is_valid_sentiment_signal(self, metrics: Dict[str, Any]) -> bool:
+        """Check if sentiment signal meets criteria."""
+        try:
+            if not metrics:
+                return False
+            
+            sentiment_strength = metrics.get("sentiment_strength", 0.0)
+            news_impact_strength = metrics.get("news_impact_strength", 0.0)
+            volume_ratio = metrics.get("volume_ratio", 1.0)
+            sentiment_consistency = metrics.get("sentiment_consistency", 0.5)
+            
+            # Check sentiment strength
+            if sentiment_strength < self.sentiment_threshold:
+                return False
+            
+            # Check news impact
+            if news_impact_strength < 1.0:
+                return False
+            
+            # Check volume confirmation
+            if volume_ratio < self.volume_confirmation:
+                return False
+            
+            # Check sentiment consistency
+            if sentiment_consistency < 0.3:
+                return False
+            
+            return True
+            
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Error validating sentiment signal: {e}")
+            return False
+
+    def _generate_sentiment_signal(self, symbol: str, current_price: float, 
+                                  metrics: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Generate sentiment trading signal."""
+        try:
+            sentiment_score = metrics.get("sentiment_score", 0.5)
+            sentiment_strength = metrics.get("sentiment_strength", 0.0)
+            news_impact_strength = metrics.get("news_impact_strength", 0.0)
+            volume_ratio = metrics.get("volume_ratio", 1.0)
+            price_momentum = metrics.get("price_momentum", 0.0)
+            
+            # Determine signal type
+            if sentiment_score > 0.5:
+                signal_type = "SENTIMENT_BULLISH"
+                confidence = min(sentiment_strength, 1.0)
+            else:
+                signal_type = "SENTIMENT_BEARISH"
+                confidence = min(sentiment_strength, 1.0)
+            
+            # Adjust confidence based on other factors
+            news_confidence = min(news_impact_strength, 1.0)
+            volume_confidence = min(volume_ratio / self.volume_confirmation, 1.0)
+            momentum_confidence = min(abs(price_momentum) / self.news_impact_threshold, 1.0)
+            
+            final_confidence = (confidence + news_confidence + volume_confidence + momentum_confidence) / 4
+            
+            signal = {
+                "signal_id": f"sentiment_{int(time.time())}",
+                "strategy_id": "sentiment_analysis",
+                "strategy_type": "news_driven",
+                "signal_type": signal_type,
+                "symbol": symbol,
+                "timestamp": datetime.now().isoformat(),
+                "price": current_price,
+                "confidence": final_confidence,
+                "metadata": {
+                    "sentiment_score": sentiment_score,
+                    "sentiment_strength": sentiment_strength,
+                    "news_impact": metrics.get("news_impact", 0.0),
+                    "news_impact_strength": news_impact_strength,
+                    "volume_ratio": volume_ratio,
+                    "price_momentum": price_momentum
+                }
             }
-
-    async def _calculate_volume_spike(self, symbol: str, current_volume: float) -> float:
-        """Calculate volume spike relative to historical average."""
-        try:
-            if not self.redis_conn:
-                return 1.0
             
-            # Get historical volume data
-            volume_key = f"volume_history:{symbol}"
-            volume_history = self.redis_conn.get(volume_key)
-            
-            if volume_history:
-                import json
-                try:
-                    volumes = json.loads(volume_history)
-                    if volumes and len(volumes) > 0:
-                        avg_volume = np.mean(volumes)
-                        if avg_volume > 0:
-                            return current_volume / avg_volume
-                except:
-                    pass
-            
-            return 1.0
+            return signal
             
         except Exception as e:
             if self.logger:
-                self.logger.error(f"Error calculating volume spike: {e}")
-            return 1.0
+                self.logger.error(f"Error generating sentiment signal: {e}")
+            return None
 
-    async def _calculate_news_impact(self, sentiment_data: Dict[str, Any]) -> float:
-        """Calculate overall news impact score."""
+    async def cleanup(self):
+        """Cleanup strategy resources."""
         try:
-            impact_scores = []
-            
-            for source, data in sentiment_data.items():
-                if isinstance(data, dict):
-                    impact = data.get("impact_score", 0.5)
-                    timestamp = data.get("timestamp", 0)
-                    
-                    # Apply time decay
-                    if timestamp > 0:
-                        time_diff = time.time() - timestamp
-                        decay_factor = 1.0 / (1.0 + self.sentiment_decay_rate * time_diff / 3600)
-                        impact = 0.5 + (impact - 0.5) * decay_factor
-                    
-                    impact_scores.append(impact)
-            
-            if impact_scores:
-                return np.mean(impact_scores)
-            
-            return 0.5
-            
+            await self.trading_context.cleanup()
+            await self.trading_research_engine.cleanup()
         except Exception as e:
             if self.logger:
-                self.logger.error(f"Error calculating news impact: {e}")
-            return 0.5
-
-    def get_strategy_info(self) -> Dict[str, Any]:
-        """Get strategy information and parameters."""
-        return {
-            "name": "Sentiment Analysis Strategy",
-            "type": "news_driven",
-            "description": "News-driven trading using sentiment analysis",
-            "parameters": {
-                "sentiment_threshold": self.sentiment_threshold,
-                "confidence_threshold": self.confidence_threshold,
-                "news_impact_duration": self.news_impact_duration,
-                "min_volume_spike": self.min_volume_spike,
-                "sentiment_decay_rate": self.sentiment_decay_rate
-            },
-            "timeframe": "tactical",  # 30s tier
-            "asset_types": ["crypto", "forex", "stocks"],
-            "execution_speed": "medium"
-        }
+                self.logger.error(f"Error during strategy cleanup: {e}")

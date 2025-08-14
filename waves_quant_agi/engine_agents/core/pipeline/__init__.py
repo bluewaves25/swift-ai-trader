@@ -1,3 +1,9 @@
-from .execution_pipeline import ExecutionPipeline
+# System Coordination Pipeline
+# Focused ONLY on system coordination pipeline
+# All trading and execution pipeline moved to Strategy Engine Agent
 
-__all__ = ["ExecutionPipeline"]
+from .execution_pipeline import SystemCoordinationPipeline
+
+__all__ = [
+    'SystemCoordinationPipeline'
+]

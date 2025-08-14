@@ -170,20 +170,21 @@ async def start_engine(config: EngineStartup):
     """Start the trading engine components."""
     try:
         if config.start_agents:
-            # Import and start parallel agent runner
-            from engine_agents.parallel_agent_runner import start_all_agents
-            await start_all_agents()
+            # Import and start agents via pipeline runner
+            from engine_agents.pipeline_runner import PipelineRunner
+            pipeline_runner = PipelineRunner()
+            await pipeline_runner.start_agents_only()
             engine_state["agents_running"] = True
         
         if config.start_trading:
-            # Import and start NEW trading engine
-            from engine_agents.trading_engine import TradingEngine
-            trading_engine = TradingEngine()
-            success = await trading_engine.start_trading_engine()
+            # Import and start NEW pipeline system
+            from engine_agents.pipeline_runner import PipelineRunner
+            pipeline_runner = PipelineRunner()
+            success = await pipeline_runner.start_pipeline()
             if success:
                 engine_state["trading_active"] = True
             else:
-                raise Exception("Failed to start trading engine")
+                raise Exception("Failed to start pipeline system")
         
         engine_state["last_startup"] = time.time()
         
@@ -203,17 +204,16 @@ async def start_engine(config: EngineStartup):
 async def stop_engine():
     """Stop the trading engine."""
     try:
-        # Stop NEW trading engine
+        # Stop NEW pipeline system
         if engine_state["trading_active"]:
-            from engine_agents.trading_engine import TradingEngine
-            trading_engine = TradingEngine()
-            await trading_engine.stop_trading_engine()
+            from engine_agents.pipeline_runner import PipelineRunner
+            pipeline_runner = PipelineRunner()
+            await pipeline_runner.stop_pipeline()
             engine_state["trading_active"] = False
         
-        # Stop agents
+        # Stop agents (now handled by pipeline runner)
         if engine_state["agents_running"]:
-            from engine_agents.parallel_agent_runner import stop_all_agents
-            await stop_all_agents()
+            # Agents are stopped automatically when pipeline stops
             engine_state["agents_running"] = False
         
         return {

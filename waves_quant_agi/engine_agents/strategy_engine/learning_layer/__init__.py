@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
 """
 Strategy Engine Learning Layer
-Handles strategy learning, optimization, and adaptation.
+Provides learning and adaptation capabilities for trading strategies.
 """
 
-from .strategy_learning_manager import StrategyLearningManager
+# Strategy adaptation and learning
 from .strategy_adaptation_engine import StrategyAdaptationEngine
+from .strategy_learning_manager import StrategyLearningManager
+
+# Consolidated trading learning components
+from ..trading.learning.trading_research_engine import TradingResearchEngine
+from ..trading.learning.trading_training_module import TradingTrainingModule
+from ..trading.learning.trading_retraining_loop import TradingRetrainingLoop
 
 __all__ = [
-    'StrategyLearningManager',
-    'StrategyAdaptationEngine'
+    "StrategyAdaptationEngine",
+    "StrategyLearningManager",
+    "TradingResearchEngine",
+    "TradingTrainingModule",
+    "TradingRetrainingLoop",
 ]

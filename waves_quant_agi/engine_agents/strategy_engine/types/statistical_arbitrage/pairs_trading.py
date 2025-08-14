@@ -1,23 +1,30 @@
 #!/usr/bin/env python3
 """
-Pairs Trading Strategy - Fixed and Enhanced
-Statistical arbitrage using cointegrated pairs.
+Pairs Trading Strategy - Statistical Arbitrage
+Focuses purely on strategy-specific tasks, delegating risk management to the risk management agent.
 """
 
 from typing import Dict, Any, List, Optional
 import time
 import pandas as pd
 import numpy as np
-from engine_agents.shared_utils import get_shared_redis
+from datetime import datetime
+
+# Import consolidated trading components
+from ....trading.memory.trading_context import TradingContext
+from ....trading.learning.trading_research_engine import TradingResearchEngine
+
 
 class PairsTradingStrategy:
-    """Pairs trading strategy using statistical arbitrage."""
+    """Pairs trading strategy using statistical arbitrage principles."""
     
     def __init__(self, config: Dict[str, Any], logger=None):
         self.config = config
         self.logger = logger
-        # Use shared Redis connection
-        self.redis_conn = get_shared_redis()
+        
+        # Initialize consolidated trading components
+        self.trading_context = TradingContext()
+        self.trading_research_engine = TradingResearchEngine()
         
         # Strategy parameters
         self.z_score_threshold = config.get("z_score_threshold", 2.0)  # Z-score threshold
@@ -25,17 +32,45 @@ class PairsTradingStrategy:
         self.min_correlation = config.get("min_correlation", 0.8)  # Minimum correlation
         self.position_threshold = config.get("position_threshold", 0.02)  # 2% position threshold
         self.stop_loss_threshold = config.get("stop_loss_threshold", 0.05)  # 5% stop loss
+        
+        # Strategy state
+        self.last_signal_time = None
+        self.current_positions = {}
+        self.strategy_performance = {
+            "total_signals": 0,
+            "successful_trades": 0,
+            "total_pnl": 0.0,
+            "average_confidence": 0.0
+        }
+
+    async def initialize(self) -> bool:
+        """Initialize the strategy and trading components."""
+        try:
+            # Initialize trading components
+            await self.trading_context.initialize()
+            await self.trading_research_engine.initialize()
+            
+            if self.logger:
+                self.logger.info("Pairs trading strategy initialized successfully")
+            return True
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Failed to initialize pairs trading strategy: {e}")
+            return False
 
     async def detect_opportunity(self, market_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Detect pairs trading opportunities."""
+        """Detect pairs trading opportunities based on statistical analysis."""
+        if not market_data or len(market_data) < self.lookback_period:
+            return []
+        
         try:
             opportunities = []
             
-            if not market_data:
-                return opportunities
+            # Extract unique symbols from market data
+            symbols = list(set([data.get("symbol", "") for data in market_data if data.get("symbol")]))
             
-            # Get available trading pairs from data feeds
-            trading_pairs = await self._get_trading_pairs()
+            # Generate potential pairs
+            trading_pairs = self._generate_trading_pairs(symbols)
             
             for pair in trading_pairs:
                 if len(pair) == 2:
@@ -50,33 +85,19 @@ class PairsTradingStrategy:
                 self.logger.error(f"Error detecting pairs trading opportunities: {e}")
             return []
 
-    async def _get_trading_pairs(self) -> List[List[str]]:
-        """Get available trading pairs from data feeds."""
+    def _generate_trading_pairs(self, symbols: List[str]) -> List[List[str]]:
+        """Generate potential trading pairs from available symbols."""
         try:
-            if not self.redis_conn:
-                return []
+            pairs = []
+            for i in range(len(symbols)):
+                for j in range(i + 1, len(symbols)):
+                    pairs.append([symbols[i], symbols[j]])
             
-            # Get available symbols from data feeds
-            symbols_key = "data_feeds:available_symbols"
-            symbols_data = self.redis_conn.get(symbols_key)
-            
-            if symbols_data:
-                import json
-                symbols = json.loads(symbols_data)
-                
-                # Generate pairs from available symbols
-                pairs = []
-                for i in range(len(symbols)):
-                    for j in range(i + 1, len(symbols)):
-                        pairs.append([symbols[i], symbols[j]])
-                
-                return pairs[:20]  # Limit to 20 pairs for performance
-            
-            return []
+            return pairs[:20]  # Limit to 20 pairs for performance
             
         except Exception as e:
             if self.logger:
-                self.logger.error(f"Error getting trading pairs: {e}")
+                self.logger.error(f"Error generating trading pairs: {e}")
             return []
 
     async def _check_pair_opportunity(self, pair: List[str], market_data: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -84,19 +105,15 @@ class PairsTradingStrategy:
         try:
             symbol1, symbol2 = pair
             
-            # Get historical data for both symbols
-            hist1 = await self._get_historical_data(symbol1)
-            hist2 = await self._get_historical_data(symbol2)
+            # Filter market data for both symbols
+            data1 = [d for d in market_data if d.get("symbol") == symbol1]
+            data2 = [d for d in market_data if d.get("symbol") == symbol2]
             
-            if hist1 is None or hist2 is None:
-                return None
-            
-            # Check if we have enough data
-            if len(hist1) < self.lookback_period or len(hist2) < self.lookback_period:
+            if len(data1) < self.lookback_period or len(data2) < self.lookback_period:
                 return None
             
             # Calculate pair statistics
-            pair_stats = await self._calculate_pair_statistics(hist1, hist2)
+            pair_stats = await self._calculate_pair_statistics(data1, data2)
             
             if not pair_stats['cointegrated']:
                 return None
@@ -107,56 +124,50 @@ class PairsTradingStrategy:
             if abs(current_z_score) > self.z_score_threshold:
                 # Determine trade direction
                 if current_z_score > self.z_score_threshold:
-                    action = "short_long"  # Short symbol1, long symbol2
-                    entry_price = pair_stats['spread']
-                    stop_loss = entry_price * (1 + self.stop_loss_threshold)
-                    take_profit = entry_price * (1 - self.position_threshold)
+                    signal_type = "SHORT_LONG"  # Short symbol1, long symbol2
+                    confidence = min(abs(current_z_score) / (self.z_score_threshold * 1.5), 1.0)
                 else:
-                    action = "long_short"  # Long symbol1, short symbol2
-                    entry_price = pair_stats['spread']
-                    stop_loss = entry_price * (1 - self.stop_loss_threshold)
-                    take_profit = entry_price * (1 + self.position_threshold)
+                    signal_type = "LONG_SHORT"  # Long symbol1, short symbol2
+                    confidence = min(abs(current_z_score) / (self.z_score_threshold * 1.5), 1.0)
                 
-                opportunity = {
-                    "type": "pairs_trading",
-                    "strategy": "statistical_arbitrage",
-                    "pair": pair,
-                    "action": action,
-                    "entry_price": entry_price,
-                    "stop_loss": stop_loss,
-                    "take_profit": take_profit,
-                    "confidence": min(abs(current_z_score) / (self.z_score_threshold * 1.5), 0.9),
-                    "z_score": current_z_score,
-                    "spread": pair_stats['spread'],
-                    "correlation": pair_stats['correlation'],
-                    "cointegration": pair_stats['cointegration_score'],
-                    "timestamp": int(time.time()),
-                    "description": f"Pairs trading {pair}: Z-score {current_z_score:.2f}, Action {action}"
+                # Create trading signal
+                signal = {
+                    "signal_id": f"pairs_trading_{int(time.time())}",
+                    "strategy_id": "pairs_trading",
+                    "strategy_type": "statistical_arbitrage",
+                    "signal_type": signal_type,
+                    "symbol": f"{symbol1}_{symbol2}",
+                    "timestamp": datetime.now().isoformat(),
+                    "price": pair_stats['spread'],
+                    "confidence": confidence,
+                    "metadata": {
+                        "pair": pair,
+                        "z_score": current_z_score,
+                        "spread": pair_stats['spread'],
+                        "correlation": pair_stats['correlation'],
+                        "cointegration_score": pair_stats['cointegration_score'],
+                        "lookback_period": self.lookback_period,
+                        "z_score_threshold": self.z_score_threshold
+                    }
                 }
                 
-                # Store in Redis for tracking with proper JSON serialization
-                if self.redis_conn:
-                    try:
-                        import json
-                        self.redis_conn.set(
-                            f"strategy_engine:pairs_trading:{':'.join(pair)}:{int(time.time())}", 
-                            json.dumps(opportunity), 
-                            ex=3600
-                        )
-                    except json.JSONEncodeError as e:
-                        if self.logger:
-                            self.logger.error(f"JSON encoding error storing pairs trading opportunity: {e}")
-                    except ConnectionError as e:
-                        if self.logger:
-                            self.logger.error(f"Redis connection error storing pairs trading opportunity: {e}")
-                    except Exception as e:
-                        if self.logger:
-                            self.logger.error(f"Unexpected error storing pairs trading opportunity: {e}")
+                # Store signal in trading context
+                self.trading_context.store_signal(signal)
+                
+                # Update strategy performance
+                self.strategy_performance["total_signals"] += 1
+                self.strategy_performance["average_confidence"] = (
+                    (self.strategy_performance["average_confidence"] * 
+                     (self.strategy_performance["total_signals"] - 1) + confidence) /
+                    self.strategy_performance["total_signals"]
+                )
+                
+                self.last_signal_time = datetime.now()
                 
                 if self.logger:
-                    self.logger.info(f"Pairs trading opportunity: {opportunity['description']}")
+                    self.logger.info(f"Pairs trading signal generated: {signal_type} for {pair} at {pair_stats['spread']:.4f}")
                 
-                return opportunity
+                return signal
             
             return None
             
@@ -165,37 +176,21 @@ class PairsTradingStrategy:
                 self.logger.error(f"Error checking pair opportunity: {e}")
             return None
 
-    async def _get_historical_data(self, symbol: str) -> Optional[pd.DataFrame]:
-        """Get historical data for a symbol."""
-        try:
-            if not self.redis_conn:
-                return None
-            
-            historical_key = f"market_data:{symbol}:history"
-            historical_data = self.redis_conn.get(historical_key)
-            
-            if historical_data:
-                import json
-                return pd.DataFrame(json.loads(historical_data))
-            
-            return None
-            
-        except Exception as e:
-            if self.logger:
-                self.logger.error(f"Error getting historical data for {symbol}: {e}")
-            return None
-
-    async def _calculate_pair_statistics(self, hist1: pd.DataFrame, hist2: pd.DataFrame) -> Dict[str, Any]:
+    async def _calculate_pair_statistics(self, data1: List[Dict[str, Any]], data2: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Calculate pair trading statistics."""
         try:
+            # Convert to pandas DataFrames
+            df1 = pd.DataFrame(data1)
+            df2 = pd.DataFrame(data2)
+            
             # Ensure same length
-            min_length = min(len(hist1), len(hist2))
-            hist1 = hist1.tail(min_length)
-            hist2 = hist2.tail(min_length)
+            min_length = min(len(df1), len(df2))
+            df1 = df1.tail(min_length)
+            df2 = df2.tail(min_length)
             
             # Get closing prices
-            prices1 = hist1['close'].values
-            prices2 = hist2['close'].values
+            prices1 = df1['close'].values
+            prices2 = df2['close'].values
             
             # Calculate correlation
             correlation = np.corrcoef(prices1, prices2)[0, 1]
@@ -241,20 +236,61 @@ class PairsTradingStrategy:
                 "cointegration_score": 0.0
             }
 
-    def get_strategy_info(self) -> Dict[str, Any]:
-        """Get strategy information and parameters."""
-        return {
-            "name": "Pairs Trading Strategy",
-            "type": "statistical_arbitrage",
-            "description": "Statistical arbitrage using cointegrated pairs",
-            "parameters": {
-                "z_score_threshold": self.z_score_threshold,
-                "lookback_period": self.lookback_period,
-                "min_correlation": self.min_correlation,
-                "position_threshold": self.position_threshold,
-                "stop_loss_threshold": self.stop_loss_threshold
-            },
-            "timeframe": "fast",  # 100ms tier
-            "asset_types": ["crypto", "forex", "stocks"],
-            "execution_speed": "fast"
-        }
+    async def update_strategy_parameters(self, new_params: Dict[str, Any]) -> bool:
+        """Update strategy parameters."""
+        try:
+            # Update configurable parameters
+            if "z_score_threshold" in new_params:
+                self.z_score_threshold = new_params["z_score_threshold"]
+            if "lookback_period" in new_params:
+                self.lookback_period = new_params["lookback_period"]
+            if "min_correlation" in new_params:
+                self.min_correlation = new_params["min_correlation"]
+            if "position_threshold" in new_params:
+                self.position_threshold = new_params["position_threshold"]
+            if "stop_loss_threshold" in new_params:
+                self.stop_loss_threshold = new_params["stop_loss_threshold"]
+            
+            if self.logger:
+                self.logger.info(f"Strategy parameters updated: {new_params}")
+            return True
+            
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Failed to update strategy parameters: {e}")
+            return False
+
+    async def get_strategy_performance(self) -> Dict[str, Any]:
+        """Get current strategy performance metrics."""
+        try:
+            # Get recent signals from trading context
+            recent_signals = self.trading_context.get_recent_signals(limit=100)
+            
+            # Calculate additional metrics
+            performance = self.strategy_performance.copy()
+            performance.update({
+                "last_signal_time": self.last_signal_time.isoformat() if self.last_signal_time else None,
+                "current_positions": self.current_positions,
+                "recent_signals_count": len(recent_signals),
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            return performance
+            
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Failed to get strategy performance: {e}")
+            return {}
+
+    async def cleanup(self):
+        """Cleanup strategy resources."""
+        try:
+            await self.trading_context.cleanup()
+            await self.trading_research_engine.cleanup()
+            
+            if self.logger:
+                self.logger.info("Pairs trading strategy cleaned up successfully")
+                
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Error during strategy cleanup: {e}")

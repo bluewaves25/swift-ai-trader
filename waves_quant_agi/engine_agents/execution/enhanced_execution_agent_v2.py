@@ -1,35 +1,45 @@
 #!/usr/bin/env python3
 """
-Enhanced Execution Agent V2
-Rust-based execution agent with Python learning layer integration.
-Inherits from BaseAgent to eliminate infrastructure duplication.
+Enhanced Execution Agent V2 - ROLE CONSOLIDATED: ORDER EXECUTION ONLY
+Removed order management functionality - now handled by Strategy Engine Agent.
+Focuses exclusively on order execution, slippage management, and execution optimization.
 """
 
 import asyncio
 import json
 import time
 from typing import Dict, Any, Optional, List
-import pandas as pd
-
 from engine_agents.shared_utils.base_agent import BaseAgent
 from .python_bridge import ExecutionBridge
 
 class EnhancedExecutionAgentV2(BaseAgent):
     """
-    Enhanced execution agent that inherits from BaseAgent.
-    Focuses ONLY on business logic, not infrastructure.
+    Enhanced execution agent - focused solely on order execution.
+    Inherits from BaseAgent to eliminate infrastructure duplication.
     """
     
     def _initialize_agent_components(self):
         """Initialize execution-specific components."""
-        self.execution_bridge = ExecutionBridge(self.config)
-        self.signal_queue = []
+        # Initialize execution components
+        self.execution_bridge = None
+        self.slippage_manager = None
+        self.execution_optimizer = None
+        
+        # Execution state
+        self.execution_state = {
+            "active_executions": {},
+            "execution_history": [],
+            "last_execution_time": None
+        }
+        
+        # Execution statistics
         self.execution_stats = {
             "total_signals_processed": 0,
             "successful_executions": 0,
             "failed_executions": 0,
-            "pending_signals": 0,
-            "last_execution_time": None
+            "execution_timeouts": 0,
+            "slippage_events": 0,
+            "start_time": time.time()
         }
         
         # Execution configuration
@@ -39,14 +49,23 @@ class EnhancedExecutionAgentV2(BaseAgent):
             "retry_attempts": self.config.get("retry_attempts", 3),
             "batch_size": self.config.get("batch_size", 10)
         }
+        
+        # Register this agent
+        from engine_agents.shared_utils import register_agent
+        register_agent(self.agent_name, self)
     
     async def _agent_specific_startup(self):
         """Initialize execution-specific components."""
         try:
-            # Initialize execution bridge (but don't start it yet)
-            self.execution_bridge = ExecutionBridge(self.config)
+            # Initialize execution bridge
+            await self._initialize_execution_bridge()
             
-            # Don't start background tasks here - let BaseAgent handle them
+            # Initialize slippage management
+            await self._initialize_slippage_management()
+            
+            # Initialize execution optimization
+            await self._initialize_execution_optimization()
+            
             self.logger.info("✅ Execution agent initialization completed")
             
         except Exception as e:
@@ -56,408 +75,459 @@ class EnhancedExecutionAgentV2(BaseAgent):
     async def _agent_specific_shutdown(self):
         """Shutdown execution-specific components."""
         try:
-            if hasattr(self, 'execution_bridge'):
-                await self.execution_bridge.stop()
+            # Cleanup execution components
+            await self._cleanup_execution_components()
             
             self.logger.info("✅ Execution agent shutdown completed")
             
         except Exception as e:
             self.logger.error(f"❌ Error in execution shutdown: {e}")
     
-    async def _initialize_signal_processing(self):
-        """Initialize signal processing capabilities."""
-        try:
-            # Set up signal monitoring
-            self.logger.info("Initializing signal processing...")
-            
-            # Start signal monitoring task
-            signal_task = asyncio.create_task(
-                self._signal_monitoring_loop(), 
-                name="execution_signal_monitor"
-            )
-            self._background_tasks.append(signal_task)
-            
-        except Exception as e:
-            self.logger.error(f"Error initializing signal processing: {e}")
-            raise
+    # ============= BACKGROUND TASKS =============
     
-    async def _signal_monitoring_loop(self):
-        """Monitor for new trading signals."""
-        # Wait for trading engine to be ready
-        self.logger.info("⏳ Waiting for trading engine to be ready...")
-        await self._wait_for_trading_engine()
-        self.logger.info("✅ Trading engine is ready, starting signal processing...")
-        
+    async def _order_execution_loop(self):
+        """Order execution loop."""
         while self.is_running:
             try:
-                # Check for new signals
-                await self._process_pending_signals()
+                # Execute orders
+                await self._execute_orders()
                 
-                # Update execution statistics
-                await self._update_execution_stats()
-                
-                await asyncio.sleep(1)  # Check every second
+                await asyncio.sleep(0.1)  # 100ms cycle
                 
             except Exception as e:
-                self.logger.error(f"Error in signal monitoring loop: {e}")
-                await asyncio.sleep(5)
+                self.logger.error(f"Error in order execution loop: {e}")
+                await asyncio.sleep(0.1)
     
-    async def _wait_for_trading_engine(self):
-        """Wait for trading engine to be ready before starting execution."""
-        max_wait_time = 300  # 5 minutes max wait
-        start_time = time.time()
-        
-        while self.is_running and (time.time() - start_time) < max_wait_time:
+    async def _execution_health_monitoring_loop(self):
+        """Execution health monitoring loop."""
+        while self.is_running:
             try:
-                                    # Check if trading engine is running
-                    if self.redis_conn:
-                        # Check trading engine status
-                        trading_engine_stats = self.redis_conn.hgetall('agent_stats:trading_engine')
-                        if trading_engine_stats:
-                            status = trading_engine_stats.get('status', 'unknown')
-                            if status == 'running':
-                                self.logger.info("✅ Trading engine detected as running")
-                                return
-                        
-                        # Check for trading engine ready signal
-                        ready_signal = self.redis_conn.get('trading_engine_ready')
-                        if ready_signal:
-                            self.logger.info("✅ Trading engine ready signal received")
-                            return
-                        
-                        # Also check if there are any execution orders (indicates trading engine is working)
-                        execution_orders_count = self.redis_conn.llen('execution_orders')
-                        if execution_orders_count > 0:
-                            self.logger.info(f"✅ Trading engine is working (found {execution_orders_count} orders)")
-                            return
+                # Monitor execution health
+                await self._monitor_execution_health()
                 
-                self.logger.info("⏳ Waiting for trading engine... (checking every 10 seconds)")
-                await asyncio.sleep(10)
+                await asyncio.sleep(2.0)  # 2 second cycle
                 
             except Exception as e:
-                self.logger.warning(f"Error checking trading engine status: {e}")
-                await asyncio.sleep(10)
-        
-        if (time.time() - start_time) >= max_wait_time:
-            self.logger.warning("⚠️ Timeout waiting for trading engine, proceeding anyway...")
-        else:
-            self.logger.info("✅ Trading engine ready signal received")
+                self.logger.error(f"Error in execution health monitoring loop: {e}")
+                await asyncio.sleep(2.0)
     
-    async def _process_pending_signals(self):
-        """Process any pending trading signals."""
+    async def _execution_reporting_loop(self):
+        """Execution reporting loop."""
+        while self.is_running:
+            try:
+                # Report execution status
+                await self._report_execution_status()
+                
+                await asyncio.sleep(30.0)  # 30 second cycle
+                
+            except Exception as e:
+                self.logger.error(f"Error in execution reporting loop: {e}")
+                await asyncio.sleep(30.0)
+    
+    async def _execute_orders(self):
+        """Execute orders."""
         try:
-            if not self.redis_conn:
-                self.logger.warning("No Redis connection available")
-                return
-            
-            # Get signals from execution_orders (where trading engine sends them)
-            signals = self.redis_conn.lrange("execution_orders", 0, -1)
-            
-            if signals:
-                self.logger.info(f"Found {len(signals)} signals to process")
-                
-                # Process signals in batches to avoid overwhelming
-                batch_size = min(len(signals), self.execution_config["batch_size"])
-                signals_to_process = signals[:batch_size]
-                
-                self.logger.info(f"Processing batch of {len(signals_to_process)} signals")
-                
-                for i, signal_data in enumerate(signals_to_process):
-                    try:
-                        self.logger.info(f"Processing signal {i+1}/{len(signals_to_process)}")
-                        
-                        signal = json.loads(signal_data)
-                        self.logger.info(f"Signal data: {signal}")
-                        
-                        # Transform signal to execution format
-                        execution_signal = self._transform_signal_for_execution(signal)
-                        
-                        if execution_signal:
-                            self.logger.info(f"Executing transformed signal: {execution_signal}")
-                            success = await self._execute_signal(execution_signal)
-                            
-                            if success:
-                                # Remove processed signal from execution_orders
-                                removed = self.redis_conn.lrem("execution_orders", 1, signal_data)
-                                self.logger.info(f"Removed processed signal: {removed} items removed")
-                            else:
-                                self.logger.error(f"Signal execution failed, keeping in queue")
-                        else:
-                            self.logger.warning(f"Could not transform signal: {signal}")
-                            # Remove untransformable signal to prevent infinite retries
-                            removed = self.redis_conn.lrem("execution_orders", 1, signal_data)
-                            self.logger.info(f"Removed untransformable signal: {removed} items removed")
-                            
-                    except json.JSONDecodeError as e:
-                        self.logger.warning(f"Invalid signal format: {signal_data}, error: {e}")
-                        # Remove invalid signal
-                        removed = self.redis_conn.lrem("execution_orders", 1, signal_data)
-                        self.logger.info(f"Removed invalid signal: {removed} items removed")
-                    except Exception as e:
-                        self.logger.error(f"Error processing signal: {e}")
-                        # Remove failed signal to prevent infinite retries
-                        removed = self.redis_conn.lrem("execution_orders", 1, signal_data)
-                        self.logger.info(f"Removed failed signal: {removed} items removed")
-            else:
-                # No signals to process
-                self.logger.debug("No signals to process")
-                    
+            # Placeholder for order execution
+            pass
         except Exception as e:
-            self.logger.error(f"Error in signal processing: {e}")
-            import traceback
-            self.logger.error(f"Traceback: {traceback.format_exc()}")
+            self.logger.error(f"Error executing orders: {e}")
     
-    def _transform_signal_for_execution(self, signal: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Transform trading engine order to execution format."""
+    async def _monitor_execution_health(self):
+        """Monitor execution health."""
         try:
-            # Extract required fields from trading engine order
-            symbol = signal.get('symbol', '')
-            action = signal.get('action', '').lower()
-            price = signal.get('price', 0)
-            quantity = signal.get('quantity', 0.01)
+            # Placeholder for execution health monitoring
+            pass
+        except Exception as e:
+            self.logger.error(f"Error monitoring execution health: {e}")
+    
+    async def _report_execution_status(self):
+        """Report execution status."""
+        try:
+            # Placeholder for execution status reporting
+            pass
+        except Exception as e:
+            self.logger.error(f"Error reporting execution status: {e}")
+
+    def _get_background_tasks(self) -> List[tuple]:
+        """Get background tasks for this agent."""
+        return [
+            (self._order_execution_loop, "Order Execution", "fast"),
+            (self._slippage_monitoring_loop, "Slippage Monitoring", "fast"),
+            (self._execution_health_monitoring_loop, "Execution Health Monitoring", "tactical"),
+            (self._execution_reporting_loop, "Execution Reporting", "strategic")
+        ]
+    
+    # ============= EXECUTION INITIALIZATION =============
+    
+    async def _initialize_execution_bridge(self):
+        """Initialize execution bridge."""
+        try:
+            # Initialize execution bridge
+            self.execution_bridge = ExecutionBridge(self.config)
             
-            if not symbol or not action or not price:
-                self.logger.warning(f"Missing required fields in signal: {signal}")
-                return None
-            
-            # Transform action to execution format
-            if action == 'buy':
-                exec_action = 'buy'
-            elif action == 'sell':
-                exec_action = 'sell'
-            else:
-                self.logger.warning(f"Invalid action: {action}")
-                return None
-            
-            # Create execution signal with required fields
-            execution_signal = {
-                'id': f"exec_{int(time.time() * 1000)}",  # Generate unique ID
-                'symbol': symbol,
-                'action': exec_action,
-                'quantity': quantity,
-                'price': price,
-                'stop_loss': signal.get('stop_loss', price * 0.995),
-                'take_profit': signal.get('take_profit', price * 1.01),
-                'strategy': signal.get('strategy', 'unknown'),
-                'confidence': signal.get('confidence', 0.5),
-                'reason': signal.get('reason', 'strategy_signal'),
-                'timestamp': signal.get('timestamp', time.time())
-            }
-            
-            self.logger.info(f"Transformed order: {symbol} {action} {quantity} @ {price}")
-            return execution_signal
+            self.logger.info("✅ Execution bridge initialized")
             
         except Exception as e:
-            self.logger.error(f"Error transforming signal: {e}")
-            return None
+            self.logger.error(f"❌ Error initializing execution bridge: {e}")
+            raise
     
-    async def _execute_signal(self, signal: Dict[str, Any]):
-        """Execute a trading signal via MT5."""
+    async def _initialize_slippage_management(self):
+        """Initialize slippage management."""
         try:
-            self.logger.info(f"Executing signal: {signal.get('id', 'unknown')}")
+            # Initialize slippage manager
+            from .core.slippage_manager import SlippageManager
+            self.slippage_manager = SlippageManager(self.config)
             
-            # Validate signal
-            if not self._validate_execution_signal(signal):
-                self.logger.warning(f"Invalid signal: {signal}")
-                return False
-            
-            # Execute via MT5
-            success = await self._execute_mt5_order(signal)
-            
-            if success:
-                self.execution_stats["successful_executions"] += 1
-                self.execution_stats["last_execution_time"] = time.time()
-                self.logger.info(f"✅ Signal executed successfully: {signal.get('id')}")
-            else:
-                self.execution_stats["failed_executions"] += 1
-                self.logger.error(f"❌ Signal execution failed: {signal.get('id')}")
-            
-            self.execution_stats["total_signals_processed"] += 1
-            return success
+            self.logger.info("✅ Slippage management initialized")
             
         except Exception as e:
-            self.logger.error(f"Error executing signal: {e}")
-            self.execution_stats["failed_executions"] += 1
-            return False
+            self.logger.error(f"❌ Error initializing slippage management: {e}")
+            raise
     
-    async def _execute_mt5_order(self, signal: Dict[str, Any]) -> bool:
-        """Execute order via MetaTrader 5."""
+    async def _initialize_execution_optimization(self):
+        """Initialize execution optimization."""
         try:
-            # Import MT5 module
-            import MetaTrader5 as mt5
+            # Initialize execution optimizer
+            from .core.execution_optimizer import ExecutionOptimizer
+            self.execution_optimizer = ExecutionOptimizer(self.config)
             
-            # Initialize MT5 if not already done
-            if not mt5.initialize():
-                self.logger.error("❌ Failed to initialize MT5")
-                return False
+            self.logger.info("✅ Execution optimization initialized")
             
-            # Prepare order request
-            symbol = signal.get('symbol', '')
-            action = signal.get('action', '').lower()
-            quantity = signal.get('quantity', 0.01)
-            price = signal.get('price', 0)
-            stop_loss = signal.get('stop_loss', 0)
-            take_profit = signal.get('take_profit', 0)
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing execution optimization: {e}")
+            raise
+    
+    # ============= EXECUTION PROCESSING LOOP =============
+    
+    async def _execution_processing_loop(self):
+        """Execution monitoring loop (100ms intervals)."""
+        while self.is_running:
+            try:
+                start_time = time.time()
+                
+                # Monitor execution status and health
+                await self._monitor_execution_status()
+                
+                # Record operation
+                duration_ms = (time.time() - start_time) * 1000
+                if hasattr(self, 'status_monitor') and self.status_monitor:
+                    self.status_monitor.record_operation(duration_ms, True)
+                
+                await asyncio.sleep(0.1)  # 100ms for execution monitoring
+                
+            except Exception as e:
+                self.logger.error(f"Error in execution monitoring loop: {e}")
+                await asyncio.sleep(0.1)
+    
+    async def _monitor_execution_status(self):
+        """Monitor execution status and health."""
+        try:
+            # Update last execution time
+            if self.execution_state["execution_history"]:
+                self.execution_state["last_execution_time"] = self.execution_state["execution_history"][-1]["timestamp"]
             
-            # Create order request
-            if action == 'buy':
-                order_type = mt5.ORDER_TYPE_BUY
-                price = mt5.symbol_info_tick(symbol).ask if mt5.symbol_info_tick(symbol) else price
-            elif action == 'sell':
-                order_type = mt5.ORDER_TYPE_SELL
-                price = mt5.symbol_info_tick(symbol).bid if mt5.symbol_info_tick(symbol) else price
-            else:
-                self.logger.error(f"Invalid action: {action}")
-                return False
+            # Check execution bridge health
+            if self.execution_bridge:
+                bridge_status = await self.execution_bridge.get_status()
+                if not bridge_status.get("healthy", False):
+                    self.logger.warning("Execution bridge health check failed")
             
-            # Create order request
-            request = {
-                "action": mt5.TRADE_ACTION_DEAL,
-                "symbol": symbol,
-                "volume": quantity,
-                "type": order_type,
-                "price": price,
-                "deviation": 20,
-                "magic": 234000,
-                "comment": f"AI_{signal.get('strategy', 'unknown')}",
-                "type_time": mt5.ORDER_TIME_GTC,
-                "type_filling": mt5.ORDER_FILLING_IOC,
-            }
+            # Clean up old active executions
+            current_time = time.time()
+            expired_executions = []
+            for exec_id, exec_data in self.execution_state["active_executions"].items():
+                if current_time - exec_data.get("start_time", 0) > 300:  # 5 minutes
+                    expired_executions.append(exec_id)
             
-            # Add stop loss and take profit if provided
-            if stop_loss > 0:
-                request["sl"] = stop_loss
-            if take_profit > 0:
-                request["tp"] = take_profit
+            for exec_id in expired_executions:
+                del self.execution_state["active_executions"][exec_id]
+                
+        except Exception as e:
+            self.logger.error(f"Error monitoring execution status: {e}")
+    
+    async def _execute_order(self, order_data: Dict[str, Any], strategy_type: str) -> Dict[str, Any]:
+        """Execute an order using the execution bridge."""
+        try:
+            if not self.execution_bridge:
+                return {"success": False, "error": "Execution bridge not available"}
             
             # Execute order
-            result = mt5.order_send(request)
+            execution_result = await self.execution_bridge.execute_order(order_data, strategy_type)
             
-            if result.retcode == mt5.TRADE_RETCODE_DONE:
-                self.logger.info(f"✅ MT5 order executed: {symbol} {action} {quantity} @ {price}")
-                
-                # Update MT5 connection status
-                if self.redis_conn:
-                    mt5_status = {
-                        'connected': 'true',
-                        'last_check': str(time.time()),
-                        'error_count': '0',
-                        'last_error': 'none'
-                    }
-                    self.redis_conn.hset('mt5_connection_status', mapping=mt5_status)
-                
-                return True
-            else:
-                self.logger.error(f"❌ MT5 order failed: {result.retcode} - {result.comment}")
-                
-                # Update MT5 connection status with error
-                if self.redis_conn:
-                    mt5_status = {
-                        'connected': 'false',
-                        'last_check': str(time.time()),
-                        'error_count': str(int(self.execution_stats.get('failed_executions', 0)) + 1),
-                        'last_error': f"{result.retcode}: {result.comment}"
-                    }
-                    self.redis_conn.hset('mt5_connection_status', mapping=mt5_status)
-                
-                return False
-                
-        except ImportError:
-            self.logger.error("❌ MetaTrader5 module not installed. Install with: pip install MetaTrader5")
-            return False
+            return execution_result
+            
         except Exception as e:
-            self.logger.error(f"❌ MT5 execution error: {e}")
-            
-            # Update MT5 connection status with error
-            if self.redis_conn:
-                mt5_status = {
-                    'connected': 'false',
-                    'last_check': str(time.time()),
-                    'error_count': str(int(self.execution_stats.get('failed_executions', 0)) + 1),
-                    'last_error': str(e)
-                }
-                self.redis_conn.hset('mt5_connection_status', mapping=mt5_status)
-            
-            return False
+            self.logger.error(f"Error executing order: {e}")
+            return {"success": False, "error": str(e)}
     
-    def _validate_execution_signal(self, signal: Dict[str, Any]) -> bool:
-        """Validate execution signal format and content."""
-        required_fields = ["symbol", "action", "quantity", "price"]
-        
-        # Check required fields
-        for field in required_fields:
-            if field not in signal:
-                self.logger.warning(f"Missing required field: {field}")
-                return False
-        
-        # Validate action
-        if signal["action"] not in ["buy", "sell", "close"]:
-            self.logger.warning(f"Invalid action: {signal['action']}")
-            return False
-        
-        # Validate quantity
-        if not isinstance(signal["quantity"], (int, float)) or signal["quantity"] <= 0:
-            self.logger.warning(f"Invalid quantity: {signal['quantity']}")
-            return False
-        
-        # Validate price
-        if not isinstance(signal["price"], (int, float)) or signal["price"] <= 0:
-            self.logger.warning(f"Invalid price: {signal['price']}")
-            return False
-        
-        return True
+    # ============= SLIPPAGE MONITORING LOOP =============
     
-    async def _update_execution_stats(self):
-        """Update execution statistics."""
+    async def _slippage_monitoring_loop(self):
+        """Slippage monitoring loop (100ms intervals)."""
+        while self.is_running:
+            try:
+                # Monitor for slippage events
+                slippage_events = await self._monitor_slippage_events()
+                
+                # Update slippage statistics
+                if slippage_events > 0:
+                    self.execution_stats["slippage_events"] += slippage_events
+                
+                await asyncio.sleep(0.1)  # 100ms for slippage monitoring
+                
+            except Exception as e:
+                self.logger.error(f"Error in slippage monitoring loop: {e}")
+                await asyncio.sleep(0.1)
+    
+    async def _monitor_slippage_events(self) -> int:
+        """Monitor for slippage events and return count."""
         try:
-            # Update pending signals count from execution_orders
-            if self.redis_conn:
-                pending_count = self.redis_conn.llen("execution_orders")
-                self.execution_stats["pending_signals"] = pending_count
+            slippage_events = 0
             
-            # Store stats in Redis for monitoring
-            if self.redis_conn:
-                self.redis_conn.hset(
-                    f"agent_stats:{self.agent_name}",
-                    mapping=self.execution_stats
-                )
-                
+            if not self.slippage_manager:
+                return 0
+            
+            # Check for new slippage events
+            events = await self.slippage_manager.check_slippage_events()
+            
+            # Process slippage events
+            for event in events:
+                await self._process_slippage_event(event)
+                slippage_events += 1
+            
+            return slippage_events
+            
         except Exception as e:
-            self.logger.error(f"Error updating execution stats: {e}")
+            self.logger.error(f"Error monitoring slippage events: {e}")
+            return 0
+    
+    async def _process_slippage_event(self, slippage_event: Dict[str, Any]):
+        """Process a slippage event."""
+        try:
+            # Log slippage event
+            self.logger.warning(f"Slippage event detected: {slippage_event.get('type', 'unknown')}")
+            
+            # Check if slippage exceeds threshold
+            slippage_amount = slippage_event.get("amount", 0.0)
+            threshold = self.execution_config.get("max_slippage", 0.001)
+            
+            if slippage_amount > threshold:
+                # Trigger slippage alert
+                await self._trigger_slippage_alert(slippage_event)
+            
+            # Publish slippage update
+            await self._publish_slippage_update(slippage_event)
+            
+        except Exception as e:
+            self.logger.error(f"Error processing slippage event: {e}")
+    
+    # ============= EXECUTION OPTIMIZATION LOOP =============
+    
+    async def _execution_optimization_loop(self):
+        """Execution optimization loop (30s intervals)."""
+        while self.is_running:
+            try:
+                # Perform execution optimization
+                optimization_results = await self._perform_execution_optimization()
+                
+                # Apply optimization recommendations
+                if optimization_results:
+                    await self._apply_optimization_recommendations(optimization_results)
+                
+                await asyncio.sleep(30)  # 30s for execution optimization
+                
+            except Exception as e:
+                self.logger.error(f"Error in execution optimization loop: {e}")
+                await asyncio.sleep(30)
+    
+    async def _perform_execution_optimization(self) -> Dict[str, Any]:
+        """Perform execution optimization."""
+        try:
+            if not self.execution_optimizer:
+                return {}
+            
+            # Get execution performance data
+            performance_data = {
+                "execution_history": self.execution_state["execution_history"],
+                "execution_stats": self.execution_stats,
+                "execution_config": self.execution_config
+            }
+            
+            # Perform optimization analysis
+            optimization_results = await self.execution_optimizer.optimize_execution(performance_data)
+            
+            return optimization_results
+            
+        except Exception as e:
+            self.logger.error(f"Error performing execution optimization: {e}")
+            return {}
+    
+    async def _apply_optimization_recommendations(self, optimization_results: Dict[str, Any]):
+        """Apply optimization recommendations."""
+        try:
+            recommendations = optimization_results.get("recommendations", [])
+            
+            for recommendation in recommendations:
+                recommendation_type = recommendation.get("type", "unknown")
+                
+                if recommendation_type == "slippage_threshold":
+                    await self._apply_slippage_threshold_optimization(recommendation)
+                elif recommendation_type == "execution_timeout":
+                    await self._apply_execution_timeout_optimization(recommendation)
+                elif recommendation_type == "batch_size":
+                    await self._apply_batch_size_optimization(recommendation)
+            
+        except Exception as e:
+            self.logger.error(f"Error applying optimization recommendations: {e}")
+    
+    async def _apply_slippage_threshold_optimization(self, recommendation: Dict[str, Any]):
+        """Apply slippage threshold optimization."""
+        try:
+            new_threshold = recommendation.get("value", 0.001)
+            self.execution_config["max_slippage"] = new_threshold
+            
+            self.logger.info(f"Slippage threshold optimized to: {new_threshold}")
+            
+        except Exception as e:
+            self.logger.error(f"Error applying slippage threshold optimization: {e}")
+    
+    async def _apply_execution_timeout_optimization(self, recommendation: Dict[str, Any]):
+        """Apply execution timeout optimization."""
+        try:
+            new_timeout = recommendation.get("value", 30)
+            self.execution_config["execution_timeout"] = new_timeout
+            
+            self.logger.info(f"Execution timeout optimized to: {new_timeout}")
+            
+        except Exception as e:
+            self.logger.error(f"Error applying execution timeout optimization: {e}")
+    
+    async def _apply_batch_size_optimization(self, recommendation: Dict[str, Any]):
+        """Apply batch size optimization."""
+        try:
+            new_batch_size = recommendation.get("value", 10)
+            self.execution_config["batch_size"] = new_batch_size
+            
+            self.logger.info(f"Batch size optimized to: {new_batch_size}")
+            
+        except Exception as e:
+            self.logger.error(f"Error applying batch size optimization: {e}")
+    
+    # ============= UTILITY METHODS =============
+    
+    async def _cleanup_execution_components(self):
+        """Cleanup execution components."""
+        try:
+            # Cleanup execution bridge
+            if self.execution_bridge:
+                await self.execution_bridge.stop()
+            
+            # Cleanup slippage manager
+            if self.slippage_manager:
+                await self.slippage_manager.cleanup()
+            
+            # Cleanup execution optimizer
+            if self.execution_optimizer:
+                await self.execution_optimizer.cleanup()
+            
+            self.logger.info("✅ Execution components cleaned up")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error cleaning up execution components: {e}")
+    
+    # ============= PUBLISHING METHODS =============
+    
+    async def _publish_execution_result(self, execution_id: str, result: Dict[str, Any]):
+        """Publish execution result."""
+        try:
+            execution_update = {
+                "execution_id": execution_id,
+                "result": result,
+                "timestamp": time.time(),
+                "agent": self.agent_name
+            }
+            
+            await self.redis_conn.publish_async("execution:results", json.dumps(execution_update))
+            
+        except Exception as e:
+            self.logger.error(f"Error publishing execution result: {e}")
+    
+    async def _trigger_slippage_alert(self, slippage_event: Dict[str, Any]):
+        """Trigger slippage alert."""
+        try:
+            alert_data = {
+                "alert_type": "slippage_alert",
+                "slippage_data": slippage_event,
+                "timestamp": time.time(),
+                "agent": self.agent_name
+            }
+            
+            await self.redis_conn.publish_async("execution:slippage_alerts", json.dumps(alert_data))
+            
+        except Exception as e:
+            self.logger.error(f"Error triggering slippage alert: {e}")
+    
+    async def _publish_slippage_update(self, slippage_event: Dict[str, Any]):
+        """Publish slippage update."""
+        try:
+            slippage_update = {
+                "slippage_event": slippage_event,
+                "timestamp": time.time(),
+                "agent": self.agent_name
+            }
+            
+            await self.redis_conn.publish_async("execution:slippage_updates", json.dumps(slippage_update))
+            
+        except Exception as e:
+            self.logger.error(f"Error publishing slippage update: {e}")
+    
+    # ============= PUBLIC INTERFACE =============
     
     async def get_execution_status(self) -> Dict[str, Any]:
         """Get current execution status."""
         return {
-            "agent_name": self.agent_name,
-            "is_running": self.is_running,
+            "execution_state": self.execution_state,
             "execution_stats": self.execution_stats,
             "execution_config": self.execution_config,
-            "bridge_status": await self.execution_bridge.get_bridge_status() if hasattr(self, 'execution_bridge') else None
+            "last_update": time.time()
         }
     
-    async def send_execution_signal(self, signal: Dict[str, Any]) -> bool:
-        """Send a signal for execution."""
+    async def get_execution_history(self) -> List[Dict[str, Any]]:
+        """Get execution history."""
+        return self.execution_state.get("execution_history", [])
+    
+    async def get_active_executions(self) -> Dict[str, Any]:
+        """Get active executions."""
+        return self.execution_state.get("active_executions", {})
+    
+    async def execute_order_request(self, order_data: Dict[str, Any], strategy_type: str = "general") -> Dict[str, Any]:
+        """Execute an order request (called by Strategy Engine)."""
         try:
-            if not self.is_running:
-                self.logger.warning("Execution agent not running")
-                return False
+            execution_id = f"exec_{int(time.time() * 1000)}_{len(self.execution_state['execution_history'])}"
             
-            # Add signal to queue
-            self.signal_queue.append(signal)
+            # Execute the order directly
+            execution_result = await self._execute_order(order_data, strategy_type)
             
-            # Store in Redis for processing
-            if self.redis_conn:
-                self.redis_conn.rpush("execution:signals", json.dumps(signal))
+            # Store execution result
+            self.execution_state["execution_history"].append({
+                "execution_id": execution_id,
+                "order_data": order_data,
+                "result": execution_result,
+                "timestamp": time.time()
+            })
             
-            self.logger.info(f"Signal queued for execution: {signal.get('id')}")
-            return True
+            # Update statistics
+            self.execution_stats["total_signals_processed"] += 1
+            if execution_result.get("success", False):
+                self.execution_stats["successful_executions"] += 1
+            else:
+                self.execution_stats["failed_executions"] += 1
+            
+            # Publish execution result
+            await self._publish_execution_result(execution_id, execution_result)
+            
+            return execution_result
             
         except Exception as e:
-            self.logger.error(f"Error queuing signal: {e}")
-            return False
-    
-    def _get_background_tasks(self) -> List[tuple]:
-        """Get background tasks for this agent."""
-        return [
-            (self._signal_monitoring_loop(), "Signal Monitoring", "high")
-        ]
+            self.logger.error(f"Error executing order request: {e}")
+            return {"success": False, "error": str(e)}

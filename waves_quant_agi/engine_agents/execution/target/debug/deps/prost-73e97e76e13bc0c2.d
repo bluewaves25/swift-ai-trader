@@ -1,0 +1,10 @@
+C:\Users\BLUE WAVES\Documents\GitHub\swift-ai-trader\waves_quant_agi\engine_agents\execution\target\debug\deps\prost-73e97e76e13bc0c2.d: C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\lib.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\error.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\message.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\types.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\encoding.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\../README.md
+
+C:\Users\BLUE WAVES\Documents\GitHub\swift-ai-trader\waves_quant_agi\engine_agents\execution\target\debug\deps\libprost-73e97e76e13bc0c2.rmeta: C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\lib.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\error.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\message.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\types.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\encoding.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\../README.md
+
+C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\lib.rs:
+C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\error.rs:
+C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\message.rs:
+C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\types.rs:
+C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\encoding.rs:
+C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\prost-0.11.9\src\../README.md:

@@ -12,7 +12,7 @@ REFACTORED FOR SIMPLICITY:
 
 import time
 from typing import Dict, Any, List, Optional
-from ...shared_utils import get_shared_logger, get_agent_learner, LearningType
+from ...shared_utils import get_shared_logger
 
 class StrategyIntelligence:
     """
@@ -23,7 +23,7 @@ class StrategyIntelligence:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.logger = get_shared_logger("intelligence", "strategy_intelligence")
-        self.learner = get_agent_learner("intelligence", LearningType.STRATEGY_ADAPTATION, 8)
+        # self.learner = get_agent_learner("intelligence", LearningType.STRATEGY_ADAPTATION, 8)
         
         # Strategy intelligence state
         self.intelligence_stats = {
@@ -96,7 +96,7 @@ class StrategyIntelligence:
             )
             
             # Learn from this intelligence provision
-            await self._learn_from_intelligence(strategy_type, market_data, intelligence, start_time)
+            # await self._learn_from_intelligence(strategy_type, market_data, intelligence, start_time)
             
             # Update statistics
             self._update_strategy_stats(strategy_type)
@@ -407,38 +407,10 @@ class StrategyIntelligence:
         
         return recommendations
     
-    async def _learn_from_intelligence(self, strategy_type: str, market_data: Dict[str, Any], 
-                                     intelligence: Dict[str, Any], start_time: float):
-        """Learn from strategy intelligence provision."""
-        try:
-            # Create learning features
-            features = [
-                market_data.get("price", 0) / 10000.0,  # Normalize
-                market_data.get("volatility", 0),
-                market_data.get("volume_ratio", 1.0),
-                intelligence.get("confidence", 0.5),
-                len(intelligence.get("focus_areas", [])) / 5.0,  # Normalize
-                time.time() - start_time,  # Analysis time
-                hash(strategy_type) % 1000 / 1000.0,  # Strategy encoding
-                1.0 if intelligence.get("confidence", 0) > 0.7 else 0.0  # High confidence flag
-            ]
-            
-            # Target is intelligence confidence
-            target = intelligence.get("confidence", 0.5)
-            
-            # Learn for future intelligence improvement
-            from ...shared_utils import LearningData
-            learning_data = LearningData(
-                agent_name="intelligence",
-                learning_type=LearningType.STRATEGY_ADAPTATION,
-                input_features=features,
-                target_value=target
-            )
-            
-            self.learner.learn(learning_data)
-            
-        except Exception as e:
-            self.logger.warning(f"Learning error for {strategy_type}: {e}")
+    # async def _learn_from_intelligence(self, strategy_type: str, market_data: Dict[str, Any], 
+    #                                  intelligence: Dict[str, Any], start_time: float):
+    #     """Learn from strategy intelligence provision (removed - handled by Strategy Engine)."""
+    #     pass
     
     def _update_strategy_stats(self, strategy_type: str):
         """Update strategy-specific statistics."""

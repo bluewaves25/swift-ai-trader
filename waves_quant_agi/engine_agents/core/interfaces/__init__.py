@@ -1,4 +1,9 @@
-from .agent_io import AgentIO
-from .trade_model import TradeCommand
+# System Coordination Interfaces
+# Focused ONLY on system coordination communication
+# All trading and strategy interfaces moved to Strategy Engine Agent
 
-__all__ = ["AgentIO", "TradeCommand"]
+from .agent_io import SystemCoordinationIO
+
+__all__ = [
+    'SystemCoordinationIO'
+]

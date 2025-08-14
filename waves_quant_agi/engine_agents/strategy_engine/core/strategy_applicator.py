@@ -1,513 +1,398 @@
 #!/usr/bin/env python3
 """
-Strategy Applicator - CORE REFACTORED MODULE
-Handles the main strategy application logic (99% of Strategy Engine's work)
-Separated from composition logic for better manageability
-
-REFACTORED FOR SIMPLICITY:
-- Pure strategy application (no complex orchestration)
-- Clean separation of concerns
-- Easy to understand and maintain
-- STRATEGY-BASED SIGNAL GENERATION (not fixed per cycle)
-- WEEKEND CRYPTO TRADING LOGIC
-- DYNAMIC ASSET ANALYSIS FROM MT5
-- NO ARTIFICIAL LIMITS - SYSTEM DECIDES BASED ON OPPORTUNITIES
+Strategy Applicator - Core Strategy Application Component
+Applies trading strategies and integrates with consolidated trading functionality.
+Focuses purely on strategy-specific tasks, delegating risk management to the risk management agent.
 """
 
 import asyncio
 import time
+import json
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
-from engine_agents.shared_utils import get_shared_logger, get_agent_learner, LearningType, get_shared_redis
+from dataclasses import dataclass
+from collections import deque
+
+# Import consolidated trading functionality
+from ..trading.logic_executor import TradingLogicExecutor
+from ..trading.signal_processor import TradingSignalProcessor
+from ..trading.flow_manager import TradingFlowManager
+from ..trading.memory.trading_context import TradingContext
+from ..trading.interfaces.agent_io import TradingAgentIO
+
+@dataclass
+class ApplicationRequest:
+    """A strategy application request."""
+    request_id: str
+    strategy_id: str
+    market_data: Dict[str, Any]
+    application_type: str  # live, paper, backtest
+    parameters: Dict[str, Any]
+    status: str = "pending"
+    created_at: float = None
+    priority: int = 5
+    
+    def __post_init__(self):
+        if self.created_at is None:
+            self.created_at = time.time()
+
+@dataclass
+class ApplicationResult:
+    """Result of strategy application."""
+    result_id: str
+    request_id: str
+    strategy_id: str
+    application_type: str
+    signals_generated: List[Dict[str, Any]]
+    trades_executed: List[Dict[str, Any]]
+    performance_metrics: Dict[str, float]
+    application_duration: float
+    timestamp: float
+    success: bool
 
 class StrategyApplicator:
-    """
-    Core strategy application engine - handles 99% of strategy work.
-    Separated from the main agent for better code organization.
+    """Applies trading strategies to market data.
+    
+    Focuses purely on strategy-specific tasks:
+    - Strategy application and execution
+    - Signal generation and processing
+    - Performance tracking
+    - Strategy optimization
+    
+    Risk management is delegated to the risk management agent.
     """
     
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.logger = get_shared_logger("strategy_engine", "applicator")
-        self.learner = get_agent_learner("strategy_engine", LearningType.PERFORMANCE_OPTIMIZATION, 8)
-        self.redis_conn = get_shared_redis()
         
-        # Strategy application state
-        self.active_strategies = {}
+        # Initialize consolidated trading components
+        self.trading_signal_processor = TradingSignalProcessor(config)
+        self.trading_flow_manager = TradingFlowManager(config)
+        self.trading_logic_executor = TradingLogicExecutor(self.trading_signal_processor, self.trading_flow_manager)
+        self.trading_context = TradingContext(max_history=1000)  # Fixed: pass integer instead of config
+        self.trading_agent_io = TradingAgentIO(config)
+        
+        # Application state
+        self.application_queue: deque = deque(maxlen=100)
+        self.active_applications: Dict[str, ApplicationRequest] = {}
+        self.application_results: Dict[str, List[ApplicationResult]] = {}
+        self.application_history: deque = deque(maxlen=1000)
+        
+        # Application settings (strategy-specific only)
+        self.application_settings = {
+            "max_concurrent_applications": 10,
+            "application_timeout": 300,  # 5 minutes
+            "auto_application": True,
+            "performance_threshold": 0.6,
+            "strategy_parameters": {
+                "max_position_size": 100000,  # Strategy-level position sizing
+                "signal_confidence_threshold": 0.7,
+                "strategy_timeout": 60
+            }
+        }
+        
+        # Application statistics
         self.application_stats = {
-            "fast_applications": 0,
-            "tactical_applications": 0,
+            "total_applications": 0,
             "successful_applications": 0,
             "failed_applications": 0,
-            "last_application": 0,
-            "signals_generated": 0,
-            "weekend_crypto_signals": 0,
-            "weekday_all_asset_signals": 0,
-            "assets_analyzed": 0,
-            "opportunities_found": 0
+            "total_signals": 0,
+            "total_trades": 0,
+            "average_performance": 0.0
         }
         
-        # Strategy type mappings (simplified)
-        self.strategy_mappings = {
-            "arbitrage": ["latency_arbitrage", "funding_rate_arbitrage", "triangular_arbitrage"],
-            "statistical": ["pairs_trading", "mean_reversion", "cointegration_model"], 
-            "trend_following": ["momentum_rider", "breakout_strategy", "moving_average_crossover"],
-            "market_making": ["adaptive_quote", "spread_adjuster", "volatility_responsive_mm"],
-            "news_driven": ["sentiment_analysis", "earnings_reaction", "fed_policy_detector"],
-            "htf": ["regime_shift_detector", "global_liquidity_signal", "macro_trend_tracker"]
-        }
+    async def initialize(self):
+        """Initialize the strategy applicator."""
+        try:
+            # Initialize trading components (these are not async)
+            self.trading_logic_executor.initialize()
+            self.trading_context.initialize()
+            self.trading_agent_io.initialize()
+            
+            # Load application settings
+            await self._load_application_settings()
+            
+            # Initialize application tracking
+            await self._initialize_application_tracking()
+            
+            print("✅ Strategy Applicator initialized")
+            
+        except Exception as e:
+            print(f"❌ Error initializing Strategy Applicator: {e}")
+            raise
+    
+    async def _initialize_trading_integration(self):
+        """Initialize trading integration components."""
+        # This is now handled in the main initialize method
+        pass
+    
+    async def _load_application_settings(self):
+        """Load application settings from configuration."""
+        # Load strategy-specific settings only
+        strategy_config = self.config.get("strategy_engine", {}).get("applicator", {})
+        self.application_settings.update(strategy_config)
+    
+    async def _initialize_application_tracking(self):
+        """Initialize application tracking and monitoring."""
+        # Initialize application tracking systems
+        pass
+
+    async def apply_strategy(self, strategy_id: str, market_data: Dict[str, Any], 
+                           application_type: str = "paper", parameters: Dict[str, Any] = None) -> ApplicationResult:
+        """Apply a trading strategy to market data.
         
-        # Enhanced trading schedule configuration
-        self.trading_schedule = {
-            "weekend_assets": ["crypto"],  # Only cryptos on weekends
-            "weekday_assets": ["crypto", "forex", "indices", "commodities", "stocks"]  # All assets Mon-Fri
-        }
-        
-        # Dynamic thresholds - system adjusts based on market conditions
-        self.dynamic_thresholds = {
-            "min_signal_quality": 0.1,  # Ultra-ultra-low threshold for maximum opportunities
-            "max_signals_per_cycle": None,  # No artificial limit - system decides
-            "opportunity_threshold": 0.05,  # Minimum opportunity score to consider
-            "volatility_multiplier": 3.0,  # Increase sensitivity in volatile markets
-            "trend_multiplier": 2.0,  # Increase sensitivity in trending markets
-            "volume_multiplier": 2.0   # Increase sensitivity in high volume
-        }
-        
-    async def apply_strategy(self, strategy_type: str, market_data: Dict[str, Any], 
-                           timing_tier: str = "fast") -> Optional[Dict[str, Any]]:
+        This method focuses purely on strategy application:
+        - Generates trading signals based on strategy logic
+        - Processes market data through strategy algorithms
+        - Tracks strategy performance
+        - Delegates risk validation to risk management agent
         """
-        Apply a specific strategy type to current market conditions.
-        This is the core method that handles 99% of strategy engine work.
-        """
+        try:
+            # Create application request
+            request = ApplicationRequest(
+                request_id=f"app_{strategy_id}_{int(time.time())}",
+                strategy_id=strategy_id,
+                market_data=market_data,
+                application_type=application_type,
+                parameters=parameters or {}
+            )
+            
+            # Add to application queue
+            self.application_queue.append(request)
+            
+            # Process application
+            result = await self._process_strategy_application(request)
+            
+            # Update statistics
+            self.application_stats["total_applications"] += 1
+            if result.success:
+                self.application_stats["successful_applications"] += 1
+            else:
+                self.application_stats["failed_applications"] += 1
+            
+            self.application_stats["total_signals"] += len(result.signals_generated)
+            self.application_stats["total_trades"] += len(result.trades_executed)
+            
+            # Store result
+            if strategy_id not in self.application_results:
+                self.application_results[strategy_id] = []
+            self.application_results[strategy_id].append(result)
+            
+            # Store in trading context
+            self.trading_context.store_signal({
+                "type": "strategy_application",
+                "strategy_id": strategy_id,
+                "application_result": result,
+                "timestamp": int(time.time())
+            })
+            
+            return result
+            
+        except Exception as e:
+            print(f"❌ Error applying strategy {strategy_id}: {e}")
+            # Return failed result
+            return ApplicationResult(
+                result_id=f"failed_{strategy_id}_{int(time.time())}",
+                request_id=request.request_id if 'request' in locals() else "unknown",
+                strategy_id=strategy_id,
+                application_type=application_type,
+                signals_generated=[],
+                trades_executed=[],
+                performance_metrics={},
+                application_duration=0.0,
+                timestamp=time.time(),
+                success=False
+            )
+
+    async def _process_strategy_application(self, request: ApplicationRequest) -> ApplicationResult:
+        """Process a strategy application request."""
         start_time = time.time()
         
         try:
-            self.logger.info(f"Applying {strategy_type} strategy with {timing_tier} timing")
+            # Execute trading logic through consolidated trading system
+            signals = await self.trading_logic_executor.execute_trading_logic_tree({
+                "type": "strategy_application",
+                "strategy_id": request.strategy_id,
+                "market_data": request.market_data,
+                "parameters": request.parameters
+            })
             
-            # Get available symbols dynamically from Redis
-            available_symbols = await self._get_available_symbols_from_redis()
-            if not available_symbols:
-                self.logger.warning("No available symbols found in Redis")
-                return None
+            # Generate trading signals (strategy-specific logic)
+            generated_signals = await self._generate_strategy_signals(
+                request.strategy_id, 
+                request.market_data, 
+                signals
+            )
             
-            # Filter symbols based on trading schedule
-            current_time = datetime.now()
-            is_weekend = current_time.weekday() >= 5  # Saturday = 5, Sunday = 6
+            # Process signals through trading flow (delegates risk management)
+            processed_signals = await self._process_signals_through_trading_flow(generated_signals)
             
-            if is_weekend:
-                allowed_asset_types = self.trading_schedule["weekend_assets"]
-                self.logger.info("Weekend trading mode - crypto only")
-            else:
-                allowed_asset_types = self.trading_schedule["weekday_assets"]
-                self.logger.info("Weekday trading mode - all assets")
+            # Calculate performance metrics (strategy-specific only)
+            performance_metrics = await self._calculate_strategy_performance(
+                request.strategy_id, 
+                processed_signals
+            )
             
-            # Filter symbols by allowed asset types
-            filtered_symbols = await self._filter_symbols_by_asset_type(available_symbols, allowed_asset_types)
+            # Create application result
+            result = ApplicationResult(
+                result_id=f"result_{request.request_id}",
+                request_id=request.request_id,
+                strategy_id=request.strategy_id,
+                application_type=request.application_type,
+                signals_generated=generated_signals,
+                trades_executed=processed_signals,
+                performance_metrics=performance_metrics,
+                application_duration=time.time() - start_time,
+                timestamp=time.time(),
+                success=True
+            )
             
-            if not filtered_symbols:
-                self.logger.warning(f"No symbols available for asset types: {allowed_asset_types}")
-                return None
+            return result
             
-            # Apply strategy to filtered symbols
-            signals = await self._apply_strategy_to_symbols(strategy_type, filtered_symbols, market_data, timing_tier)
+        except Exception as e:
+            print(f"❌ Error processing strategy application: {e}")
+            # Return failed result
+            return ApplicationResult(
+                result_id=f"failed_{request.request_id}",
+                request_id=request.request_id,
+                strategy_id=request.strategy_id,
+                application_type=request.application_type,
+                signals_generated=[],
+                trades_executed=[],
+                performance_metrics={},
+                application_duration=time.time() - start_time,
+                timestamp=time.time(),
+                success=False
+            )
+
+    async def _generate_strategy_signals(self, strategy_id: str, market_data: Dict[str, Any], 
+                                       logic_results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate trading signals based on strategy logic.
+        
+        This is purely strategy-specific logic - no risk management here.
+        """
+        try:
+            signals = []
             
-            # Record application
-            duration = time.time() - start_time
-            await self._record_application(strategy_type, timing_tier, duration)
+            # Process logic results to generate signals
+            for result in logic_results:
+                if result.get("type") == "trading_signal":
+                    signal = {
+                        "signal_id": f"signal_{strategy_id}_{int(time.time())}",
+                        "strategy_id": strategy_id,
+                        "symbol": result.get("symbol", "unknown"),
+                        "action": result.get("action", "hold"),
+                        "entry_price": result.get("entry_price", 0.0),
+                        "confidence": result.get("confidence", 0.0),
+                        "strategy_parameters": result.get("parameters", {}),
+                        "timestamp": int(time.time())
+                    }
+                    signals.append(signal)
             
-            if signals:
-                self.logger.info(f"Generated {len(signals)} signals for {strategy_type}")
-                self.application_stats["signals_generated"] += len(signals)
-                self.application_stats["successful_applications"] += 1
-                
-                # Learn from successful application
-                await self._learn_from_application(strategy_type, market_data, signals, start_time)
-                
-                return {
-                    "type": "strategy_application",
-                    "strategy_type": strategy_type,
-                    "timing_tier": timing_tier,
-                    "signals_generated": len(signals),
-                    "symbols_analyzed": len(filtered_symbols),
-                    "duration": duration,
+            return signals
+            
+        except Exception as e:
+            print(f"❌ Error generating strategy signals: {e}")
+            return []
+
+    async def _process_signals_through_trading_flow(self, signals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Process signals through the trading flow.
+        
+        This delegates risk management to the risk management agent.
+        """
+        try:
+            processed_signals = []
+            
+            for signal in signals:
+                # Send signal to risk management agent for validation
+                risk_validation = await self.trading_agent_io.send_to_risk({
+                    "type": "signal_validation",
+                    "signal": signal,
                     "timestamp": int(time.time())
-                }
-            else:
-                self.logger.info(f"No signals generated for {strategy_type}")
-                self.application_stats["failed_applications"] += 1
-                return None
+                })
                 
-        except Exception as e:
-            self.logger.error(f"Error applying strategy {strategy_type}: {e}")
-            self.application_stats["failed_applications"] += 1
-            return None
-
-    async def _get_available_symbols_from_redis(self) -> List[str]:
-        """Get available symbols dynamically from Redis data feeds."""
-        try:
-            # Get available symbols from data feeds
-            symbols_key = "data_feeds:available_symbols"
-            symbols_data = self.redis_conn.get(symbols_key)
+                if risk_validation.get("approved", False):
+                    # Signal approved by risk management
+                    processed_signal = signal.copy()
+                    processed_signal["risk_approved"] = True
+                    processed_signal["risk_score"] = risk_validation.get("risk_score", 0.0)
+                    processed_signals.append(processed_signal)
+                else:
+                    # Signal rejected by risk management
+                    rejected_signal = signal.copy()
+                    rejected_signal["risk_approved"] = False
+                    rejected_signal["rejection_reason"] = risk_validation.get("rejection_reason", "unknown")
+                    processed_signals.append(rejected_signal)
             
-            if symbols_data:
-                import json
-                try:
-                    symbols = json.loads(symbols_data)
-                    if isinstance(symbols, list):
-                        self.logger.info(f"Retrieved {len(symbols)} symbols from Redis")
-                        return symbols
-                    else:
-                        self.logger.warning(f"Invalid symbols data format: expected list, got {type(symbols)}")
-                        return []
-                except json.JSONDecodeError as e:
-                    self.logger.error(f"JSON decode error for symbols data: {e}")
-                    return []
-            else:
-                self.logger.warning("No symbols data found in Redis")
-                return []
-                
-        except ConnectionError as e:
-            self.logger.error(f"Redis connection error getting symbols: {e}")
-            return []
-        except Exception as e:
-            self.logger.error(f"Unexpected error getting symbols from Redis: {e}")
-            return []
-
-    async def _filter_symbols_by_asset_type(self, symbols: List[str], allowed_asset_types: List[str]) -> List[str]:
-        """Filter symbols based on allowed asset types."""
-        try:
-            if not symbols or not allowed_asset_types:
-                self.logger.warning("Empty symbols or allowed asset types")
-                return []
-                
-            filtered_symbols = []
-            
-            for symbol in symbols:
-                try:
-                    if not isinstance(symbol, str):
-                        self.logger.warning(f"Invalid symbol type: {type(symbol)} for {symbol}")
-                        continue
-                        
-                    asset_type = self._get_asset_type(symbol)
-                    if asset_type in allowed_asset_types:
-                        filtered_symbols.append(symbol)
-                except Exception as e:
-                    self.logger.error(f"Error processing symbol {symbol}: {e}")
-                    continue
-            
-            self.logger.info(f"Filtered {len(filtered_symbols)} symbols from {len(symbols)} total")
-            return filtered_symbols
+            return processed_signals
             
         except Exception as e:
-            self.logger.error(f"Unexpected error filtering symbols: {e}")
-            return symbols  # Return all if filtering fails
+            print(f"❌ Error processing signals through trading flow: {e}")
+            return signals  # Return original signals if processing fails
 
-    def _get_asset_type(self, symbol: str) -> str:
-        """Determine asset type from symbol name."""
-        try:
-            if not isinstance(symbol, str):
-                self.logger.error(f"Invalid symbol type: {type(symbol)}, expected string")
-                return "crypto"  # Safe default
-                
-            if not symbol.strip():
-                self.logger.error("Empty symbol string")
-                return "crypto"  # Safe default
-                
-            symbol_upper = symbol.upper().strip()
-            
-            # Crypto detection
-            if any(crypto in symbol_upper for crypto in ["BTC", "ETH", "USDT", "USDC", "BNB", "ADA", "SOL", "DOT", "LINK", "MATIC"]):
-                return "crypto"
-            
-            # Forex detection
-            elif any(forex in symbol_upper for forex in ["EUR", "USD", "GBP", "JPY", "CHF", "AUD", "CAD", "NZD"]):
-                return "forex"
-            
-            # Indices detection
-            elif any(index in symbol_upper for index in ["SPX", "NDX", "DJI", "VIX", "DAX", "FTSE", "CAC", "NIKKEI"]):
-                return "indices"
-            
-            # Commodities detection
-            elif any(commodity in symbol_upper for commodity in ["GOLD", "SILVER", "OIL", "GAS", "COPPER", "PLATINUM"]):
-                return "commodities"
-            
-            # Stocks detection (default for US stocks)
-            elif len(symbol) <= 5 and symbol_upper.isalpha():
-                return "stocks"
-            
-            # Default to crypto for unknown symbols
-            else:
-                return "crypto"
-                
-        except Exception as e:
-            self.logger.error(f"Unexpected error determining asset type for {symbol}: {e}")
-            return "crypto"  # Safe default
-
-    async def _apply_strategy_to_symbols(self, strategy_type: str, symbols: List[str], 
-                                       market_data: Dict[str, Any], timing_tier: str) -> List[Dict[str, Any]]:
-        """Apply strategy to a list of symbols."""
-        try:
-            if not strategy_type or not symbols:
-                self.logger.warning(f"Invalid inputs: strategy_type={strategy_type}, symbols_count={len(symbols) if symbols else 0}")
-                return []
-                
-            signals = []
-            
-            # Get strategy implementations from the strategy types directory
-            strategy_implementations = self.strategy_mappings.get(strategy_type, [])
-            
-            if not strategy_implementations:
-                self.logger.warning(f"No implementations found for strategy type: {strategy_type}")
-                return []
-            
-            # Apply each strategy implementation
-            for strategy_name in strategy_implementations:
-                try:
-                    if not isinstance(strategy_name, str):
-                        self.logger.warning(f"Invalid strategy name type: {type(strategy_name)}")
-                        continue
-                        
-                    strategy_signals = await self._apply_single_strategy(strategy_name, symbols, market_data, timing_tier)
-                    if strategy_signals and isinstance(strategy_signals, list):
-                        signals.extend(strategy_signals)
-                    elif strategy_signals:
-                        self.logger.warning(f"Strategy {strategy_name} returned non-list signals: {type(strategy_signals)}")
-                except ConnectionError as e:
-                    self.logger.error(f"Redis connection error applying strategy {strategy_name}: {e}")
-                    continue
-                except ValueError as e:
-                    self.logger.error(f"Data validation error applying strategy {strategy_name}: {e}")
-                    continue
-                except Exception as e:
-                    self.logger.error(f"Unexpected error applying strategy {strategy_name}: {e}")
-                    continue
-            
-            # Prioritize and filter signals
-            if signals:
-                try:
-                    signals = await self._prioritize_signals(signals)
-                    signals = await self._filter_signals_by_quality(signals)
-                except Exception as e:
-                    self.logger.error(f"Error prioritizing/filtering signals: {e}")
-                    # Return signals as-is if filtering fails
-            
-            return signals
-            
-        except Exception as e:
-            self.logger.error(f"Unexpected error applying strategy to symbols: {e}")
-            return []
-
-    async def _apply_single_strategy(self, strategy_name: str, symbols: List[str], 
-                                   market_data: Dict[str, Any], timing_tier: str) -> List[Dict[str, Any]]:
-        """Apply a single strategy implementation."""
-        try:
-            # This would dynamically load and apply the strategy from the types directory
-            # For now, we'll create a placeholder signal structure
-            
-            signals = []
-            for symbol in symbols[:10]:  # Limit to first 10 symbols for performance
-                # Create a basic signal structure
-                signal = {
-                    "type": strategy_name,
-                    "symbol": symbol,
-                    "action": "buy" if hash(symbol) % 2 == 0 else "sell",
-                    "confidence": 0.7 + (hash(symbol) % 30) / 100,  # 0.7-1.0
-                    "timestamp": int(time.time()),
-                    "timing_tier": timing_tier,
-                    "strategy": strategy_name,
-                    "description": f"{strategy_name} signal for {symbol}"
-                }
-                signals.append(signal)
-            
-            return signals
-            
-        except Exception as e:
-            self.logger.error(f"Error applying single strategy {strategy_name}: {e}")
-            return []
-
-    async def _prioritize_signals(self, signals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Prioritize signals based on quality and confidence."""
-        try:
-            # Sort by confidence (highest first)
-            signals.sort(key=lambda x: x.get("confidence", 0), reverse=True)
-            
-            # Apply dynamic thresholds
-            min_quality = self.dynamic_thresholds["min_signal_quality"]
-            filtered_signals = [s for s in signals if s.get("confidence", 0) >= min_quality]
-            
-            return filtered_signals
-            
-        except Exception as e:
-            self.logger.error(f"Error prioritizing signals: {e}")
-            return signals
-
-    async def _filter_signals_by_quality(self, signals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Filter signals by quality thresholds."""
-        try:
-            # Apply opportunity threshold
-            opportunity_threshold = self.dynamic_thresholds["opportunity_threshold"]
-            quality_signals = [s for s in signals if s.get("confidence", 0) >= opportunity_threshold]
-            
-            # Limit signals if configured
-            max_signals = self.dynamic_thresholds["max_signals_per_cycle"]
-            if max_signals and len(quality_signals) > max_signals:
-                quality_signals = quality_signals[:max_signals]
-            
-            return quality_signals
-            
-        except Exception as e:
-            self.logger.error(f"Error filtering signals by quality: {e}")
-            return signals
-
-    async def _record_application(self, strategy_type: str, timing_tier: str, duration: float):
-        """Record strategy application statistics."""
-        try:
-            if timing_tier == "fast":
-                self.application_stats["fast_applications"] += 1
-            elif timing_tier == "tactical":
-                self.application_stats["tactical_applications"] += 1
-            
-            self.application_stats["last_application"] = time.time()
-            
-            # Store stats in Redis with proper JSON serialization
-            try:
-                import json
-                stats_key = f"strategy_engine:applicator:stats:{int(time.time())}"
-                self.redis_conn.set(stats_key, json.dumps(self.application_stats), ex=3600)
-            except ConnectionError as e:
-                self.logger.error(f"Redis connection error storing application stats: {e}")
-            except json.JSONEncodeError as e:
-                self.logger.error(f"JSON encoding error storing application stats: {e}")
-            except Exception as e:
-                self.logger.error(f"Unexpected error storing application stats: {e}")
-            
-        except Exception as e:
-            self.logger.error(f"Unexpected error recording application: {e}")
-
-    async def _learn_from_application(self, strategy_type: str, market_data: Dict[str, Any], 
-                                    signals: List[Dict[str, Any]], start_time: float):
-        """Learn from successful strategy application."""
+    async def _calculate_strategy_performance(self, strategy_id: str, 
+                                           signals: List[Dict[str, Any]]) -> Dict[str, float]:
+        """Calculate strategy performance metrics.
+        
+        Focuses on strategy-specific metrics, not risk metrics.
+        """
         try:
             if not signals:
-                return
-            
-            # Calculate success metrics
-            avg_confidence = sum(s.get("confidence", 0) for s in signals) / len(signals)
-            signal_count = len(signals)
-            
-            # Create learning data
-            learning_features = [
-                avg_confidence,
-                signal_count,
-                time.time() - start_time,
-                len(market_data) if isinstance(market_data, list) else 1
-            ]
-            
-            # Learn from the application
-            learning_data = {
-                "agent_name": "strategy_engine",
-                "learning_type": LearningType.PERFORMANCE_OPTIMIZATION,
-                "input_features": learning_features,
-                "target_value": avg_confidence,
-                "metadata": {
-                    "strategy_type": strategy_type,
-                    "signals_generated": signal_count,
-                    "duration": time.time() - start_time
+                return {
+                    "signal_count": 0,
+                    "approval_rate": 0.0,
+                    "average_confidence": 0.0,
+                    "strategy_efficiency": 0.0
                 }
-            }
             
-            # Update learner
-            if self.learner:
-                self.learner.learn(learning_data)
-                self.logger.info(f"Learned from {strategy_type} application: confidence {avg_confidence:.3f}")
+            # Calculate strategy-specific metrics
+            total_signals = len(signals)
+            approved_signals = len([s for s in signals if s.get("risk_approved", False)])
+            approval_rate = approved_signals / total_signals if total_signals > 0 else 0.0
             
-        except Exception as e:
-            self.logger.error(f"Error learning from application: {e}")
-
-    async def get_available_strategies(self) -> List[str]:
-        """Get list of available strategy types."""
-        try:
-            return list(self.strategy_mappings.keys())
-        except Exception as e:
-            self.logger.error(f"Error getting available strategies: {e}")
-            return []
-
-    async def get_strategy_implementations(self, strategy_type: str) -> List[str]:
-        """Get implementations for a specific strategy type."""
-        try:
-            return self.strategy_mappings.get(strategy_type, [])
-        except Exception as e:
-            self.logger.error(f"Error getting strategy implementations: {e}")
-            return []
-
-    def get_application_stats(self) -> Dict[str, Any]:
-        """Get application statistics."""
-        return {
-            **self.application_stats,
-            "available_strategies": len(self.strategy_mappings),
-            "total_implementations": sum(len(impls) for impls in self.strategy_mappings.values())
-        }
-
-    def reset_stats(self):
-        """Reset application statistics."""
-        self.application_stats = {
-            "fast_applications": 0,
-            "tactical_applications": 0,
-            "successful_applications": 0,
-            "failed_applications": 0,
-            "last_application": 0,
-            "signals_generated": 0,
-            "weekend_crypto_signals": 0,
-            "weekday_all_asset_signals": 0,
-            "assets_analyzed": 0,
-            "opportunities_found": 0
-        }
-        self.logger.info("Application statistics reset")
-
-    async def update_dynamic_thresholds(self, new_thresholds: Dict[str, Any]):
-        """Update dynamic thresholds based on market conditions."""
-        try:
-            if not isinstance(new_thresholds, dict):
-                self.logger.error(f"Invalid thresholds type: {type(new_thresholds)}, expected dict")
-                return
-                
-            self.dynamic_thresholds.update(new_thresholds)
-            self.logger.info(f"Updated dynamic thresholds: {new_thresholds}")
+            confidences = [s.get("confidence", 0.0) for s in signals]
+            average_confidence = sum(confidences) / len(confidences) if confidences else 0.0
             
-            # Store updated thresholds in Redis with proper JSON serialization
-            try:
-                import json
-                thresholds_key = "strategy_engine:applicator:dynamic_thresholds"
-                self.redis_conn.set(thresholds_key, json.dumps(self.dynamic_thresholds), ex=3600)
-            except ConnectionError as e:
-                self.logger.error(f"Redis connection error storing dynamic thresholds: {e}")
-            except json.JSONEncodeError as e:
-                self.logger.error(f"JSON encoding error storing dynamic thresholds: {e}")
-            except Exception as e:
-                self.logger.error(f"Unexpected error storing dynamic thresholds: {e}")
-            
-        except Exception as e:
-            self.logger.error(f"Unexpected error updating dynamic thresholds: {e}")
-
-    async def get_market_conditions_summary(self) -> Dict[str, Any]:
-        """Get summary of current market conditions."""
-        try:
-            # Get available symbols count
-            available_symbols = await self._get_available_symbols_from_redis()
-            
-            # Get current trading schedule
-            current_time = datetime.now()
-            is_weekend = current_time.weekday() >= 5
-            current_schedule = self.trading_schedule["weekend_assets"] if is_weekend else self.trading_schedule["weekday_assets"]
+            # Strategy efficiency (based on signal quality, not P&L)
+            strategy_efficiency = approval_rate * average_confidence
             
             return {
-                "available_symbols_count": len(available_symbols),
-                "current_trading_schedule": current_schedule,
-                "is_weekend": is_weekend,
-                "dynamic_thresholds": self.dynamic_thresholds,
-                "timestamp": int(time.time())
+                "signal_count": total_signals,
+                "approval_rate": approval_rate,
+                "average_confidence": average_confidence,
+                "strategy_efficiency": strategy_efficiency
             }
             
         except Exception as e:
-            self.logger.error(f"Error getting market conditions summary: {e}")
+            print(f"❌ Error calculating strategy performance: {e}")
             return {}
+
+    async def get_application_status(self, strategy_id: str = None) -> Dict[str, Any]:
+        """Get application status and statistics."""
+        if strategy_id:
+            return {
+                "strategy_id": strategy_id,
+                "active_applications": len([a for a in self.active_applications.values() if a.strategy_id == strategy_id]),
+                "application_results": len(self.application_results.get(strategy_id, [])),
+                "performance_metrics": self.application_results.get(strategy_id, [{}])[-1].get("performance_metrics", {}) if self.application_results.get(strategy_id) else {}
+            }
+        else:
+            return {
+                "total_applications": self.application_stats["total_applications"],
+                "successful_applications": self.application_stats["successful_applications"],
+                "failed_applications": self.application_stats["failed_applications"],
+                "total_signals": self.application_stats["total_signals"],
+                "total_trades": self.application_stats["total_trades"],
+                "average_performance": self.application_stats["average_performance"],
+                "queue_size": len(self.application_queue),
+                "active_applications": len(self.active_applications)
+            }
+
+    async def cleanup(self):
+        """Clean up resources."""
+        try:
+            self.trading_logic_executor.cleanup()
+            await self.trading_context.cleanup()
+            self.trading_agent_io.cleanup()
+            print("✅ Strategy Applicator cleaned up")
+        except Exception as e:
+            print(f"❌ Error cleaning up Strategy Applicator: {e}")

@@ -1,500 +1,796 @@
 #!/usr/bin/env python3
 """
-Online Generator - Fixed and Enhanced
-Generates adaptive strategies based on real-time market conditions.
+Online Generator - Strategy Online Generation Component
+Generates new trading strategies online and integrates with consolidated trading functionality.
+Focuses purely on strategy-specific online generation, delegating risk management to the risk management agent.
 """
 
-from typing import Dict, Any, List, Optional
-import time
 import asyncio
-from engine_agents.shared_utils import get_shared_redis, get_shared_logger
+import time
+import json
+from typing import Dict, Any, List, Optional
+from dataclasses import dataclass
+from collections import deque
+
+# Import consolidated trading functionality
+from ..trading.memory.trading_context import TradingContext
+from ..trading.learning.trading_research_engine import TradingResearchEngine
+
+@dataclass
+class GenerationRequest:
+    """An online strategy generation request."""
+    request_id: str
+    generation_type: str  # market_adaptive, volatility_based, momentum_driven
+    target_symbols: List[str]
+    market_conditions: Dict[str, Any]
+    priority: int = 5
+    created_at: float = None
+    status: str = "pending"
+    
+    def __post_init__(self):
+        if self.created_at is None:
+            self.created_at = time.time()
+
+@dataclass
+class GenerationResult:
+    """Result of online strategy generation."""
+    result_id: str
+    request_id: str
+    generation_type: str
+    generated_strategy: Dict[str, Any]
+    market_conditions: Dict[str, Any]
+    generation_duration: float
+    timestamp: float
+    success: bool
 
 class OnlineGenerator:
-    """Online strategy generator for real-time market adaptation."""
+    """Generates new trading strategies online based on market conditions.
+    
+    Focuses purely on strategy-specific online generation:
+    - Market-adaptive strategy generation
+    - Volatility-based strategy creation
+    - Momentum-driven strategy composition
+    - Real-time market condition analysis
+    
+    Risk management is delegated to the risk management agent.
+    """
     
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.logger = get_shared_logger("strategy_engine", "online_generator")
-        self.redis_conn = get_shared_redis()
         
-        # Generation thresholds
-        self.strategy_threshold = config.get("strategy_threshold", 0.7)
-        self.adaptation_frequency = config.get("adaptation_frequency", 300)  # 5 minutes
-        self.max_strategies_per_cycle = config.get("max_strategies_per_cycle", 10)
+        # Initialize consolidated trading components
+        self.trading_context = TradingContext(config)
+        self.trading_research_engine = TradingResearchEngine(config)
         
-        # Generation state
-        self.generated_strategies: Dict[str, Dict[str, Any]] = {}
-        self.adaptation_history: List[Dict[str, Any]] = []
-        self.last_adaptation = 0
+        # Online generation state
+        self.generation_queue: deque = deque(maxlen=100)
+        self.active_generations: Dict[str, GenerationRequest] = {}
+        self.generation_results: Dict[str, List[GenerationResult]] = {}
+        self.generation_history: deque = deque(maxlen=1000)
         
-        self.stats = {
-            "strategies_generated": 0,
-            "adaptations_triggered": 0,
-            "generation_errors": 0,
-            "start_time": time.time()
+        # Online generation settings (strategy-specific only)
+        self.generation_settings = {
+            "max_concurrent_generations": 5,
+            "generation_timeout": 1800,  # 30 minutes
+            "market_analysis_depth": 100,
+            "generation_types": ["market_adaptive", "volatility_based", "momentum_driven"],
+            "strategy_parameters": {
+                "max_components": 3,
+                "min_market_data": 100,
+                "adaptation_threshold": 0.1
+            }
         }
-
-    async def generate_strategy(self, market_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Generate online strategies based on market conditions."""
+        
+        # Online generation statistics
+        self.generation_stats = {
+            "total_generations": 0,
+            "successful_generations": 0,
+            "failed_generations": 0,
+            "total_strategies_generated": 0,
+            "average_generation_time": 0.0,
+            "market_adaptations": 0
+        }
+        
+    async def initialize(self):
+        """Initialize the online generator."""
         try:
-            if not market_data:
-                self.logger.warning("No market data provided for strategy generation")
-                return []
+            # Initialize trading components
+            await self.trading_context.initialize()
+            await self.trading_research_engine.initialize()
             
-            strategies = []
+            # Load generation settings
+            await self._load_generation_settings()
             
-            # Analyze market conditions
-            try:
-                market_conditions = await self._analyze_market_conditions(market_data)
-            except ConnectionError as e:
-                self.logger.error(f"Redis connection error analyzing market conditions: {e}")
-                return []
-            except ValueError as e:
-                self.logger.error(f"Data validation error analyzing market conditions: {e}")
-                return []
-            except Exception as e:
-                self.logger.error(f"Unexpected error analyzing market conditions: {e}")
-                return []
+            print("✅ Online Generator initialized")
             
-            if not market_conditions:
-                self.logger.warning("No market conditions extracted")
-                return []
-            
-            # Generate strategies for each market condition
-            for condition in market_conditions:
-                try:
-                    strategy = await self._generate_single_strategy(condition)
-                    if strategy:
-                        strategies.append(strategy)
-                        
-                        # Store generated strategy
-                        await self._store_generated_strategy(strategy)
-                        
-                        self.stats["strategies_generated"] += 1
-                        
-                except Exception as e:
-                    self.logger.error(f"Error generating strategy for condition {condition}: {e}")
-                    continue
-            
-            # Record adaptation
-            if strategies:
-                try:
-                    await self._record_adaptation(market_conditions, len(strategies))
-                except Exception as e:
-                    self.logger.error(f"Error recording adaptation: {e}")
-            
-            self.logger.info(f"Generated {len(strategies)} online strategies")
-            return strategies
-            
-        except ConnectionError as e:
-            self.logger.error(f"Redis connection error in strategy generation: {e}")
-            return []
-        except ValueError as e:
-            self.logger.error(f"Data validation error in strategy generation: {e}")
-            return []
         except Exception as e:
-            self.logger.error(f"Unexpected error in strategy generation: {e}")
-            return []
-
-    async def _generate_single_strategy(self, market_condition: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Generate a single strategy based on market condition."""
+            print(f"❌ Error initializing Online Generator: {e}")
+            raise
+    
+    async def _load_generation_settings(self):
+        """Load online generation settings from configuration."""
         try:
-            if not isinstance(market_condition, dict):
-                self.logger.error(f"Invalid market_condition type: {type(market_condition)}")
-                return None
-                
-            # Extract market condition parameters
-            market_regime = market_condition.get("market_regime", "unknown")
-            volatility_level = market_condition.get("volatility_level", "unknown")
-            trend_strength = market_condition.get("trend_strength", "unknown")
+            gen_config = self.config.get("strategy_engine", {}).get("online_generation", {})
+            self.generation_settings.update(gen_config)
+        except Exception as e:
+            print(f"❌ Error loading generation settings: {e}")
+
+    async def add_generation_request(self, generation_type: str, target_symbols: List[str], 
+                                   market_conditions: Dict[str, Any]) -> str:
+        """Add an online generation request to the queue."""
+        try:
+            request_id = f"online_gen_{generation_type}_{int(time.time())}"
             
-            # Determine strategy type based on market conditions
-            strategy_type = self._determine_strategy_type_from_conditions(
-                market_regime, volatility_level, trend_strength
+            request = GenerationRequest(
+                request_id=request_id,
+                generation_type=generation_type,
+                target_symbols=target_symbols,
+                market_conditions=market_conditions
             )
             
-            if not strategy_type:
-                return None
+            # Add to generation queue
+            self.generation_queue.append(request)
             
-            # Create strategy
+            # Store request in trading context
+            await self.trading_context.store_signal({
+                "type": "online_generation_request",
+                "request_id": request_id,
+                "generation_data": {
+                    "type": generation_type,
+                    "target_symbols": target_symbols,
+                    "market_conditions": market_conditions
+                },
+                "timestamp": int(time.time())
+            })
+            
+            print(f"✅ Added online generation request: {request_id}")
+            return request_id
+            
+        except Exception as e:
+            print(f"❌ Error adding online generation request: {e}")
+            return ""
+
+    async def process_generation_queue(self) -> List[GenerationResult]:
+        """Process the online generation queue."""
+        try:
+            results = []
+            
+            while self.generation_queue and len(self.active_generations) < self.generation_settings["max_concurrent_generations"]:
+                request = self.generation_queue.popleft()
+                result = await self._execute_online_generation(request)
+                if result:
+                    results.append(result)
+            
+            return results
+            
+        except Exception as e:
+            print(f"❌ Error processing online generation queue: {e}")
+            return []
+
+    async def _execute_online_generation(self, request: GenerationRequest) -> Optional[GenerationResult]:
+        """Execute a single online generation request."""
+        start_time = time.time()
+        
+        try:
+            # Mark as active
+            self.active_generations[request.request_id] = request
+            request.status = "running"
+            
+            # Execute generation based on type
+            if request.generation_type == "market_adaptive":
+                generated_strategy = await self._generate_market_adaptive_strategy(request)
+            elif request.generation_type == "volatility_based":
+                generated_strategy = await self._generate_volatility_based_strategy(request)
+            elif request.generation_type == "momentum_driven":
+                generated_strategy = await self._generate_momentum_driven_strategy(request)
+            else:
+                raise ValueError(f"Unknown generation type: {request.generation_type}")
+            
+            if not generated_strategy:
+                raise ValueError("Strategy generation failed")
+            
+            # Create generation result
+            result = GenerationResult(
+                result_id=f"result_{request.request_id}",
+                request_id=request.request_id,
+                generation_type=request.generation_type,
+                generated_strategy=generated_strategy,
+                market_conditions=request.market_conditions,
+                generation_duration=time.time() - start_time,
+                timestamp=time.time(),
+                success=True
+            )
+            
+            # Store result
+            if request.generation_type not in self.generation_results:
+                self.generation_results[request.generation_type] = []
+            self.generation_results[request.generation_type].append(result)
+            
+            # Update statistics
+            self.generation_stats["total_generations"] += 1
+            self.generation_stats["successful_generations"] += 1
+            self.generation_stats["total_strategies_generated"] += 1
+            self.generation_stats["average_generation_time"] += result.generation_duration
+            
+            # Store result in trading context
+            await self.trading_context.store_signal({
+                "type": "online_generation_result",
+                "generation_type": request.generation_type,
+                "result_data": {
+                    "strategy": generated_strategy,
+                    "market_conditions": request.market_conditions
+                },
+                "timestamp": int(time.time())
+            })
+            
+            print(f"✅ Online generation completed: {request.request_id}")
+            return result
+            
+        except Exception as e:
+            print(f"❌ Error executing online generation: {e}")
+            self.generation_stats["failed_generations"] += 1
+            
+            # Return failed result
+            return GenerationResult(
+                result_id=f"failed_{request.request_id}",
+                request_id=request.request_id,
+                generation_type=request.generation_type,
+                generated_strategy={},
+                market_conditions=request.market_conditions,
+                generation_duration=time.time() - start_time,
+                timestamp=time.time(),
+                success=False
+            )
+        finally:
+            # Remove from active generations
+            self.active_generations.pop(request.request_id, None)
+
+    async def _generate_market_adaptive_strategy(self, request: GenerationRequest) -> Optional[Dict[str, Any]]:
+        """Generate a market-adaptive strategy."""
+        try:
+            # Analyze current market conditions
+            market_analysis = await self._analyze_market_conditions(request.target_symbols)
+            
+            # Identify market regime
+            market_regime = self._identify_market_regime(market_analysis)
+            
+            # Generate adaptive components
+            strategy_components = self._generate_market_adaptive_components(market_regime, market_analysis)
+            
+            # Compose strategy
             strategy = {
-                "type": "online_generated",
-                "strategy_type": strategy_type,
-                "market_conditions": market_condition,
-                "confidence": 0.7,  # Base confidence for online strategies
-                "timestamp": int(time.time()),
-                "description": f"Online-generated {strategy_type} strategy for {market_regime} market"
+                "strategy_id": f"market_adaptive_{request.request_id}",
+                "name": f"Market Adaptive Strategy {request.request_id}",
+                "description": "Online-generated market-adaptive trading strategy",
+                "strategy_type": "market_adaptive",
+                "symbols": request.target_symbols,
+                "components": strategy_components,
+                "parameters": self._generate_adaptive_parameters(market_regime),
+                "market_regime": market_regime,
+                "adaptation_threshold": 0.1,
+                "created_at": time.time()
             }
             
             return strategy
             
         except Exception as e:
-            self.logger.error(f"Unexpected error generating single strategy: {e}")
-            return None
-    
-    def _determine_strategy_type_from_conditions(self, market_regime: str, volatility_level: str, trend_strength: str) -> Optional[str]:
-        """Determine strategy type based on market conditions."""
-        try:
-            if market_regime == "trending":
-                if trend_strength in ["uptrend", "downtrend"]:
-                    return "trend_following"
-                else:
-                    return "momentum_trading"
-            elif market_regime == "volatile":
-                if volatility_level == "high":
-                    return "volatility_trading"
-                else:
-                    return "mean_reversion"
-            elif market_regime == "stable":
-                return "market_making"
-            elif market_regime == "normal":
-                return "statistical_arbitrage"
-            else:
-                return "adaptive"
-                
-        except Exception as e:
-            self.logger.error(f"Unexpected error determining strategy type: {e}")
+            print(f"❌ Error generating market-adaptive strategy: {e}")
             return None
 
-    async def _analyze_market_conditions(self, market_data: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Analyze market conditions for strategy generation."""
+    async def _generate_volatility_based_strategy(self, request: GenerationRequest) -> Optional[Dict[str, Any]]:
+        """Generate a volatility-based strategy."""
         try:
-            if not market_data or not isinstance(market_data, list):
-                self.logger.error(f"Invalid market_data: {type(market_data)}")
-                return {}
+            # Analyze volatility patterns
+            volatility_analysis = await self._analyze_volatility_patterns(request.target_symbols)
             
-            analysis = {
-                "timestamp": int(time.time()),
-                "data_points": len(market_data),
-                "market_regime": "unknown",
-                "volatility_level": "unknown",
-                "trend_strength": "unknown",
-                "volume_profile": "unknown"
+            # Identify volatility regime
+            volatility_regime = self._identify_volatility_regime(volatility_analysis)
+            
+            # Generate volatility-based components
+            strategy_components = self._generate_volatility_based_components(volatility_regime, volatility_analysis)
+            
+            # Compose strategy
+            strategy = {
+                "strategy_id": f"volatility_based_{request.request_id}",
+                "name": f"Volatility-Based Strategy {request.request_id}",
+                "description": "Online-generated volatility-based trading strategy",
+                "strategy_type": "volatility_based",
+                "symbols": request.target_symbols,
+                "components": strategy_components,
+                "parameters": self._generate_volatility_parameters(volatility_regime),
+                "volatility_regime": volatility_regime,
+                "volatility_threshold": 0.15,
+                "created_at": time.time()
             }
             
-            # Extract market conditions from data
-            try:
-                # Simple market condition analysis
-                if len(market_data) > 0:
-                    # Analyze volatility
-                    prices = [float(data.get("close", 0)) for data in market_data if data.get("close")]
-                    if len(prices) > 1:
-                        price_changes = [abs(prices[i] - prices[i-1]) / prices[i-1] for i in range(1, len(prices))]
-                        avg_change = sum(price_changes) / len(price_changes)
-                        
-                        if avg_change > 0.05:
-                            analysis["volatility_level"] = "high"
-                        elif avg_change > 0.02:
-                            analysis["volatility_level"] = "medium"
-                        else:
-                            analysis["volatility_level"] = "low"
-                    
-                    # Analyze trend
-                    if len(prices) > 5:
-                        recent_prices = prices[-5:]
-                        if recent_prices[0] < recent_prices[-1]:
-                            analysis["trend_strength"] = "uptrend"
-                        elif recent_prices[0] > recent_prices[-1]:
-                            analysis["trend_strength"] = "downtrend"
-                        else:
-                            analysis["trend_strength"] = "sideways"
-                    
-                    # Determine market regime
-                    if analysis["volatility_level"] == "high" and analysis["trend_strength"] != "sideways":
-                        analysis["market_regime"] = "trending"
-                    elif analysis["volatility_level"] == "high":
-                        analysis["market_regime"] = "volatile"
-                    elif analysis["volatility_level"] == "low":
-                        analysis["market_regime"] = "stable"
-                    else:
-                        analysis["market_regime"] = "normal"
-                        
-            except Exception as e:
-                self.logger.error(f"Error analyzing market data: {e}")
-                # Keep default values
-            
-            return analysis
+            return strategy
             
         except Exception as e:
-            self.logger.error(f"Unexpected error in _analyze_market_conditions: {e}")
+            print(f"❌ Error generating volatility-based strategy: {e}")
+            return None
+
+    async def _generate_momentum_driven_strategy(self, request: GenerationRequest) -> Optional[Dict[str, Any]]:
+        """Generate a momentum-driven strategy."""
+        try:
+            # Analyze momentum patterns
+            momentum_analysis = await self._analyze_momentum_patterns(request.target_symbols)
+            
+            # Identify momentum regime
+            momentum_regime = self._identify_momentum_regime(momentum_analysis)
+            
+            # Generate momentum-driven components
+            strategy_components = self._generate_momentum_driven_components(momentum_regime, momentum_analysis)
+            
+            # Compose strategy
+            strategy = {
+                "strategy_id": f"momentum_driven_{request.request_id}",
+                "name": f"Momentum-Driven Strategy {request.request_id}",
+                "description": "Online-generated momentum-driven trading strategy",
+                "strategy_type": "momentum_driven",
+                "symbols": request.target_symbols,
+                "components": strategy_components,
+                "parameters": self._generate_momentum_parameters(momentum_regime),
+                "momentum_regime": momentum_regime,
+                "momentum_threshold": 0.02,
+                "created_at": time.time()
+            }
+            
+            return strategy
+            
+        except Exception as e:
+            print(f"❌ Error generating momentum-driven strategy: {e}")
+            return None
+
+    async def _analyze_market_conditions(self, target_symbols: List[str]) -> Dict[str, Any]:
+        """Analyze current market conditions."""
+        try:
+            market_analysis = {}
+            
+            for symbol in target_symbols:
+                # Get recent market data from trading context
+                signals = await self.trading_context.get_recent_signals(symbol, limit=100)
+                pnl_snapshots = await self.trading_context.get_recent_pnl_snapshots(symbol, limit=100)
+                
+                # Analyze market patterns
+                pattern_analysis = await self.trading_research_engine.analyze_trading_patterns(signals + pnl_snapshots)
+                
+                market_analysis[symbol] = pattern_analysis
+            
+            return market_analysis
+            
+        except Exception as e:
+            print(f"❌ Error analyzing market conditions: {e}")
             return {}
 
-    def _determine_market_regime(self, volatility: float, trend_strength: float, 
-                                volume_ratio: float, rsi: float, macd: float) -> str:
-        """Determine current market regime."""
+    async def _analyze_volatility_patterns(self, target_symbols: List[str]) -> Dict[str, Any]:
+        """Analyze volatility patterns."""
         try:
-            # High volatility + strong trend = trending regime
-            if volatility > 0.4 and trend_strength > 0.6:
+            volatility_analysis = {}
+            
+            for symbol in target_symbols:
+                # Get recent market data
+                signals = await self.trading_context.get_recent_signals(symbol, limit=100)
+                
+                # Calculate volatility metrics
+                volatility_metrics = self._calculate_volatility_metrics(signals)
+                volatility_analysis[symbol] = volatility_metrics
+            
+            return volatility_analysis
+            
+        except Exception as e:
+            print(f"❌ Error analyzing volatility patterns: {e}")
+            return {}
+
+    async def _analyze_momentum_patterns(self, target_symbols: List[str]) -> Dict[str, Any]:
+        """Analyze momentum patterns."""
+        try:
+            momentum_analysis = {}
+            
+            for symbol in target_symbols:
+                # Get recent market data
+                signals = await self.trading_context.get_recent_signals(symbol, limit=100)
+                
+                # Calculate momentum metrics
+                momentum_metrics = self._calculate_momentum_metrics(signals)
+                momentum_analysis[symbol] = momentum_metrics
+            
+            return momentum_analysis
+            
+        except Exception as e:
+            print(f"❌ Error analyzing momentum patterns: {e}")
+            return {}
+
+    def _identify_market_regime(self, market_analysis: Dict[str, Any]) -> str:
+        """Identify current market regime."""
+        try:
+            # Simple market regime identification
+            total_signals = sum(len(analysis.get("signals", [])) for analysis in market_analysis.values())
+            
+            if total_signals == 0:
+                return "unknown"
+            
+            # Count different signal types
+            signal_types = {}
+            for analysis in market_analysis.values():
+                for signal in analysis.get("signals", []):
+                    signal_type = signal.get("type", "unknown")
+                    signal_types[signal_type] = signal_types.get(signal_type, 0) + 1
+            
+            # Determine regime based on signal distribution
+            if signal_types.get("trend", 0) > total_signals * 0.6:
                 return "trending"
-            
-            # High volatility + weak trend = volatile regime
-            elif volatility > 0.4 and trend_strength < 0.3:
+            elif signal_types.get("volatile", 0) > total_signals * 0.6:
                 return "volatile"
-            
-            # Low volatility + strong trend = momentum regime
-            elif volatility < 0.2 and trend_strength > 0.7:
-                return "momentum"
-            
-            # Low volatility + weak trend = sideways regime
-            elif volatility < 0.2 and trend_strength < 0.3:
+            elif signal_types.get("sideways", 0) > total_signals * 0.6:
                 return "sideways"
-            
-            # High volume + strong indicators = breakout regime
-            elif volume_ratio > 1.5 and (abs(rsi - 50) > 20 or abs(macd) > 0.2):
-                return "breakout"
-            
-            # Default to normal regime
             else:
-                return "normal"
+                return "mixed"
                 
         except Exception as e:
-            self.logger.error(f"Error determining market regime: {e}")
-            return "normal"
+            print(f"❌ Error identifying market regime: {e}")
+            return "unknown"
 
-    async def _calculate_condition_score(self, data: Dict[str, Any], 
-                                       market_conditions: Dict[str, Any]) -> float:
-        """Calculate condition score for strategy generation."""
+    def _identify_volatility_regime(self, volatility_analysis: Dict[str, Any]) -> str:
+        """Identify current volatility regime."""
         try:
-            if not market_conditions:
-                return 0.0
+            # Simple volatility regime identification
+            avg_volatility = 0.0
+            count = 0
             
-            score = 0.0
+            for analysis in volatility_analysis.values():
+                if "volatility" in analysis:
+                    avg_volatility += analysis["volatility"]
+                    count += 1
             
-            # Volatility component
-            volatility = float(data.get("volatility", 0.0))
-            avg_volatility = market_conditions.get("avg_volatility", 0.0)
+            if count == 0:
+                return "unknown"
             
-            if avg_volatility > 0:
-                vol_ratio = volatility / avg_volatility
-                if 0.8 <= vol_ratio <= 1.5:  # Optimal volatility range
-                    score += 0.3
-                elif vol_ratio > 1.5:  # High volatility opportunity
-                    score += 0.2
+            avg_volatility /= count
             
-            # Trend component
-            trend_strength = float(data.get("trend_strength", 0.0))
-            if abs(trend_strength) > 0.6:
-                score += 0.3
-            
-            # Volume component
-            volume = float(data.get("volume", 0.0))
-            avg_volume = float(data.get("avg_volume", volume))
-            if avg_volume > 0:
-                volume_ratio = volume / avg_volume
-                if volume_ratio > 1.3:  # Above average volume
-                    score += 0.2
-            
-            # Technical indicators
-            rsi = float(data.get("rsi", 50.0))
-            if rsi < 30 or rsi > 70:  # Oversold/overbought
-                score += 0.2
-            
-            macd = float(data.get("macd", 0.0))
-            if abs(macd) > 0.1:  # Strong MACD signal
-                score += 0.1
-            
-            # Market regime bonus
-            market_regime = market_conditions.get("market_regime", "normal")
-            regime_bonus = {
-                "trending": 0.1,
-                "volatile": 0.15,
-                "momentum": 0.1,
-                "breakout": 0.2,
-                "sideways": 0.05,
-                "normal": 0.0
-            }.get(market_regime, 0.0)
-            
-            score += regime_bonus
-            
-            return min(score, 1.0)
-            
+            if avg_volatility > 0.25:
+                return "high_volatility"
+            elif avg_volatility > 0.15:
+                return "medium_volatility"
+            else:
+                return "low_volatility"
+                
         except Exception as e:
-            self.logger.error(f"Error calculating condition score: {e}")
-            return 0.0
+            print(f"❌ Error identifying volatility regime: {e}")
+            return "unknown"
 
-    async def _determine_strategy_type(self, data: Dict[str, Any], 
-                                     market_conditions: Dict[str, Any]) -> str:
-        """Determine optimal strategy type based on market conditions."""
+    def _identify_momentum_regime(self, momentum_analysis: Dict[str, Any]) -> str:
+        """Identify current momentum regime."""
         try:
-            market_regime = market_conditions.get("market_regime", "normal")
-            volatility = float(data.get("volatility", 0.0))
-            trend_strength = float(data.get("trend_strength", 0.0))
-            rsi = float(data.get("rsi", 50.0))
+            # Simple momentum regime identification
+            avg_momentum = 0.0
+            count = 0
             
-            # Regime-based strategy selection
+            for analysis in momentum_analysis.values():
+                if "momentum" in analysis:
+                    avg_momentum += analysis["momentum"]
+                    count += 1
+            
+            if count == 0:
+                return "unknown"
+            
+            avg_momentum /= count
+            
+            if abs(avg_momentum) > 0.05:
+                return "strong_momentum"
+            elif abs(avg_momentum) > 0.02:
+                return "moderate_momentum"
+            else:
+                return "weak_momentum"
+                
+        except Exception as e:
+            print(f"❌ Error identifying momentum regime: {e}")
+            return "unknown"
+
+    def _generate_market_adaptive_components(self, market_regime: str, 
+                                          market_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Generate market-adaptive strategy components."""
+        try:
+            components = []
+            
+            # Generate components based on market regime
             if market_regime == "trending":
-                if trend_strength > 0.7:
-                    return "trend_following"
-                else:
-                    return "momentum_rider"
+                components.append({
+                    "component_id": "trend_follower",
+                    "name": "Trend Follower",
+                    "component_type": "trend_following",
+                    "parameters": {"trend_period": 20, "trend_strength": 0.6},
+                    "weight": 1.0
+                })
             
             elif market_regime == "volatile":
-                if volatility > 0.6:
-                    return "volatility_trading"
-                else:
-                    return "mean_reversion"
-            
-            elif market_regime == "momentum":
-                return "momentum_rider"
-            
-            elif market_regime == "breakout":
-                return "breakout_strategy"
+                components.append({
+                    "component_id": "volatility_trader",
+                    "name": "Volatility Trader",
+                    "component_type": "volatility_trading",
+                    "parameters": {"volatility_threshold": 0.2, "mean_reversion": True},
+                    "weight": 1.0
+                })
             
             elif market_regime == "sideways":
-                if abs(rsi - 50) > 20:
-                    return "mean_reversion"
-                else:
-                    return "market_making"
+                components.append({
+                    "component_id": "range_trader",
+                    "name": "Range Trader",
+                    "component_type": "range_trading",
+                    "parameters": {"range_period": 50, "breakout_threshold": 0.02},
+                    "weight": 1.0
+                })
             
-            else:  # normal regime
-                if abs(trend_strength) > 0.5:
-                    return "trend_following"
-                elif volatility > 0.3:
-                    return "adaptive"
-                else:
-                    return "market_making"
-                    
-        except Exception as e:
-            self.logger.error(f"Error determining strategy type: {e}")
-            return "adaptive"
-
-    async def _create_online_strategy(self, symbol: str, strategy_type: str, 
-                                    condition_score: float, data: Dict[str, Any], 
-                                    market_conditions: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Create online strategy from market analysis."""
-        try:
-            strategy = {
-                "type": "online_generated",
-                "symbol": symbol,
-                "strategy_type": strategy_type,
-                "condition_score": condition_score,
-                "market_regime": market_conditions.get("market_regime", "normal"),
-                "market_conditions": market_conditions,
-                "asset_data": {
-                    "volatility": float(data.get("volatility", 0.0)),
-                    "trend_strength": float(data.get("trend_strength", 0.0)),
-                    "volume_ratio": float(data.get("volume", 0.0)) / float(data.get("avg_volume", 1.0)) if data.get("avg_volume", 0) > 0 else 1.0,
-                    "rsi": float(data.get("rsi", 50.0)),
-                    "macd": float(data.get("macd", 0.0))
-                },
-                "confidence": min(condition_score * 0.8 + 0.2, 0.9),  # Base confidence of 20%
-                "timestamp": int(time.time()),
-                "description": f"Online {strategy_type} strategy for {symbol}: score {condition_score:.2f}, regime {market_conditions.get('market_regime', 'normal')}"
-            }
-            
-            return strategy
+            return components
             
         except Exception as e:
-            self.logger.error(f"Error creating online strategy: {e}")
-            return None
-
-    async def _store_generated_strategy(self, strategy: Dict[str, Any]):
-        """Store generated strategy in Redis."""
-        try:
-            if not isinstance(strategy, dict):
-                self.logger.error(f"Invalid strategy type: {type(strategy)}, expected dict")
-                return
-                
-            strategy_id = f"{strategy['type']}:{strategy.get('symbol', 'unknown')}:{strategy['timestamp']}"
-            
-            # Store in Redis with proper JSON serialization
-            try:
-                import json
-                self.redis_conn.set(
-                    f"strategy_engine:online_strategy:{strategy_id}", 
-                    json.dumps(strategy), 
-                    ex=604800
-                )
-                
-                # Store in local cache
-                self.generated_strategies[strategy_id] = strategy
-                
-                self.logger.info(f"Stored online-generated strategy: {strategy_id}")
-                
-            except json.JSONEncodeError as e:
-                self.logger.error(f"JSON encoding error storing online strategy: {e}")
-            except ConnectionError as e:
-                self.logger.error(f"Redis connection error storing online strategy: {e}")
-            except Exception as e:
-                self.logger.error(f"Unexpected error storing online strategy: {e}")
-            
-        except Exception as e:
-            self.logger.error(f"Unexpected error in _store_generated_strategy: {e}")
-
-    async def _record_adaptation(self, market_conditions: Dict[str, Any], strategy_count: int):
-        """Record adaptation event."""
-        try:
-            if not isinstance(market_conditions, dict):
-                self.logger.error(f"Invalid market_conditions type: {type(market_conditions)}, expected dict")
-                return
-                
-            adaptation_record = {
-                "timestamp": int(time.time()),
-                "market_conditions": market_conditions,
-                "strategies_generated": strategy_count,
-                "adaptation_type": "online_generation"
-            }
-            
-            # Store adaptation record in Redis with proper JSON serialization
-            try:
-                import json
-                record_key = f"strategy_engine:online_adaptation:{int(time.time())}"
-                self.redis_conn.set(record_key, json.dumps(adaptation_record), ex=604800)
-                
-                # Add to local history
-                self.adaptation_history.append(adaptation_record)
-                
-                # Keep only last 100 adaptations
-                if len(self.adaptation_history) > 100:
-                    self.adaptation_history = self.adaptation_history[-100:]
-                    
-            except json.JSONEncodeError as e:
-                self.logger.error(f"JSON encoding error storing adaptation record: {e}")
-            except ConnectionError as e:
-                self.logger.error(f"Redis connection error storing adaptation record: {e}")
-            except Exception as e:
-                self.logger.error(f"Unexpected error storing adaptation record: {e}")
-            
-        except Exception as e:
-            self.logger.error(f"Unexpected error in _record_adaptation: {e}")
-
-    async def get_generated_strategies(self) -> List[Dict[str, Any]]:
-        """Get all generated strategies."""
-        try:
-            return list(self.generated_strategies.values())
-        except Exception as e:
-            self.logger.error(f"Unexpected error getting generated strategies: {e}")
+            print(f"❌ Error generating market-adaptive components: {e}")
             return []
 
-    async def get_adaptation_history(self) -> List[Dict[str, Any]]:
-        """Get adaptation history."""
+    def _generate_volatility_based_components(self, volatility_regime: str, 
+                                            volatility_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Generate volatility-based strategy components."""
         try:
-            return self.adaptation_history.copy()
+            components = []
+            
+            # Generate components based on volatility regime
+            if volatility_regime == "high_volatility":
+                components.append({
+                    "component_id": "volatility_breakout",
+                    "name": "Volatility Breakout",
+                    "component_type": "breakout_trading",
+                    "parameters": {"volatility_threshold": 0.25, "breakout_multiplier": 2.0},
+                    "weight": 1.0
+                })
+            
+            elif volatility_regime == "medium_volatility":
+                components.append({
+                    "component_id": "volatility_mean_reversion",
+                    "name": "Volatility Mean Reversion",
+                    "component_type": "mean_reversion",
+                    "parameters": {"volatility_threshold": 0.15, "reversion_strength": 0.8},
+                    "weight": 1.0
+                })
+            
+            elif volatility_regime == "low_volatility":
+                components.append({
+                    "component_id": "volatility_momentum",
+                    "name": "Volatility Momentum",
+                    "component_type": "momentum_trading",
+                    "parameters": {"volatility_threshold": 0.1, "momentum_period": 10},
+                    "weight": 1.0
+                })
+            
+            return components
+            
         except Exception as e:
-            self.logger.error(f"Unexpected error getting adaptation history: {e}")
+            print(f"❌ Error generating volatility-based components: {e}")
             return []
 
-    async def force_adaptation(self):
-        """Force immediate strategy adaptation."""
+    def _generate_momentum_driven_components(self, momentum_regime: str, 
+                                           momentum_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Generate momentum-driven strategy components."""
         try:
-            self.logger.info("Forcing online strategy adaptation...")
+            components = []
             
-            # Reset adaptation timer
-            self.last_adaptation = 0
+            # Generate components based on momentum regime
+            if momentum_regime == "strong_momentum":
+                components.append({
+                    "component_id": "momentum_follower",
+                    "name": "Momentum Follower",
+                    "component_type": "momentum_following",
+                    "parameters": {"momentum_period": 5, "momentum_threshold": 0.05},
+                    "weight": 1.0
+                })
             
-            # Trigger immediate adaptation
-            self.stats["adaptations_triggered"] += 1
+            elif momentum_regime == "moderate_momentum":
+                components.append({
+                    "component_id": "momentum_oscillator",
+                    "name": "Momentum Oscillator",
+                    "component_type": "oscillator_trading",
+                    "parameters": {"momentum_period": 10, "oscillator_threshold": 0.02},
+                    "weight": 1.0
+                })
             
-            self.logger.info("Online strategy adaptation forced successfully")
+            elif momentum_regime == "weak_momentum":
+                components.append({
+                    "component_id": "momentum_reversal",
+                    "name": "Momentum Reversal",
+                    "component_type": "reversal_trading",
+                    "parameters": {"momentum_period": 15, "reversal_threshold": 0.01},
+                    "weight": 1.0
+                })
+            
+            return components
             
         except Exception as e:
-            self.logger.error(f"Unexpected error forcing adaptation: {e}")
+            print(f"❌ Error generating momentum-driven components: {e}")
+            return []
 
-    def get_generator_stats(self) -> Dict[str, Any]:
-        """Get online generator statistics."""
-        return {
-            **self.stats,
-            "generated_strategies": len(self.generated_strategies),
-            "adaptations": len(self.adaptation_history),
-            "uptime": time.time() - self.stats["start_time"]
-        }
+    def _generate_adaptive_parameters(self, market_regime: str) -> Dict[str, Any]:
+        """Generate parameters for market-adaptive strategy."""
+        try:
+            base_params = {
+                "confidence_threshold": 0.7,
+                "execution_timeout": 60,
+                "max_position_size": 100000
+            }
+            
+            # Add regime-specific parameters
+            if market_regime == "trending":
+                base_params.update({
+                    "trend_following": True,
+                    "trend_period": 20,
+                    "trend_strength": 0.6
+                })
+            elif market_regime == "volatile":
+                base_params.update({
+                    "volatility_trading": True,
+                    "volatility_threshold": 0.2,
+                    "mean_reversion": True
+                })
+            elif market_regime == "sideways":
+                base_params.update({
+                    "range_trading": True,
+                    "range_period": 50,
+                    "breakout_threshold": 0.02
+                })
+            
+            return base_params
+            
+        except Exception as e:
+            print(f"❌ Error generating adaptive parameters: {e}")
+            return {}
+
+    def _generate_volatility_parameters(self, volatility_regime: str) -> Dict[str, Any]:
+        """Generate parameters for volatility-based strategy."""
+        try:
+            base_params = {
+                "confidence_threshold": 0.7,
+                "execution_timeout": 60,
+                "max_position_size": 100000
+            }
+            
+            # Add regime-specific parameters
+            if volatility_regime == "high_volatility":
+                base_params.update({
+                    "volatility_threshold": 0.25,
+                    "breakout_multiplier": 2.0,
+                    "risk_management": "aggressive"
+                })
+            elif volatility_regime == "medium_volatility":
+                base_params.update({
+                    "volatility_threshold": 0.15,
+                    "reversion_strength": 0.8,
+                    "risk_management": "moderate"
+                })
+            elif volatility_regime == "low_volatility":
+                base_params.update({
+                    "volatility_threshold": 0.1,
+                    "momentum_period": 10,
+                    "risk_management": "conservative"
+                })
+            
+            return base_params
+            
+        except Exception as e:
+            print(f"❌ Error generating volatility parameters: {e}")
+            return {}
+
+    def _generate_momentum_parameters(self, momentum_regime: str) -> Dict[str, Any]:
+        """Generate parameters for momentum-driven strategy."""
+        try:
+            base_params = {
+                "confidence_threshold": 0.7,
+                "execution_timeout": 60,
+                "max_position_size": 100000
+            }
+            
+            # Add regime-specific parameters
+            if momentum_regime == "strong_momentum":
+                base_params.update({
+                    "momentum_period": 5,
+                    "momentum_threshold": 0.05,
+                    "position_sizing": "aggressive"
+                })
+            elif momentum_regime == "moderate_momentum":
+                base_params.update({
+                    "momentum_period": 10,
+                    "oscillator_threshold": 0.02,
+                    "position_sizing": "moderate"
+                })
+            elif momentum_regime == "weak_momentum":
+                base_params.update({
+                    "momentum_period": 15,
+                    "reversal_threshold": 0.01,
+                    "position_sizing": "conservative"
+                })
+            
+            return base_params
+            
+        except Exception as e:
+            print(f"❌ Error generating momentum parameters: {e}")
+            return {}
+
+    def _calculate_volatility_metrics(self, signals: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Calculate volatility metrics from signals."""
+        try:
+            if not signals:
+                return {"volatility": 0.0, "volatility_type": "unknown"}
+            
+            # Simple volatility calculation
+            prices = [s.get("price", 0.0) for s in signals if s.get("price")]
+            if len(prices) < 2:
+                return {"volatility": 0.0, "volatility_type": "unknown"}
+            
+            # Calculate price changes
+            price_changes = [abs(prices[i] - prices[i-1]) for i in range(1, len(prices))]
+            avg_change = sum(price_changes) / len(price_changes)
+            
+            return {
+                "volatility": avg_change,
+                "volatility_type": "price_based"
+            }
+            
+        except Exception as e:
+            print(f"❌ Error calculating volatility metrics: {e}")
+            return {"volatility": 0.0, "volatility_type": "unknown"}
+
+    def _calculate_momentum_metrics(self, signals: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Calculate momentum metrics from signals."""
+        try:
+            if not signals:
+                return {"momentum": 0.0, "momentum_type": "unknown"}
+            
+            # Simple momentum calculation
+            prices = [s.get("price", 0.0) for s in signals if s.get("price")]
+            if len(prices) < 2:
+                return {"momentum": 0.0, "momentum_type": "unknown"}
+            
+            # Calculate momentum (price change over time)
+            momentum = (prices[-1] - prices[0]) / len(prices)
+            
+            return {
+                "momentum": momentum,
+                "momentum_type": "price_based"
+            }
+            
+        except Exception as e:
+            print(f"❌ Error calculating momentum metrics: {e}")
+            return {"momentum": 0.0, "momentum_type": "unknown"}
+
+    async def get_generation_status(self, generation_type: str = None) -> Dict[str, Any]:
+        """Get online generation status and statistics."""
+        if generation_type:
+            return {
+                "generation_type": generation_type,
+                "active_generations": len([r for r in self.active_generations.values() if r.generation_type == generation_type]),
+                "generation_results": len(self.generation_results.get(generation_type, [])),
+                "last_generation": self.generation_results.get(generation_type, [{}])[-1] if self.generation_results.get(generation_type) else {}
+            }
+        else:
+            # Calculate average generation time
+            if self.generation_stats["successful_generations"] > 0:
+                avg_generation_time = self.generation_stats["average_generation_time"] / self.generation_stats["successful_generations"]
+            else:
+                avg_generation_time = 0.0
+            
+            return {
+                "stats": {**self.generation_stats, "average_generation_time": avg_generation_time},
+                "queue_size": len(self.generation_queue),
+                "active_generations": len(self.active_generations),
+                "generation_history_size": len(self.generation_history),
+                "generation_settings": self.generation_settings
+            }
+
+    async def get_generation_results(self, generation_type: str) -> List[GenerationResult]:
+        """Get online generation results for a specific type."""
+        return self.generation_results.get(generation_type, [])
+
+    async def cleanup(self):
+        """Clean up resources."""
+        try:
+            await self.trading_context.cleanup()
+            await self.trading_research_engine.cleanup()
+            print("✅ Online Generator cleaned up")
+        except Exception as e:
+            print(f"❌ Error cleaning up Online Generator: {e}")

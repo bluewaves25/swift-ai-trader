@@ -164,7 +164,8 @@ class BaseAgent(ABC):
                     self.logger.warning(f"Invalid task format: {task_info}")
                     continue
                 
-                task = asyncio.create_task(task_coro, name=task_name)
+                # Call the coroutine function to get the actual coroutine
+                task = asyncio.create_task(task_coro(), name=task_name)
                 self._background_tasks.append(task)
                 self.logger.info(f"Started background task: {task_name} (priority: {priority})")
     
@@ -211,7 +212,7 @@ class BaseAgent(ABC):
         while self.is_running:
             try:
                 # Send heartbeat to Redis
-                await self.redis_conn.async_publish(
+                await self.redis_conn.publish_async(
                     f"heartbeat:{self.agent_name}",
                     {
                         "agent_name": self.agent_name,
@@ -231,7 +232,7 @@ class BaseAgent(ABC):
                 }
                 
                 # Update the agent_stats hash using the correct Redis connector method
-                self.redis_conn.hset(f"agent_stats:{self.agent_name}", mapping=agent_stats)
+                await self.redis_conn.hset_async(f"agent_stats:{self.agent_name}", mapping=agent_stats)
                 
                 # Wait for next heartbeat
                 await asyncio.sleep(60)  # 60 second heartbeat

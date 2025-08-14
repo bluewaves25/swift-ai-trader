@@ -87,6 +87,10 @@ class DataValidatorSimple:
                 "timestamp": time.time()
             }
     
+    async def cleanup(self):
+        """Cleanup resources."""
+        pass
+    
     async def _validate_via_rust(self, market_data: Dict[str, Any], 
                                validation_type: str) -> Dict[str, Any]:
         """Validate data via Rust backend for high performance."""

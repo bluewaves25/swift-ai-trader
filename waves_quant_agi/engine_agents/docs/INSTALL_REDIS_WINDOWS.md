@@ -114,7 +114,7 @@ Once Redis is installed and running:
 cd C:\Users\BLUE WAVES\Documents\GitHub\swift-ai-trader\waves_quant_agi\engine_agents
 
 # Start the trading engine
-python start_trading_engine.py
+python pipeline_runner.py
 ```
 
 ## Troubleshooting
@@ -146,7 +146,7 @@ If you don't want to install Redis locally:
 1. Go to https://redis.com/try-free/
 2. Create a free account
 3. Get your Redis connection details
-4. Update the configuration in `start_trading_engine.py`:
+4. Update the configuration in `pipeline_runner.py`:
 
 ```python
 config = {
@@ -162,18 +162,18 @@ Once Redis is installed and running:
 
 1. **Start the Trading Engine:**
    ```powershell
-   python start_trading_engine.py
+   python pipeline_runner.py
    ```
 
-2. **Monitor Agents:**
+2. **Monitor Pipeline:**
    ```powershell
    # In another terminal
-   python monitor_agents.py
+   python test_pipeline.py
    ```
 
 3. **Check Status:**
    ```powershell
-   python monitor_agents.py --once
+   python test_pipeline.py --status
    ```
 
 ## Recommended Setup

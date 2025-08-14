@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 """
-Funding Rate Arbitrage Strategy - Fixed and Enhanced
-Detects funding rate arbitrage opportunities in perpetual futures.
+Funding Rate Arbitrage Strategy - Arbitrage Based
+Focuses purely on strategy-specific tasks, delegating risk management to the risk management agent.
 """
 
 from typing import Dict, Any, List, Optional
 import time
 import asyncio
-from engine_agents.shared_utils import get_shared_redis
+from datetime import datetime
+
+# Import consolidated trading components
+from ....trading.memory.trading_context import TradingContext
+from ....trading.learning.trading_research_engine import TradingResearchEngine
+
 
 class FundingRateArbitrage:
     """Funding rate arbitrage strategy for perpetual futures."""
@@ -15,8 +20,10 @@ class FundingRateArbitrage:
     def __init__(self, config: Dict[str, Any], logger=None):
         self.config = config
         self.logger = logger
-        # Use shared Redis connection
-        self.redis_conn = get_shared_redis()
+        
+        # Initialize consolidated trading components
+        self.trading_context = TradingContext()
+        self.trading_research_engine = TradingResearchEngine()
         
         # Strategy parameters
         self.min_funding_rate = config.get("min_funding_rate", 0.0001)  # 0.01% minimum
@@ -24,14 +31,29 @@ class FundingRateArbitrage:
         self.funding_threshold = config.get("funding_threshold", 0.0005)  # 0.05% threshold
         self.position_size_limit = config.get("position_size_limit", 0.1)  # 10% of capital
         self.hedge_ratio = config.get("hedge_ratio", 0.95)  # 95% hedge ratio
+        
+        # Strategy state
+        self.last_signal_time = None
+        self.strategy_performance = {"total_signals": 0, "average_confidence": 0.0}
+
+    async def initialize(self) -> bool:
+        """Initialize the strategy and trading components."""
+        try:
+            await self.trading_context.initialize()
+            await self.trading_research_engine.initialize()
+            return True
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Failed to initialize funding rate arbitrage strategy: {e}")
+            return False
 
     async def detect_opportunity(self, market_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Detect funding rate arbitrage opportunities."""
+        if not market_data:
+            return []
+        
         try:
             opportunities = []
-            
-            if not market_data:
-                return opportunities
             
             for data in market_data:
                 symbol = data.get("symbol", "BTCUSD")
@@ -51,210 +73,88 @@ class FundingRateArbitrage:
                     if arbitrage_potential['profitable']:
                         # Determine strategy direction
                         if funding_rate > 0:  # Positive funding rate
-                            action = "long_spot_short_futures"
-                            entry_price = spot_price
-                            stop_loss = spot_price * 0.98
-                            take_profit = spot_price * 1.02
+                            signal_type = "LONG_SPOT_SHORT_FUTURES"
                         else:  # Negative funding rate
-                            action = "short_spot_long_futures"
-                            entry_price = futures_price
-                            stop_loss = futures_price * 1.02
-                            take_profit = futures_price * 0.98
+                            signal_type = "SHORT_SPOT_LONG_FUTURES"
                         
-                        opportunity = {
-                            "type": "funding_rate_arbitrage",
-                            "strategy": "arbitrage",
+                        confidence = min(abs(funding_rate) / self.max_funding_rate, 1.0)
+                        
+                        # Create trading signal
+                        signal = {
+                            "signal_id": f"funding_arbitrage_{int(time.time())}",
+                            "strategy_id": "funding_rate_arbitrage",
+                            "strategy_type": "arbitrage_based",
+                            "signal_type": signal_type,
                             "symbol": symbol,
-                            "action": action,
-                            "entry_price": entry_price,
-                            "stop_loss": stop_loss,
-                            "take_profit": take_profit,
-                            "confidence": min(abs(funding_rate) / self.max_funding_rate, 0.9),
-                            "funding_rate": funding_rate,
-                            "funding_rate_annualized": funding_rate * 3 * 365,  # 8-hour funding
-                            "arbitrage_potential": arbitrage_potential['potential'],
-                            "next_funding_time": next_funding_time,
-                            "volume_24h": volume_24h,
-                            "hedge_ratio": self.hedge_ratio,
-                            "timestamp": int(time.time()),
-                            "description": f"Funding arbitrage for {symbol}: Rate {funding_rate:.6f}, Potential {arbitrage_potential['potential']:.4f}"
+                            "timestamp": datetime.now().isoformat(),
+                            "price": spot_price,
+                            "confidence": confidence,
+                            "metadata": {
+                                "funding_rate": funding_rate,
+                                "funding_rate_annualized": funding_rate * 3 * 365,
+                                "arbitrage_potential": arbitrage_potential['potential'],
+                                "next_funding_time": next_funding_time,
+                                "volume_24h": volume_24h,
+                                "hedge_ratio": self.hedge_ratio
+                            }
                         }
-                        opportunities.append(opportunity)
                         
-                        # Store funding arbitrage in Redis with proper JSON serialization
-                        if self.redis_conn:
-                            try:
-                                import json
-                                self.redis_conn.set(
-                                    f"strategy_engine:funding_arbitrage:{symbol}:{int(time.time())}", 
-                                    json.dumps(opportunity), 
-                                    ex=3600
-                                )
-                            except json.JSONEncodeError as e:
-                                if self.logger:
-                                    self.logger.error(f"JSON encoding error storing funding arbitrage: {e}")
-                            except ConnectionError as e:
-                                if self.logger:
-                                    self.logger.error(f"Redis connection error storing funding arbitrage: {e}")
-                            except Exception as e:
-                                if self.logger:
-                                    self.logger.error(f"Unexpected error storing funding arbitrage: {e}")
+                        # Store signal in trading context
+                        self.trading_context.store_signal(signal)
+                        opportunities.append(signal)
+                        
+                        # Update strategy performance
+                        self.strategy_performance["total_signals"] += 1
+                        self.strategy_performance["average_confidence"] = (
+                            (self.strategy_performance["average_confidence"] * 
+                             (self.strategy_performance["total_signals"] - 1) + confidence) /
+                            self.strategy_performance["total_signals"]
+                        )
+                        
+                        self.last_signal_time = datetime.now()
                         
                         if self.logger:
-                            self.logger.info(f"Funding rate arbitrage opportunity: {opportunity['description']}")
-
+                            self.logger.info(f"Funding rate arbitrage signal generated: {signal_type} for {symbol}")
+            
             return opportunities
             
         except Exception as e:
             if self.logger:
-                self.logger.error(f"Error detecting funding rate arbitrage: {e}")
+                self.logger.error(f"Error detecting funding rate arbitrage opportunities: {e}")
             return []
 
     async def _calculate_arbitrage_potential(self, symbol: str, spot_price: float, 
                                            futures_price: float, funding_rate: float, 
                                            volume_24h: float) -> Dict[str, Any]:
-        """Calculate arbitrage potential and profitability."""
+        """Calculate arbitrage potential."""
         try:
-            # Get market data for calculation
-            market_info = await self._get_market_info(symbol)
+            # Calculate basis
+            basis = futures_price - spot_price
+            basis_percentage = basis / spot_price if spot_price > 0 else 0
             
-            # Calculate basis (difference between spot and futures)
-            basis = (futures_price - spot_price) / spot_price if spot_price > 0 else 0
+            # Calculate potential profit from funding rate
+            funding_profit = abs(funding_rate) * 3 * 365  # Annualized
             
-            # Calculate funding rate impact
-            funding_impact = abs(funding_rate) * 3 * 365  # Annualized
-            
-            # Calculate transaction costs
-            transaction_costs = await self._estimate_transaction_costs(symbol, volume_24h)
-            
-            # Calculate arbitrage potential
-            potential = funding_impact - transaction_costs - abs(basis)
-            
-            # Check profitability
-            profitable = potential > self.funding_threshold
-            
-            # Calculate optimal position size
-            optimal_size = await self._calculate_optimal_position_size(
-                symbol, potential, volume_24h, market_info
-            )
+            # Check if profitable
+            profitable = funding_profit > self.funding_threshold
             
             return {
                 "profitable": profitable,
-                "potential": potential,
+                "potential": funding_profit,
                 "basis": basis,
-                "funding_impact": funding_impact,
-                "transaction_costs": transaction_costs,
-                "optimal_position_size": optimal_size
+                "basis_percentage": basis_percentage
             }
             
         except Exception as e:
             if self.logger:
                 self.logger.error(f"Error calculating arbitrage potential: {e}")
-            return {
-                "profitable": False,
-                "potential": 0.0,
-                "basis": 0.0,
-                "funding_impact": 0.0,
-                "transaction_costs": 0.0,
-                "optimal_position_size": 0.0
-            }
+            return {"profitable": False, "potential": 0.0}
 
-    async def _get_market_info(self, symbol: str) -> Dict[str, Any]:
-        """Get market information for calculations."""
+    async def cleanup(self):
+        """Cleanup strategy resources."""
         try:
-            if not self.redis_conn:
-                return {}
-            
-            market_key = f"market_info:{symbol}"
-            market_info = self.redis_conn.get(market_key)
-            
-            if market_info:
-                import json
-                return json.loads(market_info)
-            
-            return {}
-            
+            await self.trading_context.cleanup()
+            await self.trading_research_engine.cleanup()
         except Exception as e:
             if self.logger:
-                self.logger.error(f"Error getting market info: {e}")
-            return {}
-
-    async def _estimate_transaction_costs(self, symbol: str, volume_24h: float) -> float:
-        """Estimate transaction costs for arbitrage."""
-        try:
-            # Base transaction costs
-            base_cost = 0.0005  # 0.05% base cost
-            
-            # Volume-based adjustment
-            if volume_24h > 1000000:  # High volume
-                volume_adjustment = 0.8
-            elif volume_24h > 100000:  # Medium volume
-                volume_adjustment = 1.0
-            else:  # Low volume
-                volume_adjustment = 1.2
-            
-            # Market maker adjustment
-            market_maker_adjustment = 0.9
-            
-            total_cost = base_cost * volume_adjustment * market_maker_adjustment
-            
-            return total_cost
-            
-        except Exception as e:
-            if self.logger:
-                self.logger.error(f"Error estimating transaction costs: {e}")
-            return 0.001  # Default cost
-
-    async def _calculate_optimal_position_size(self, symbol: str, potential: float, 
-                                             volume_24h: float, market_info: Dict[str, Any]) -> float:
-        """Calculate optimal position size for arbitrage."""
-        try:
-            # Base position size
-            base_size = self.position_size_limit
-            
-            # Adjust based on potential
-            if potential > self.max_funding_rate:
-                potential_adjustment = 1.2
-            elif potential > self.funding_threshold * 2:
-                potential_adjustment = 1.0
-            else:
-                potential_adjustment = 0.8
-            
-            # Adjust based on volume
-            if volume_24h > 1000000:
-                volume_adjustment = 1.0
-            elif volume_24h > 100000:
-                volume_adjustment = 0.8
-            else:
-                volume_adjustment = 0.6
-            
-            # Calculate optimal size
-            optimal_size = base_size * potential_adjustment * volume_adjustment
-            
-            # Ensure within limits
-            optimal_size = max(0.01, min(optimal_size, self.position_size_limit))
-            
-            return optimal_size
-            
-        except Exception as e:
-            if self.logger:
-                self.logger.error(f"Error calculating optimal position size: {e}")
-            return 0.05  # Default size
-
-    def get_strategy_info(self) -> Dict[str, Any]:
-        """Get strategy information and parameters."""
-        return {
-            "name": "Funding Rate Arbitrage Strategy",
-            "type": "arbitrage",
-            "description": "Detects funding rate arbitrage opportunities in perpetual futures",
-            "parameters": {
-                "min_funding_rate": self.min_funding_rate,
-                "max_funding_rate": self.max_funding_rate,
-                "funding_threshold": self.funding_threshold,
-                "position_size_limit": self.position_size_limit,
-                "hedge_ratio": self.hedge_ratio
-            },
-            "timeframe": "fast",  # 100ms tier
-            "asset_types": ["crypto"],
-            "execution_speed": "fast"
-        }
+                self.logger.error(f"Error during strategy cleanup: {e}")

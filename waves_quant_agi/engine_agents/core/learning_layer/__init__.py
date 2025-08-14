@@ -1,5 +1,13 @@
-from .research_engine import ResearchEngine
-from .training_module import TrainingModule
-from .retraining_loop import RetrainingLoop
+# System Coordination Learning Layer
+# Focused ONLY on system coordination learning and research
+# All trading and strategy learning moved to Strategy Engine Agent
 
-__all__ = ["ResearchEngine", "TrainingModule", "RetrainingLoop"]
+from .research_engine import SystemCoordinationResearchEngine
+from .training_module import SystemCoordinationTrainingModule
+from .retraining_loop import SystemCoordinationRetrainingLoop
+
+__all__ = [
+    'SystemCoordinationResearchEngine',
+    'SystemCoordinationTrainingModule', 
+    'SystemCoordinationRetrainingLoop'
+]

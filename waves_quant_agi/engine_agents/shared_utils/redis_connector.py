@@ -170,6 +170,22 @@ class SharedRedisConnector:
             print(f"❌ Redis PUBLISH error: {e}")
             return False
     
+    async def publish_async(self, channel: str, message: Union[str, Dict]) -> bool:
+        """Publish message to channel (async)."""
+        if not self.redis_async:
+            await self.ensure_async_connection()
+        
+        try:
+            if isinstance(message, dict):
+                message = json.dumps(message)
+            
+            await self.redis_async.publish(channel, message)
+            return True
+            
+        except Exception as e:
+            print(f"❌ Redis async PUBLISH error: {e}")
+            return False
+    
     def lpush(self, key: str, *values) -> bool:
         """Push values to list (sync)."""
         if not self.ensure_connection():
@@ -228,6 +244,36 @@ class SharedRedisConnector:
             print(f"❌ Redis LPOP error: {e}")
             return default
     
+    async def hset_async(self, name: str, mapping: Dict[str, Any]) -> bool:
+        """Set hash fields (async)."""
+        if not self.redis_async:
+            await self.ensure_async_connection()
+        
+        try:
+            # Convert values to JSON strings for storage
+            json_mapping = {k: json.dumps(v) if not isinstance(v, (str, int, float, bool)) else v 
+                           for k, v in mapping.items()}
+            
+            await self.redis_async.hset(name, mapping=json_mapping)
+            return True
+            
+        except Exception as e:
+            print(f"❌ Redis async HSET error: {e}")
+            return False
+    
+    async def hset_field_async(self, name: str, key: str, value: Any) -> bool:
+        """Set a single hash field (async)."""
+        if not self.redis_async:
+            await self.ensure_async_connection()
+        
+        try:
+            await self.redis_async.hset(name, key, value)
+            return True
+            
+        except Exception as e:
+            print(f"❌ Redis async HSET field error: {e}")
+            return False
+
     def hset(self, name: str, mapping: Dict[str, Any]) -> bool:
         """Set hash fields (sync)."""
         if not self.ensure_connection():
@@ -498,13 +544,13 @@ class SharedRedisConnector:
             "connection_attempts": self.connection_attempts
         }
     
-    def close(self):
+    async def close(self):
         """Close all connections."""
         if self.redis_sync:
             self.redis_sync.close()
         
         if self.redis_async:
-            asyncio.create_task(self.redis_async.close())
+            await self.redis_async.close()
         
         self.is_connected = False
         print("✅ Shared Redis connections closed")
@@ -556,6 +602,18 @@ class SharedRedisConnector:
             print(f"⚠️ Error getting list range from {name}: {e}")
             return []
     
+    async def lrange_async(self, name: str, start: int = 0, end: int = -1):
+        """Get a range of elements from a Redis list (async)."""
+        if not self.redis_async:
+            await self.ensure_async_connection()
+        
+        try:
+            items = await self.redis_async.lrange(name, start, end)
+            return [item.decode('utf-8') if isinstance(item, bytes) else item for item in items]
+        except Exception as e:
+            print(f"⚠️ Error getting list range from {name} (async): {e}")
+            return []
+    
     def ltrim(self, name: str, start: int, end: int):
         """Trim a Redis list to the specified range."""
         if not self.ensure_connection():
@@ -578,12 +636,42 @@ class SharedRedisConnector:
             print(f"⚠️ Error removing from list {name}: {e}")
             return 0
     
+    async def lrem_async(self, name: str, count: int, value: str):
+        """Remove elements from a Redis list (async)."""
+        if not self.redis_async:
+            await self.ensure_async_connection()
+        
+        try:
+            removed_count = await self.redis_async.lrem(name, count, value)
+            return removed_count
+        except Exception as e:
+            print(f"⚠️ Error removing from list {name} (async): {e}")
+            return 0
+    
     def hgetall(self, name: str):
         """Get all field-value pairs from a Redis hash."""
         if not self.ensure_connection():
             return {}
         try:
             hash_data = self.redis_sync.hgetall(name)
+            # Convert bytes to strings if needed
+            result = {}
+            for key, value in hash_data.items():
+                key_str = key.decode('utf-8') if isinstance(key, bytes) else key
+                value_str = value.decode('utf-8') if isinstance(value, bytes) else value
+                result[key_str] = value_str
+            return result
+        except Exception as e:
+            print(f"⚠️ Error getting hash data from {name}: {e}")
+            return {}
+    
+    async def hgetall_async(self, name: str):
+        """Get all field-value pairs from a Redis hash (async)."""
+        if not self.redis_async:
+            await self.ensure_async_connection()
+        
+        try:
+            hash_data = await self.redis_async.hgetall(name)
             # Convert bytes to strings if needed
             result = {}
             for key, value in hash_data.items():
@@ -604,6 +692,18 @@ class SharedRedisConnector:
             return [key.decode('utf-8') if isinstance(key, bytes) else key for key in keys]
         except Exception as e:
             print(f"⚠️ Error getting keys with pattern {pattern}: {e}")
+            return []
+    
+    async def keys_async(self, pattern: str = "*"):
+        """Get keys matching pattern (async)."""
+        if not self.redis_async:
+            await self.ensure_async_connection()
+        
+        try:
+            keys = await self.redis_async.keys(pattern)
+            return [key.decode('utf-8') if isinstance(key, bytes) else key for key in keys]
+        except Exception as e:
+            print(f"⚠️ Error getting keys with pattern {pattern} (async): {e}")
             return []
     
     def llen(self, name: str):
@@ -636,6 +736,38 @@ class SharedRedisConnector:
         except Exception as e:
             print(f"⚠️ Error getting portfolio data: {e}")
             return {}
+    
+    def ping(self) -> bool:
+        """Ping Redis server (sync)."""
+        if not self.ensure_connection():
+            return False
+        
+        try:
+            return self.redis_sync.ping()
+        except Exception as e:
+            print(f"❌ Redis PING error: {e}")
+            return False
+    
+    async def ping_async(self) -> bool:
+        """Ping Redis server (async)."""
+        if not self.redis_async:
+            await self.ensure_async_connection()
+        
+        try:
+            return await self.redis_async.ping()
+        except Exception as e:
+            print(f"❌ Redis async PING error: {e}")
+            return False
+    
+    def pubsub(self):
+        """Get Redis pubsub object for subscriptions."""
+        if not self.ensure_connection():
+            return None
+        try:
+            return self.redis_sync.pubsub()
+        except Exception as e:
+            print(f"⚠️ Error getting pubsub: {e}")
+            return None
 
 # Global instance for all agents to use
 _global_redis_connector: Optional[SharedRedisConnector] = None

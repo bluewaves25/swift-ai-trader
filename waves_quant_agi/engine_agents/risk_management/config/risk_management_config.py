@@ -19,7 +19,13 @@ PERFORMANCE_THRESHOLDS = {
     'min_cache_hit_rate': 0.9,       # Minimum cache hit rate (90%)
     'max_memory_usage_percent': 80,  # Maximum memory usage
     'max_cpu_usage_percent': 80,     # Maximum CPU usage
-    'max_queue_size': 1000           # Maximum queue size
+    'max_queue_size': 1000,          # Maximum queue size
+    
+    # USER REQUIREMENTS - Portfolio Risk Limits
+    'max_daily_portfolio_loss': 0.02,    # 2% maximum daily portfolio loss
+    'min_weekly_reward_target': 0.20,    # 20% minimum weekly reward target
+    'portfolio_loss_circuit_breaker': True,  # Enable circuit breaker for daily loss
+    'reward_optimization_enabled': True      # Enable weekly reward optimization
 }
 
 # Load Balancer Configuration
@@ -76,31 +82,45 @@ STRATEGY_RISK_LIMITS = {
         'max_position_size': 0.05,    # 5% of portfolio
         'max_leverage': 2.0,          # 2x leverage
         'stop_loss': 0.002,           # 0.2% stop loss
-        'max_drawdown': 0.01          # 1% max drawdown
+        'max_drawdown': 0.01,         # 1% max drawdown
+        'trailing_stop_enabled': False,  # No trailing stop for arbitrage
+        'trailing_stop_distance': None
     },
     'trend_following': {
         'max_position_size': 0.15,    # 15% of portfolio
         'max_leverage': 1.2,          # 1.2x leverage
         'stop_loss': 0.01,            # 1% stop loss
-        'max_drawdown': 0.03          # 3% max drawdown
+        'max_drawdown': 0.03,         # 3% max drawdown
+        'trailing_stop_enabled': True,   # USER REQUIREMENT: Trailing stop enabled
+        'trailing_stop_distance': 0.005,  # 0.5% trailing stop distance
+        'trailing_stop_activation': 0.01, # Activate after 1% profit
+        'trailing_stop_tightening': 0.002 # Tighten by 0.2% increments
     },
     'market_making': {
         'max_position_size': 0.08,    # 8% of portfolio
         'max_leverage': 3.0,          # 3x leverage
         'stop_loss': 0.003,           # 0.3% stop loss
-        'max_drawdown': 0.015         # 1.5% max drawdown
+        'max_drawdown': 0.015,        # 1.5% max drawdown
+        'trailing_stop_enabled': False,  # No trailing stop for market making
+        'trailing_stop_distance': None
     },
     'news_driven': {
         'max_position_size': 0.12,    # 12% of portfolio
         'max_leverage': 1.0,          # No leverage
         'stop_loss': 0.008,           # 0.8% stop loss
-        'max_drawdown': 0.025         # 2.5% max drawdown
+        'max_drawdown': 0.025,        # 2.5% max drawdown
+        'trailing_stop_enabled': False,  # No trailing stop for news driven
+        'trailing_stop_distance': None
     },
     'htf': {
         'max_position_size': 0.20,    # 20% of portfolio
         'max_leverage': 1.0,          # No leverage
         'stop_loss': 0.02,            # 2% stop loss
-        'max_drawdown': 0.05          # 5% max drawdown
+        'max_drawdown': 0.05,         # 5% max drawdown
+        'trailing_stop_enabled': True,    # USER REQUIREMENT: Trailing stop enabled
+        'trailing_stop_distance': 0.01,   # 1% trailing stop distance
+        'trailing_stop_activation': 0.015, # Activate after 1.5% profit
+        'trailing_stop_tightening': 0.005  # Tighten by 0.5% increments
     }
 }
 
@@ -138,6 +158,18 @@ SAFETY_BOUNDS = {
     }
 }
 
+# Portfolio Performance Tracking Configuration
+PORTFOLIO_PERFORMANCE_CONFIG = {
+    'daily_loss_limit': 0.02,         # 2% maximum daily portfolio loss
+    'weekly_reward_target': 0.20,     # 20% minimum weekly reward target
+    'performance_tracking_window': 7,  # 7 days for weekly calculations
+    'daily_loss_circuit_breaker': True,  # Enable circuit breaker for daily loss
+    'reward_optimization_enabled': True,  # Enable weekly reward optimization
+    'trailing_stop_management': True,     # Enable trailing stop management
+    'position_monitoring_interval': 60,   # Check positions every 60 seconds
+    'performance_alert_threshold': 0.015  # Alert when daily loss > 1.5%
+}
+
 # Main Configuration
 RISK_MANAGEMENT_CONFIG = {
     'redis': REDIS_CONFIG,
@@ -149,6 +181,7 @@ RISK_MANAGEMENT_CONFIG = {
     'adaptive_timer': ADAPTIVE_TIMER_CONFIG,
     'strategy_risk_limits': STRATEGY_RISK_LIMITS,
     'safety_bounds': SAFETY_BOUNDS,
+    'portfolio_performance': PORTFOLIO_PERFORMANCE_CONFIG,  # Added portfolio performance config
     'num_workers': 4,
     'max_queue_size': 1000
 }

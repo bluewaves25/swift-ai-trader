@@ -1,0 +1,8 @@
+C:\Users\BLUE WAVES\Documents\GitHub\swift-ai-trader\waves_quant_agi\engine_agents\execution\target\debug\deps\icu_normalizer-ba687f545284b0b7.d: C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\icu_normalizer-2.0.0\src\lib.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\icu_normalizer-2.0.0\src\properties.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\icu_normalizer-2.0.0\src\provider.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\icu_normalizer-2.0.0\src\uts46.rs
+
+C:\Users\BLUE WAVES\Documents\GitHub\swift-ai-trader\waves_quant_agi\engine_agents\execution\target\debug\deps\libicu_normalizer-ba687f545284b0b7.rmeta: C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\icu_normalizer-2.0.0\src\lib.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\icu_normalizer-2.0.0\src\properties.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\icu_normalizer-2.0.0\src\provider.rs C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\icu_normalizer-2.0.0\src\uts46.rs
+
+C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\icu_normalizer-2.0.0\src\lib.rs:
+C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\icu_normalizer-2.0.0\src\properties.rs:
+C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\icu_normalizer-2.0.0\src\provider.rs:
+C:\Users\BLUE\ WAVES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\icu_normalizer-2.0.0\src\uts46.rs:

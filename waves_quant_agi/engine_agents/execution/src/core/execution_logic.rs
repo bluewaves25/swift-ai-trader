@@ -17,14 +17,15 @@ pub struct ExecutionLogic {
 }
 
 impl ExecutionLogic {
-    pub fn new(config: &HashMap<String, Value>, tx: mpsc::Sender<HashMap<String, Value>>) -> Self {
+    pub fn new(config: &HashMap<String, Value>, _tx: mpsc::Sender<HashMap<String, Value>>) -> Self {
+        let (_, rx) = mpsc::channel(100);
         ExecutionLogic {
             order_executor: OrderExecutor::new(config),
             slippage_controller: SlippageController::new(config),
             risk_filters: RiskFilters::new(config),
             metrics: Metrics::new(config),
             config: config.clone(),
-            rx: mpsc::Receiver::new(tx),
+            rx,
         }
     }
 

@@ -1,38 +1,43 @@
 #!/usr/bin/env python3
 """
-Enhanced Validation Agent V2 - REFACTORED TO USE BASE AGENT
-Eliminates duplicate start/stop methods and Redis connection logic.
+Enhanced Validation Agent V2 - ROLE CONSOLIDATED: DATA VALIDATION ONLY
+Removed system health validation functionality - now handled by Core Agent.
+Focuses exclusively on data validation and quality monitoring.
 """
 
 import asyncio
 import time
+import json
 from typing import Dict, Any, List
 from engine_agents.shared_utils import BaseAgent, register_agent
 
 class EnhancedValidationAgentV2(BaseAgent):
-    """Enhanced validation agent using base class."""
+    """Enhanced validation agent - focused solely on data validation."""
     
     def _initialize_agent_components(self):
         """Initialize validation specific components."""
-        # Initialize validation components with mock implementations
-        self.data_validator = MockDataValidator()
-        self.system_validator = MockSystemValidator()
+        # Initialize validation components
+        self.data_validator = None
         self.validation_queue = {}
+        self.data_quality_monitor = None
         
-        # Initialize validation state
-        self.current_validation_state = {
+        # Data validation state
+        self.validation_state = {
             "last_validation_time": time.time(),
-            "system_health_score": 1.0,
             "data_quality_score": 1.0,
-            "validation_status": "initializing"
+            "validation_status": "initializing",
+            "active_validations": {},
+            "validation_history": []
         }
         
-        # Initialize stats
+        # Data validation statistics
         self.stats = {
             "data_validations": 0,
-            "system_validations": 0,
+            "successful_validations": 0,
+            "failed_validations": 0,
+            "data_quality_issues": 0,
+            "validation_timeouts": 0,
             "comprehensive_validations": 0,
-            "validation_failures": 0,
             "start_time": time.time()
         }
         
@@ -41,452 +46,667 @@ class EnhancedValidationAgentV2(BaseAgent):
     
     async def _agent_specific_startup(self):
         """Validation specific startup logic."""
-        # Initialize validation systems
-        self.logger.info("Validation systems initialized")
+        try:
+            # Initialize data validation components
+            await self._initialize_validation_components()
+            
+            # Initialize data quality monitoring
+            await self._initialize_data_quality_monitoring()
+            
+            self.logger.info("✅ Validation Agent: Data validation systems initialized")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error in validation startup: {e}")
+            raise
     
     async def _agent_specific_shutdown(self):
         """Validation specific shutdown logic."""
-        # Cleanup validation specific resources
-        self.logger.info("Validation systems cleaned up")
+        try:
+            # Cleanup validation resources
+            await self._cleanup_validation_components()
+            
+            self.logger.info("✅ Validation Agent: Data validation systems shutdown completed")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error in validation shutdown: {e}")
     
-    # ============= TIER 2: FAST DATA VALIDATION LOOP (100ms) =============
+    # ============= BACKGROUND TASKS =============
     
-    async def _fast_data_validation_loop(self):
-        """TIER 2: Fast data integrity validation for critical data (100ms)."""
+    async def _quality_monitoring_loop(self):
+        """Quality monitoring loop."""
+        while self.is_running:
+            try:
+                # Monitor data quality
+                await self._monitor_data_quality()
+                
+                await asyncio.sleep(5.0)  # 5 second cycle
+                
+            except Exception as e:
+                self.logger.error(f"Error in quality monitoring loop: {e}")
+                await asyncio.sleep(5.0)
+    
+    async def _validation_reporting_loop(self):
+        """Validation reporting loop."""
+        while self.is_running:
+            try:
+                # Generate validation reports
+                await self._generate_validation_report()
+                
+                await asyncio.sleep(30.0)  # 30 second cycle
+                
+            except Exception as e:
+                self.logger.error(f"Error in validation reporting loop: {e}")
+                await asyncio.sleep(30.0)
+    
+    async def _comprehensive_validation_loop(self):
+        """Comprehensive validation loop."""
+        while self.is_running:
+            try:
+                # Perform comprehensive validation
+                await self._perform_comprehensive_validation()
+                
+                await asyncio.sleep(10.0)  # 10 second cycle
+                
+            except Exception as e:
+                self.logger.error(f"Error in comprehensive validation loop: {e}")
+                await asyncio.sleep(10.0)
+    
+    async def _monitor_data_quality(self):
+        """Monitor data quality."""
+        try:
+            # Placeholder for data quality monitoring
+            pass
+        except Exception as e:
+            self.logger.error(f"Error monitoring data quality: {e}")
+    
+    async def _generate_validation_report(self):
+        """Generate validation report."""
+        try:
+            # Placeholder for validation report generation
+            pass
+        except Exception as e:
+            self.logger.error(f"Error generating validation report: {e}")
+    
+    async def _perform_comprehensive_validation(self):
+        """Perform comprehensive validation."""
+        try:
+            # Placeholder for comprehensive validation
+            pass
+        except Exception as e:
+            self.logger.error(f"Error performing comprehensive validation: {e}")
+
+    def _get_background_tasks(self) -> List[tuple]:
+        """Get background tasks for this agent."""
+        return [
+            (self._data_validation_loop, "Data Validation", "fast"),
+            (self._quality_monitoring_loop, "Quality Monitoring", "tactical"),
+            (self._validation_reporting_loop, "Validation Reporting", "strategic"),
+            (self._comprehensive_validation_loop, "Comprehensive Validation", "tactical")
+        ]
+    
+    # ============= VALIDATION COMPONENT INITIALIZATION =============
+    
+    async def _initialize_validation_components(self):
+        """Initialize data validation components."""
+        try:
+            # Initialize data validator
+            from .core.data_validator_simple import DataValidatorSimple as DataValidator
+            self.data_validator = DataValidator(self.config)
+            
+            # Initialize validation queue
+            self.validation_queue = {
+                "high_priority": [],
+                "normal_priority": [],
+                "low_priority": []
+            }
+            
+            self.logger.info("✅ Data validation components initialized")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing validation components: {e}")
+            raise
+    
+    async def _initialize_data_quality_monitoring(self):
+        """Initialize data quality monitoring."""
+        try:
+            # Initialize data quality monitor
+            from .core.data_quality_monitor import DataQualityMonitor
+            self.data_quality_monitor = DataQualityMonitor(self.config)
+            
+            self.logger.info("✅ Data quality monitoring initialized")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing data quality monitoring: {e}")
+            raise
+    
+    # ============= DATA VALIDATION LOOP =============
+    
+    async def _data_validation_loop(self):
+        """Main data validation loop (100ms intervals)."""
         while self.is_running:
             try:
                 start_time = time.time()
                 
-                # Process fast data validation queue
-                data_validations = await self._process_fast_data_validations()
-                
-                # Update validation state if needed
-                if data_validations > 0:
-                    self._update_validation_state_fast()
-                    self.stats["data_validations"] += data_validations
-                
-                # Record operation for monitoring
-                duration_ms = (time.time() - start_time) * 1000
-                self.status_monitor.record_operation(duration_ms, data_validations > 0)
-                
-                # TIER 2 timing: 100ms for fast data validation
-                await asyncio.sleep(0.1)
-                
-            except Exception as e:
-                self.logger.error(f"Error in fast data validation loop: {e}")
-                await asyncio.sleep(0.1)
-    
-    # ============= TIER 3: TACTICAL SYSTEM VALIDATION LOOP (30s) =============
-    
-    async def _tactical_system_validation_loop(self):
-        """TIER 3: Tactical system health validation (30s)."""
-        while self.is_running:
-            try:
-                # Perform basic system health check (simplified)
-                system_validation = await self._perform_basic_system_check()
+                # Process validation queue
+                validations_processed = await self._process_validation_queue()
                 
                 # Update validation state
-                self._update_validation_state_from_system_health(system_validation)
+                if validations_processed > 0:
+                    self._update_validation_state()
+                    self.stats["data_validations"] += validations_processed
                 
-                # Publish system health alerts if needed
-                await self._publish_system_health_alerts(system_validation)
+                # Record operation
+                duration_ms = (time.time() - start_time) * 1000
+                if hasattr(self, 'status_monitor') and self.status_monitor:
+                    self.status_monitor.record_operation(duration_ms, validations_processed > 0)
                 
-                # TIER 3 timing: 30s for tactical system validation
-                await asyncio.sleep(30.0)
+                await asyncio.sleep(0.1)  # 100ms validation cycle
                 
             except Exception as e:
-                self.logger.error(f"Error in tactical system validation loop: {e}")
-                await asyncio.sleep(30.0)
+                self.logger.error(f"Error in data validation loop: {e}")
+                await asyncio.sleep(0.1)
     
-    # ============= TIER 4: STRATEGIC COMPREHENSIVE VALIDATION LOOP (300s) =============
+    async def _process_validation_queue(self) -> int:
+        """Process validation queue and return number of validations processed."""
+        try:
+            validations_processed = 0
+            
+            # Process high priority validations first
+            if self.validation_queue["high_priority"]:
+                validations_processed += await self._process_priority_queue("high_priority")
+            
+            # Process normal priority validations
+            if self.validation_queue["normal_priority"]:
+                validations_processed += await self._process_priority_queue("normal_priority")
+            
+            # Process low priority validations (if time permits)
+            if self.validation_queue["low_priority"] and validations_processed < 5:
+                validations_processed += await self._process_priority_queue("low_priority")
+            
+            return validations_processed
+            
+        except Exception as e:
+            self.logger.error(f"Error processing validation queue: {e}")
+            return 0
     
-    async def _strategic_comprehensive_validation_loop(self):
-        """TIER 4: Strategic comprehensive validation and audit (300s)."""
+    async def _process_priority_queue(self, priority: str) -> int:
+        """Process a specific priority queue."""
+        try:
+            validations_processed = 0
+            queue = self.validation_queue[priority]
+            
+            # Process up to 10 validations per cycle
+            max_validations = min(10, len(queue))
+            
+            for _ in range(max_validations):
+                if not queue:
+                    break
+                
+                validation_request = queue.pop(0)
+                if await self._process_validation_request(validation_request):
+                    validations_processed += 1
+            
+            return validations_processed
+            
+        except Exception as e:
+            self.logger.error(f"Error processing {priority} queue: {e}")
+            return 0
+    
+    async def _process_validation_request(self, validation_request: Dict[str, Any]) -> bool:
+        """Process a single validation request."""
+        try:
+            request_id = validation_request.get("request_id")
+            data_type = validation_request.get("data_type")
+            data = validation_request.get("data")
+            priority = validation_request.get("priority", "normal")
+            
+            # Add to active validations
+            self.validation_state["active_validations"][request_id] = {
+                "data_type": data_type,
+                "priority": priority,
+                "start_time": time.time(),
+                "status": "processing"
+            }
+            
+            # Perform validation
+            validation_result = await self._validate_data(data_type, data)
+            
+            # Update validation state
+            self.validation_state["active_validations"][request_id]["status"] = "completed"
+            self.validation_state["active_validations"][request_id]["result"] = validation_result
+            
+            # Add to validation history
+            self.validation_state["validation_history"].append({
+                "request_id": request_id,
+                "data_type": data_type,
+                "priority": priority,
+                "result": validation_result,
+                "timestamp": time.time()
+            })
+            
+            # Update statistics
+            if validation_result.get("valid", False):
+                self.stats["successful_validations"] += 1
+            else:
+                self.stats["failed_validations"] += 1
+            
+            # Publish validation result
+            await self._publish_validation_result(request_id, validation_result)
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error processing validation request: {e}")
+            return False
+    
+    async def _validate_data(self, data_type: str, data: Any) -> Dict[str, Any]:
+        """Validate data based on type."""
+        try:
+            if not self.data_validator:
+                return await self._fallback_validation(data_type, data)
+            
+            # Use data validator for validation
+            validation_result = await self.data_validator.validate(data_type, data)
+            
+            return validation_result
+            
+        except Exception as e:
+            self.logger.error(f"Error validating data: {e}")
+            return {
+                "valid": False,
+                "error": str(e),
+                "data_type": data_type,
+                "timestamp": time.time()
+            }
+    
+    async def _fallback_validation(self, data_type: str, data: Any) -> Dict[str, Any]:
+        """Fallback validation when data validator is not available."""
+        try:
+            # Basic validation checks
+            if data is None:
+                return {
+                    "valid": False,
+                    "error": "Data is None",
+                    "data_type": data_type,
+                    "timestamp": time.time()
+                }
+            
+            # Type-specific validation
+            if data_type == "price_data":
+                return await self._validate_price_data(data)
+            elif data_type == "order_data":
+                return await self._validate_order_data(data)
+            elif data_type == "market_data":
+                return await self._validate_market_data(data)
+            else:
+                return {
+                    "valid": True,
+                    "data_type": data_type,
+                    "timestamp": time.time()
+                }
+                
+        except Exception as e:
+            self.logger.error(f"Error in fallback validation: {e}")
+            return {
+                "valid": False,
+                "error": str(e),
+                "data_type": data_type,
+                "timestamp": time.time()
+            }
+    
+    async def _validate_price_data(self, data: Any) -> Dict[str, Any]:
+        """Validate price data."""
+        try:
+            if not isinstance(data, dict):
+                return {
+                    "valid": False,
+                    "error": "Price data must be a dictionary",
+                    "timestamp": time.time()
+                }
+            
+            required_fields = ["symbol", "price", "timestamp"]
+            for field in required_fields:
+                if field not in data:
+                    return {
+                        "valid": False,
+                        "error": f"Missing required field: {field}",
+                        "timestamp": time.time()
+                    }
+            
+            # Validate price is numeric and positive
+            if not isinstance(data["price"], (int, float)) or data["price"] <= 0:
+                return {
+                    "valid": False,
+                    "error": "Price must be a positive number",
+                    "timestamp": time.time()
+                }
+            
+            return {
+                "valid": True,
+                "data_type": "price_data",
+                "timestamp": time.time()
+            }
+            
+        except Exception as e:
+            return {
+                "valid": False,
+                "error": str(e),
+                "timestamp": time.time()
+            }
+    
+    async def _validate_order_data(self, data: Any) -> Dict[str, Any]:
+        """Validate order data."""
+        try:
+            if not isinstance(data, dict):
+                return {
+                    "valid": False,
+                    "error": "Order data must be a dictionary",
+                    "timestamp": time.time()
+                }
+            
+            required_fields = ["symbol", "side", "volume", "order_type"]
+            for field in required_fields:
+                if field not in data:
+                    return {
+                        "valid": False,
+                        "error": f"Missing required field: {field}",
+                        "timestamp": time.time()
+                    }
+            
+            # Validate side
+            if data["side"] not in ["buy", "sell"]:
+                return {
+                    "valid": False,
+                    "error": "Side must be 'buy' or 'sell'",
+                    "timestamp": time.time()
+                }
+            
+            # Validate volume
+            if not isinstance(data["volume"], (int, float)) or data["volume"] <= 0:
+                return {
+                    "valid": False,
+                    "error": "Volume must be a positive number",
+                    "timestamp": time.time()
+                }
+            
+            return {
+                "valid": True,
+                "data_type": "order_data",
+                "timestamp": time.time()
+            }
+            
+        except Exception as e:
+            return {
+                "valid": False,
+                "error": str(e),
+                "timestamp": time.time()
+            }
+    
+    async def _validate_market_data(self, data: Any) -> Dict[str, Any]:
+        """Validate market data."""
+        try:
+            if not isinstance(data, dict):
+                return {
+                    "valid": False,
+                    "error": "Market data must be a dictionary",
+                    "timestamp": time.time()
+                }
+            
+            # Basic market data validation
+            if "symbol" not in data:
+                return {
+                    "valid": False,
+                    "error": "Missing symbol field",
+                    "timestamp": time.time()
+                }
+            
+            return {
+                "valid": True,
+                "data_type": "market_data",
+                "timestamp": time.time()
+            }
+            
+        except Exception as e:
+            return {
+                "valid": False,
+                "error": str(e),
+                "timestamp": time.time()
+            }
+    
+    # ============= DATA QUALITY MONITORING LOOP =============
+    
+    async def _data_quality_monitoring_loop(self):
+        """Data quality monitoring loop (30s intervals)."""
         while self.is_running:
             try:
-                # Perform comprehensive validation audit
-                audit_results = await self._perform_comprehensive_validation_audit()
+                if self.data_quality_monitor:
+                    # Monitor data quality
+                    quality_metrics = await self.data_quality_monitor.get_quality_metrics()
+                    
+                    # Update validation state
+                    self.validation_state["data_quality_score"] = quality_metrics.get("overall_score", 1.0)
+                    
+                    # Check for quality issues
+                    await self._check_data_quality_issues(quality_metrics)
+                    
+                    # Publish quality update
+                    await self._publish_quality_update(quality_metrics)
                 
-                # Publish comprehensive validation report
-                await self._publish_comprehensive_validation_report(audit_results)
+                await asyncio.sleep(30)  # 30s quality monitoring cycle
+                
+            except Exception as e:
+                self.logger.error(f"Error in data quality monitoring loop: {e}")
+                await asyncio.sleep(30)
+    
+    async def _check_data_quality_issues(self, quality_metrics: Dict[str, Any]):
+        """Check for data quality issues."""
+        try:
+            overall_score = quality_metrics.get("overall_score", 1.0)
+            
+            if overall_score < 0.8:
+                self.stats["data_quality_issues"] += 1
+                self.logger.warning(f"Data quality degraded: {overall_score}")
+                
+                # Publish quality alert
+                await self._publish_quality_alert(quality_metrics)
+                
+        except Exception as e:
+            self.logger.error(f"Error checking data quality issues: {e}")
+    
+    # ============= VALIDATION AUDIT LOOP =============
+    
+    async def _validation_audit_loop(self):
+        """Validation audit loop (5min intervals)."""
+        while self.is_running:
+            try:
+                # Perform validation audit
+                audit_results = await self._perform_validation_audit()
+                
+                # Publish audit report
+                await self._publish_validation_audit(audit_results)
                 
                 # Update comprehensive stats
                 self._update_comprehensive_stats()
                 
-                # TIER 4 timing: 300s for strategic comprehensive validation
-                await asyncio.sleep(300.0)
+                await asyncio.sleep(300)  # 5min audit cycle
                 
             except Exception as e:
-                self.logger.error(f"Error in strategic comprehensive validation loop: {e}")
-                await asyncio.sleep(300.0)
+                self.logger.error(f"Error in validation audit loop: {e}")
+                await asyncio.sleep(300)
     
-    # ============= TIER 4: HEARTBEAT LOOP (60s) =============
-    
-    async def _heartbeat_loop(self):
-        """TIER 4: Communication heartbeat and status reporting (60s)."""
-        while self.is_running:
-            try:
-                # Send heartbeat to communication hub
-                if self.comm_hub:
-                    await self._send_heartbeat()
-                
-                # Update agent stats in Redis (same as BaseAgent)
-                current_time = time.time()
-                agent_stats = {
-                    'status': 'running' if self.is_running else 'stopped',
-                    'start_time': str(self.start_time) if self.start_time else '0',
-                    'uptime_seconds': str(int(current_time - self.start_time)) if self.start_time else '0',
-                    'last_heartbeat': str(current_time),
-                    'timestamp': str(current_time)
-                }
-                
-                # Update the agent_stats hash using the correct Redis connector method
-                if hasattr(self, 'redis_conn') and self.redis_conn:
-                    self.redis_conn.hset(f"agent_stats:{self.agent_name}", mapping=agent_stats)
-                else:
-                    self.logger.warning("Redis connection not available for storing agent status")
-                
-                # TIER 4 timing: 60s for heartbeat
-                await asyncio.sleep(60)
-                
-            except Exception as e:
-                self.logger.error(f"Error in heartbeat loop: {e}")
-                await asyncio.sleep(60)
-    
-    # ============= HELPER METHODS =============
-    
-    async def _process_fast_data_validations(self) -> int:
-        """Process fast data validations from queue."""
-        validations_processed = 0
-        
+    async def _perform_validation_audit(self) -> Dict[str, Any]:
+        """Perform comprehensive validation audit."""
         try:
-            # Get pending data validation requests
-            pending_validations = self._get_pending_data_validations()
-            
-            for validation_request in pending_validations:
-                try:
-                    start_time = time.time()
-                    
-                    # Validate market data
-                    validation_result = await self.data_validator.validate_market_data(
-                        validation_request["data"],
-                        validation_request.get("validation_type", "realtime")
-                    )
-                    
-                    # Send validation response
-                    await self._send_data_validation_response(validation_request, validation_result)
-                    
-                    validations_processed += 1
-                    
-                    # Update stats
-                    if validation_result.get("data_quality_score", 0.0) < 0.7:
-                        self.stats["validation_failures"] += 1
-                    
-                except Exception as e:
-                    self.logger.warning(f"Error processing data validation: {e}")
-            
-        except Exception as e:
-            self.logger.error(f"Error in fast data validation processing: {e}")
-        
-        return validations_processed
-    
-    def _get_pending_data_validations(self) -> List[Dict[str, Any]]:
-        """Get pending data validation requests."""
-        try:
-            # Safety check for Redis connection
-            if not hasattr(self, 'redis_conn') or not self.redis_conn:
-                self.logger.warning("Redis connection not available, returning empty list")
-                return []
-            
-            # Check if the method exists
-            if not hasattr(self.redis_conn, 'get_queue_items'):
-                self.logger.warning(f"Redis connector missing get_queue_items method. Available methods: {[m for m in dir(self.redis_conn) if not m.startswith('_')]}")
-                return []
-            
-            # Get from Redis queue or return simulated data for testing
-            validations = self.redis_conn.get_queue_items("data_validations_fast")
-            return validations if validations else []
-            
-        except Exception as e:
-            self.logger.warning(f"Error getting pending data validations: {e}")
-            return []
-    
-    async def _send_data_validation_response(self, validation_request: Dict[str, Any], 
-                                           validation_result: Dict[str, Any]):
-        """Send data validation response back to requester."""
-        try:
-            response = {
-                "type": "DATA_VALIDATION_RESPONSE",
-                "request_id": validation_request.get("request_id"),
-                "validation_result": validation_result,
+            audit_results = {
                 "timestamp": time.time(),
-                "source": "validation"
+                "total_validations": self.stats["data_validations"],
+                "success_rate": self.stats["successful_validations"] / max(self.stats["data_validations"], 1),
+                "data_quality_score": self.validation_state["data_quality_score"],
+                "active_validations": len(self.validation_state["active_validations"]),
+                "validation_history_size": len(self.validation_state["validation_history"])
             }
             
-            if self.comm_hub:
-                await self.comm_hub.publish_message(response)
+            return audit_results
+            
+        except Exception as e:
+            self.logger.error(f"Error performing validation audit: {e}")
+            return {"error": str(e), "timestamp": time.time()}
+    
+    # ============= UTILITY METHODS =============
+    
+    def _update_validation_state(self):
+        """Update validation state with current information."""
+        try:
+            # Update validation timestamp
+            self.validation_state["last_validation_time"] = time.time()
+            
+            # Clean up old validation history (keep last 1000)
+            if len(self.validation_state["validation_history"]) > 1000:
+                self.validation_state["validation_history"] = self.validation_state["validation_history"][-1000:]
                 
         except Exception as e:
-            self.logger.error(f"Error sending data validation response: {e}")
-    
-    def _update_validation_state_fast(self):
-        """Update validation state from fast operations."""
-        self.current_validation_state["last_validation_time"] = time.time()
-    
-    def _update_validation_state_from_system_health(self, system_validation: Dict[str, Any]):
-        """Update validation state from system health validation."""
-        try:
-            system_health_score = system_validation.get("system_health_score", 1.0)
-            
-            self.current_validation_state.update({
-                "system_health_score": system_health_score,
-                "last_validation_time": time.time()
-            })
-            
-        except Exception as e:
-            self.logger.warning(f"Error updating validation state: {e}")
-    
-    async def _perform_basic_system_check(self) -> Dict[str, Any]:
-        """Perform basic system health check (simplified)."""
-        try:
-            import psutil
-            
-            # Basic system metrics
-            cpu_usage = psutil.cpu_percent()
-            memory_usage = psutil.virtual_memory().percent
-            
-            # Simple health assessment
-            system_health_score = 1.0
-            critical_issues = []
-            
-            if cpu_usage > 85:
-                system_health_score -= 0.3
-                critical_issues.append(f"High CPU usage: {cpu_usage:.1f}%")
-            
-            if memory_usage > 90:
-                system_health_score -= 0.4
-                critical_issues.append(f"High memory usage: {memory_usage:.1f}%")
-            
-            return {
-                "system_health_score": max(0.0, system_health_score),
-                "critical_issues": critical_issues,
-                "recommendations": ["Monitor system resources"] if critical_issues else [],
-                "cpu_usage": cpu_usage,
-                "memory_usage": memory_usage,
-                "timestamp": time.time()
-            }
-            
-        except Exception as e:
-            self.logger.warning(f"Error in basic system check: {e}")
-            return {
-                "system_health_score": 0.8,  # Default to reasonable health
-                "critical_issues": [],
-                "recommendations": [],
-                "timestamp": time.time()
-            }
-    
-    async def _simple_system_health_monitoring(self):
-        """Simple system health monitoring (placeholder)."""
-        try:
-            # Basic monitoring - could be expanded later
-            self.current_validation_state["last_validation_time"] = time.time()
-            
-        except Exception as e:
-            self.logger.warning(f"Error in simple system health monitoring: {e}")
-    
-    async def _publish_system_health_alerts(self, system_validation: Dict[str, Any]):
-        """Publish system health alerts if critical issues are found."""
-        try:
-            critical_issues = system_validation.get("critical_issues", [])
-            
-            if critical_issues:
-                alert_message = {
-                    "type": "SYSTEM_HEALTH_ALERT",
-                    "critical_issues": critical_issues,
-                    "system_health_score": system_validation.get("system_health_score", 0.0),
-                    "recommendations": system_validation.get("recommendations", []),
-                    "timestamp": time.time(),
-                    "source": "validation"
-                }
-                
-                if self.comm_hub:
-                    await self.comm_hub.publish_message(alert_message)
-                
-        except Exception as e:
-            self.logger.error(f"Error publishing system health alerts: {e}")
-    
-    async def _perform_comprehensive_validation_audit(self) -> Dict[str, Any]:
-        """Perform comprehensive validation audit across all systems."""
-        try:
-            # Simplified comprehensive validation
-            
-            # Perform both data and basic system validation
-            data_validation = await self.data_validator.validate_market_data({
-                "symbol": "AUDIT_CHECK",
-                "price": 30000.0,
-                "timestamp": time.time()
-            }, "comprehensive")
-            
-            system_validation = await self._perform_basic_system_check()
-            
-            # Update current validation state
-            self.current_validation_state.update({
-                "data_quality_score": data_validation.get("data_quality_score", 1.0),
-                "system_health_score": system_validation.get("system_health_score", 1.0),
-                "last_validation_time": time.time()
-            })
-            
-            return {
-                "data_validation_result": data_validation,
-                "system_validation_result": system_validation
-            }
-            
-        except Exception as e:
-            self.logger.warning(f"Error in comprehensive validation audit: {e}")
-            return {}
-    
-
-    
-    async def _publish_comprehensive_validation_report(self, audit_results: Dict[str, Any]):
-        """Publish comprehensive validation report."""
-        try:
-            validation_report = {
-                "type": "COMPREHENSIVE_VALIDATION_REPORT",
-                "current_validation_state": self.current_validation_state,
-                "data_validator_stats": audit_results.get("data_validation_result", {}).get("validation_stats", {}),
-                "system_validator_stats": audit_results.get("system_validation_result", {}).get("validation_stats", {}),
-                "timestamp": time.time(),
-                "source": "validation"
-            }
-            
-            if self.comm_hub:
-                await self.comm_hub.publish_message(validation_report)
-                
-        except Exception as e:
-            self.logger.error(f"Error publishing comprehensive validation report: {e}")
+            self.logger.error(f"Error updating validation state: {e}")
     
     def _update_comprehensive_stats(self):
-        """Update comprehensive statistics."""
-        # The original code had data_validator.get_validation_stats() here,
-        # but data_validator is not initialized in the new BaseAgent structure.
-        # This method will need to be refactored or removed if comprehensive stats
-        # are no longer tracked by the data validator.
-        # For now, keeping the structure but noting the potential issue.
-        pass
-    
-    async def _send_heartbeat(self):
-        """Send heartbeat to communication hub."""
+        """Update comprehensive validation statistics."""
         try:
-            heartbeat_data = {
-                "agent": "validation",
-                "status": "healthy",
-                "stats": self.stats,
-                "current_validation_state": self.current_validation_state,
+            # Update comprehensive validation count
+            self.stats["comprehensive_validations"] += 1
+            
+        except Exception as e:
+            self.logger.error(f"Error updating comprehensive stats: {e}")
+    
+    async def _cleanup_validation_components(self):
+        """Cleanup validation components."""
+        try:
+            # Cleanup data validator
+            if self.data_validator:
+                await self.data_validator.cleanup()
+            
+            # Cleanup data quality monitor
+            if self.data_quality_monitor:
+                await self.data_quality_monitor.cleanup()
+            
+            self.logger.info("✅ Validation components cleaned up")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error cleaning up validation components: {e}")
+    
+    # ============= PUBLISHING METHODS =============
+    
+    async def _publish_validation_result(self, request_id: str, result: Dict[str, Any]):
+        """Publish validation result."""
+        try:
+            validation_update = {
+                "request_id": request_id,
+                "result": result,
                 "timestamp": time.time()
             }
             
-            if hasattr(self.comm_hub, 'publish_message'):
-                await self.comm_hub.publish_message({
-                    "type": "AGENT_HEARTBEAT",
-                    "data": heartbeat_data
-                })
-                
-        except Exception as e:
-            self.logger.warning(f"Error sending heartbeat: {e}")
-    
-    # ============= MESSAGE HANDLERS =============
-    
-    async def _handle_data_validation_request(self, message):
-        """Handle data validation requests."""
-        try:
-            data = message.get("data", {})
-            validation_type = message.get("validation_type", "realtime")
+            await self.redis_conn.publish_async("validation:results", json.dumps(validation_update))
             
-            # Validate data
-            validation_result = await self.data_validator.validate_market_data(data, validation_type)
-            
-            # Send response back through communication hub
-            if self.comm_hub:
-                response = {
-                    "type": "DATA_VALIDATION_RESPONSE",
-                    "request_id": message.get("request_id"),
-                    "validation_result": validation_result,
-                    "timestamp": time.time()
-                }
-                await self.comm_hub.publish_message(response)
-                
         except Exception as e:
-            self.logger.error(f"Error handling data validation request: {e}")
+            self.logger.error(f"Error publishing validation result: {e}")
     
-    async def _handle_system_validation_request(self, message):
-        """Handle system validation requests."""
+    async def _publish_quality_update(self, quality_metrics: Dict[str, Any]):
+        """Publish data quality update."""
         try:
-            # Perform system health validation
-            system_validation = await self.system_validator.validate_system_health()
-            
-            # Send response back through communication hub
-            if self.comm_hub:
-                response = {
-                    "type": "SYSTEM_VALIDATION_RESPONSE",
-                    "request_id": message.get("request_id"),
-                    "system_validation": system_validation,
-                    "timestamp": time.time()
-                }
-                await self.comm_hub.publish_message(response)
-                
-        except Exception as e:
-            self.logger.error(f"Error handling system validation request: {e}")
-    
-    async def _handle_validation_status_request(self, message):
-        """Handle validation status requests."""
-        try:
-            # Get current validation status
-            validation_status = {
-                "current_state": self.current_validation_state,
-                "agent_stats": self.stats,
-                "data_validator_stats": self.data_validator.get_validation_stats() if self.data_validator else {},
-                "system_validator_stats": self.system_validator.get_system_validation_stats() if self.system_validator else {}
+            quality_update = {
+                "quality_metrics": quality_metrics,
+                "timestamp": time.time(),
+                "agent": self.agent_name
             }
             
-            # Send response back through communication hub
-            if self.comm_hub:
-                response = {
-                    "type": "VALIDATION_STATUS_RESPONSE",
-                    "request_id": message.get("request_id"),
-                    "validation_status": validation_status,
-                    "timestamp": time.time()
-                }
-                await self.comm_hub.publish_message(response)
-                
+            await self.redis_conn.publish_async("validation:quality_updates", json.dumps(quality_update))
+            
         except Exception as e:
-            self.logger.error(f"Error handling validation status request: {e}")
+            self.logger.error(f"Error publishing quality update: {e}")
+    
+    async def _publish_quality_alert(self, quality_metrics: Dict[str, Any]):
+        """Publish data quality alert."""
+        try:
+            quality_alert = {
+                "alert_type": "data_quality_degraded",
+                "quality_metrics": quality_metrics,
+                "timestamp": time.time(),
+                "agent": self.agent_name
+            }
+            
+            await self.redis_conn.publish_async("validation:quality_alerts", json.dumps(quality_alert))
+            
+        except Exception as e:
+            self.logger.error(f"Error publishing quality alert: {e}")
+    
+    async def _publish_validation_audit(self, audit_results: Dict[str, Any]):
+        """Publish validation audit report."""
+        try:
+            audit_report = {
+                "audit_results": audit_results,
+                "timestamp": time.time(),
+                "agent": self.agent_name
+            }
+            
+            await self.redis_conn.publish_async("validation:audit_reports", json.dumps(audit_report))
+            
+        except Exception as e:
+            self.logger.error(f"Error publishing validation audit: {e}")
     
     # ============= PUBLIC INTERFACE =============
     
-    def get_agent_status(self) -> Dict[str, Any]:
-        """Get comprehensive agent status."""
+    async def submit_validation_request(self, data_type: str, data: Any, priority: str = "normal") -> str:
+        """Submit a validation request."""
+        try:
+            request_id = f"val_{int(time.time() * 1000)}_{len(self.validation_state['validation_history'])}"
+            
+            validation_request = {
+                "request_id": request_id,
+                "data_type": data_type,
+                "data": data,
+                "priority": priority,
+                "timestamp": time.time()
+            }
+            
+            # Add to appropriate priority queue
+            if priority == "high":
+                self.validation_queue["high_priority"].append(validation_request)
+            elif priority == "low":
+                self.validation_queue["low_priority"].append(validation_request)
+            else:
+                self.validation_queue["normal_priority"].append(validation_request)
+            
+            self.logger.info(f"Validation request submitted: {request_id} ({priority} priority)")
+            return request_id
+            
+        except Exception as e:
+            self.logger.error(f"Error submitting validation request: {e}")
+            return ""
+    
+    async def get_validation_status(self, request_id: str) -> Dict[str, Any]:
+        """Get validation status for a specific request."""
+        try:
+            if request_id in self.validation_state["active_validations"]:
+                return self.validation_state["active_validations"][request_id]
+            else:
+                # Check validation history
+                for validation in self.validation_state["validation_history"]:
+                    if validation["request_id"] == request_id:
+                        return validation
+                
+                return {"error": "Request not found"}
+                
+        except Exception as e:
+            self.logger.error(f"Error getting validation status: {e}")
+            return {"error": str(e)}
+    
+    async def get_validation_stats(self) -> Dict[str, Any]:
+        """Get validation statistics."""
         return {
-            "is_running": self.is_running,
             "stats": self.stats,
-            "current_validation_state": self.current_validation_state,
-            "data_validator_stats": self.data_validator.get_validation_stats() if self.data_validator else {},
-            "uptime_seconds": int(time.time() - self.stats["start_time"])
-        }
-
-# Mock classes for components that don't exist yet
-class MockDataValidator:
-    async def validate_market_data(self, data, validation_type):
-        return {
-            "data_quality_score": 0.95,
-            "is_valid": True,
-            "validation_type": validation_type,
-            "timestamp": time.time()
-        }
-
-class MockSystemValidator:
-    async def validate_system_health(self):
-        return {
-            "system_health_score": 0.9,
-            "is_healthy": True,
-            "timestamp": time.time()
+            "validation_state": self.validation_state,
+            "queue_status": {
+                "high_priority": len(self.validation_queue["high_priority"]),
+                "normal_priority": len(self.validation_queue["normal_priority"]),
+                "low_priority": len(self.validation_queue["low_priority"])
+            },
+            "last_update": time.time()
         }

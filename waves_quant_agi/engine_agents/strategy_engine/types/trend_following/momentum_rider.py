@@ -1,199 +1,267 @@
 #!/usr/bin/env python3
 """
-Momentum Rider Strategy - Fixed and Enhanced
-Rides strong momentum trends with dynamic position sizing.
+Momentum Rider Strategy - Trend Following
+Focuses purely on strategy-specific tasks, delegating risk management to the risk management agent.
 """
 
 from typing import Dict, Any, List, Optional
 import time
 import pandas as pd
-from engine_agents.shared_utils import get_shared_redis
+import numpy as np
+from datetime import datetime
+
+# Import consolidated trading components
+from ....trading.memory.trading_context import TradingContext
+from ....trading.learning.trading_research_engine import TradingResearchEngine
+
 
 class MomentumRiderStrategy:
-    """Momentum strategy for riding strong trends with dynamic sizing."""
+    """Momentum rider strategy for trend following."""
     
     def __init__(self, config: Dict[str, Any], logger=None):
         self.config = config
         self.logger = logger
-        # Use shared Redis connection
-        self.redis_conn = get_shared_redis()
+        
+        # Initialize consolidated trading components
+        self.trading_context = TradingContext()
+        self.trading_research_engine = TradingResearchEngine()
         
         # Strategy parameters
-        self.momentum_threshold = config.get("momentum_threshold", 0.015)  # 1.5% momentum
-        self.momentum_lookback = config.get("momentum_lookback", 10)
-        self.volume_multiplier = config.get("volume_multiplier", 2.0)
-        self.trend_confirmation = config.get("trend_confirmation", 3)
-        self.max_position_size = config.get("max_position_size", 0.1)
+        self.momentum_period = config.get("momentum_period", 14)  # 14 periods
+        self.momentum_threshold = config.get("momentum_threshold", 0.02)  # 2% threshold
+        self.volume_multiplier = config.get("volume_multiplier", 1.5)  # 1.5x average volume
+        self.trend_confirmation = config.get("trend_confirmation", 3)  # 3 periods confirmation
+        
+        # Strategy state
+        self.last_signal_time = None
+        self.strategy_performance = {"total_signals": 0, "average_confidence": 0.0}
 
-    async def detect_momentum(self, market_data: pd.DataFrame) -> List[Dict[str, Any]]:
-        """Detect momentum opportunities across assets."""
+    async def initialize(self) -> bool:
+        """Initialize the strategy and trading components."""
         try:
+            await self.trading_context.initialize()
+            await self.trading_research_engine.initialize()
+            return True
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Failed to initialize momentum rider strategy: {e}")
+            return False
+
+    async def detect_opportunity(self, market_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Detect momentum opportunities."""
+        if not market_data or len(market_data) < self.momentum_period:
+            return []
+        
+        try:
+            # Convert to DataFrame for analysis
+            df = pd.DataFrame(market_data)
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            df = df.sort_values('timestamp').tail(self.momentum_period)
+            
             opportunities = []
             
-            if market_data.empty:
-                return opportunities
-                
-            for _, row in market_data.iterrows():
+            for _, row in df.iterrows():
                 symbol = row.get("symbol", "BTCUSD")
-                close = float(row.get("close", 0.0))
-                volume = float(row.get("volume", 0.0))
+                current_price = float(row.get("close", 0.0))
+                current_volume = float(row.get("volume", 0.0))
                 
-                # Get historical data for momentum calculation
+                # Get historical data for analysis
                 historical_data = await self._get_historical_data(symbol)
                 if not historical_data:
                     continue
                 
                 # Calculate momentum metrics
-                momentum_score = await self._calculate_momentum_score(
-                    close, volume, historical_data
+                momentum_metrics = await self._calculate_momentum_metrics(
+                    current_price, current_volume, historical_data
                 )
                 
-                if momentum_score > self.momentum_threshold:
-                    # Determine trend direction
-                    trend_direction = await self._determine_trend_direction(historical_data)
-                    
-                    opportunity = {
-                        "type": "momentum_rider",
-                        "strategy": "momentum",
-                        "symbol": symbol,
-                        "action": "buy" if trend_direction > 0 else "sell",
-                        "entry_price": close,
-                        "stop_loss": close * (0.98 if trend_direction > 0 else 1.02),
-                        "take_profit": close * (1.03 if trend_direction > 0 else 0.97),
-                        "confidence": min(momentum_score / self.momentum_threshold, 0.9),
-                        "momentum_strength": momentum_score,
-                        "trend_direction": trend_direction,
-                        "volume_confirmation": volume > self.volume_multiplier,
-                        "timestamp": int(time.time()),
-                        "description": f"Momentum opportunity for {symbol}: Score {momentum_score:.4f}"
-                    }
-                    opportunities.append(opportunity)
-                    
-                    # Store in Redis for tracking with proper JSON serialization
-                    if self.redis_conn:
-                        try:
-                            import json
-                            self.redis_conn.set(
-                                f"strategy_engine:momentum:{symbol}:{int(time.time())}", 
-                                json.dumps(opportunity), 
-                                ex=3600
-                            )
-                        except json.JSONEncodeError as e:
-                            if self.logger:
-                                self.logger.error(f"JSON encoding error storing momentum opportunity: {e}")
-                        except ConnectionError as e:
-                            if self.logger:
-                                self.logger.error(f"Redis connection error storing momentum opportunity: {e}")
-                        except Exception as e:
-                            if self.logger:
-                                self.logger.error(f"Unexpected error storing momentum opportunity: {e}")
-                    
-                    if self.logger:
-                        self.logger.info(f"Momentum opportunity: {opportunity['description']}")
-
+                # Check if momentum signal meets criteria
+                if self._is_valid_momentum_signal(momentum_metrics):
+                    signal = self._generate_momentum_signal(
+                        symbol, current_price, momentum_metrics
+                    )
+                    if signal:
+                        self.trading_context.store_signal(signal)
+                        opportunities.append(signal)
+                        
+                        # Update strategy performance
+                        self.strategy_performance["total_signals"] += 1
+                        self.strategy_performance["average_confidence"] = (
+                            (self.strategy_performance["average_confidence"] * 
+                             (self.strategy_performance["total_signals"] - 1) + signal["confidence"]) /
+                            self.strategy_performance["total_signals"]
+                        )
+                        
+                        self.last_signal_time = datetime.now()
+                        
+                        if self.logger:
+                            self.logger.info(f"Momentum signal generated: {signal['signal_type']} for {symbol}")
+            
             return opportunities
             
         except Exception as e:
             if self.logger:
-                self.logger.error(f"Error detecting momentum: {e}")
+                self.logger.error(f"Error detecting momentum opportunities: {e}")
             return []
 
     async def _get_historical_data(self, symbol: str) -> Optional[pd.DataFrame]:
-        """Get historical data for momentum calculation."""
+        """Get historical data for momentum analysis."""
         try:
-            if not self.redis_conn:
+            # Get recent signals from trading context
+            signals = await self.trading_context.get_recent_signals(symbol, limit=self.momentum_period * 2)
+            
+            if not signals:
                 return None
-                
-            historical_key = f"market_data:{symbol}:history"
-            historical_data = self.redis_conn.get(historical_key)
             
-            if historical_data:
-                import json
-                return pd.DataFrame(json.loads(historical_data))
+            # Convert signals to DataFrame
+            data = []
+            for signal in signals:
+                if "price" in signal:
+                    data.append({
+                        "timestamp": signal.get("timestamp", 0),
+                        "price": signal.get("price", 0.0),
+                        "volume": signal.get("volume", 0.0)
+                    })
             
-            return None
+            if not data:
+                return None
+            
+            # Create DataFrame and sort by timestamp
+            df = pd.DataFrame(data)
+            df = df.sort_values("timestamp").reset_index(drop=True)
+            
+            return df
             
         except Exception as e:
             if self.logger:
                 self.logger.error(f"Error getting historical data: {e}")
             return None
 
-    async def _calculate_momentum_score(self, close: float, volume: float, 
-                                      historical_data: pd.DataFrame) -> float:
-        """Calculate momentum score based on price and volume."""
+    async def _calculate_momentum_metrics(self, current_price: float, current_volume: float, 
+                                        historical_data: pd.DataFrame) -> Dict[str, Any]:
+        """Calculate momentum metrics."""
         try:
-            if historical_data.empty or len(historical_data) < self.momentum_lookback:
-                return 0.0
+            if historical_data.empty or len(historical_data) < self.momentum_period:
+                return {}
             
-            # Price momentum
-            recent_prices = historical_data['close'].tail(self.momentum_lookback)
-            price_momentum = (close - recent_prices.iloc[0]) / recent_prices.iloc[0]
+            # Get recent prices and volumes
+            recent_prices = historical_data["price"].tail(self.momentum_period)
+            recent_volumes = historical_data["volume"].tail(self.momentum_period)
             
-            # Volume momentum
-            recent_volumes = historical_data['volume'].tail(self.momentum_lookback)
-            avg_volume = recent_volumes.mean()
-            volume_momentum = volume / avg_volume if avg_volume > 0 else 1.0
+            # Calculate momentum indicators
+            price_momentum = (current_price - recent_prices.iloc[0]) / recent_prices.iloc[0] if recent_prices.iloc[0] > 0 else 0
+            volume_momentum = current_volume / recent_volumes.mean() if recent_volumes.mean() > 0 else 0
             
-            # Volatility adjustment
-            volatility = recent_prices.pct_change().std()
-            volatility_factor = 1.0 / (1.0 + volatility) if volatility > 0 else 1.0
+            # Calculate trend strength
+            price_changes = recent_prices.pct_change().dropna()
+            trend_strength = abs(price_changes.mean()) / price_changes.std() if price_changes.std() > 0 else 0
             
-            # Combined momentum score
-            momentum_score = (
-                abs(price_momentum) * 0.5 +
-                min(volume_momentum / self.volume_multiplier, 1.0) * 0.3 +
-                volatility_factor * 0.2
-            )
+            # Calculate RSI-like momentum
+            gains = price_changes[price_changes > 0].sum()
+            losses = abs(price_changes[price_changes < 0].sum())
+            momentum_ratio = gains / (gains + losses) if (gains + losses) > 0 else 0.5
             
-            return momentum_score
+            return {
+                "price_momentum": price_momentum,
+                "volume_momentum": volume_momentum,
+                "trend_strength": trend_strength,
+                "momentum_ratio": momentum_ratio,
+                "current_price": current_price,
+                "current_volume": current_volume
+            }
             
         except Exception as e:
             if self.logger:
-                self.logger.error(f"Error calculating momentum score: {e}")
-            return 0.0
+                self.logger.error(f"Error calculating momentum metrics: {e}")
+            return {}
 
-    async def _determine_trend_direction(self, historical_data: pd.DataFrame) -> float:
-        """Determine trend direction using multiple timeframes."""
+    def _is_valid_momentum_signal(self, metrics: Dict[str, Any]) -> bool:
+        """Check if momentum signal meets criteria."""
         try:
-            if historical_data.empty:
-                return 0.0
+            if not metrics:
+                return False
             
-            # Short-term trend (last 5 periods)
-            short_trend = historical_data['close'].tail(5).pct_change().mean()
+            price_momentum = metrics.get("price_momentum", 0.0)
+            volume_momentum = metrics.get("volume_momentum", 0.0)
+            trend_strength = metrics.get("trend_strength", 0.0)
+            momentum_ratio = metrics.get("momentum_ratio", 0.5)
             
-            # Medium-term trend (last 10 periods)
-            medium_trend = historical_data['close'].tail(10).pct_change().mean()
+            # Check price momentum
+            if abs(price_momentum) < self.momentum_threshold:
+                return False
             
-            # Long-term trend (last 20 periods)
-            long_trend = historical_data['close'].tail(20).pct_change().mean()
+            # Check volume confirmation
+            if volume_momentum < self.volume_multiplier:
+                return False
             
-            # Weighted trend direction
-            trend_direction = (
-                short_trend * 0.5 +
-                medium_trend * 0.3 +
-                long_trend * 0.2
-            )
+            # Check trend strength
+            if trend_strength < 0.5:
+                return False
             
-            return trend_direction
+            # Check momentum ratio
+            if momentum_ratio < 0.6 and momentum_ratio > 0.4:
+                return False
+            
+            return True
             
         except Exception as e:
             if self.logger:
-                self.logger.error(f"Error determining trend direction: {e}")
-            return 0.0
+                self.logger.error(f"Error validating momentum signal: {e}")
+            return False
 
-    def get_strategy_info(self) -> Dict[str, Any]:
-        """Get strategy information and parameters."""
-        return {
-            "name": "Momentum Rider Strategy",
-            "type": "trend_following",
-            "description": "Rides strong momentum trends with dynamic position sizing",
-            "parameters": {
-                "momentum_threshold": self.momentum_threshold,
-                "momentum_lookback": self.momentum_lookback,
-                "volume_multiplier": self.volume_multiplier,
-                "trend_confirmation": self.trend_confirmation,
-                "max_position_size": self.max_position_size
-            },
-            "timeframe": "fast",  # 100ms tier
-            "asset_types": ["crypto", "forex", "indices", "stocks"]
-        }
+    def _generate_momentum_signal(self, symbol: str, current_price: float, 
+                                 metrics: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Generate momentum trading signal."""
+        try:
+            price_momentum = metrics.get("price_momentum", 0.0)
+            volume_momentum = metrics.get("volume_momentum", 0.0)
+            trend_strength = metrics.get("trend_strength", 0.0)
+            momentum_ratio = metrics.get("momentum_ratio", 0.5)
+            
+            # Determine signal type
+            if price_momentum > 0 and momentum_ratio > 0.6:
+                signal_type = "MOMENTUM_UP"
+                confidence = min(abs(price_momentum) / self.momentum_threshold, 1.0)
+            elif price_momentum < 0 and momentum_ratio < 0.4:
+                signal_type = "MOMENTUM_DOWN"
+                confidence = min(abs(price_momentum) / self.momentum_threshold, 1.0)
+            else:
+                return None
+            
+            # Adjust confidence based on volume and trend
+            volume_confidence = min(volume_momentum / self.volume_multiplier, 1.0)
+            trend_confidence = min(trend_strength, 1.0)
+            final_confidence = (confidence + volume_confidence + trend_confidence) / 3
+            
+            signal = {
+                "signal_id": f"momentum_{int(time.time())}",
+                "strategy_id": "momentum_rider",
+                "strategy_type": "trend_following",
+                "signal_type": signal_type,
+                "symbol": symbol,
+                "timestamp": datetime.now().isoformat(),
+                "price": current_price,
+                "confidence": final_confidence,
+                "metadata": {
+                    "price_momentum": price_momentum,
+                    "volume_momentum": volume_momentum,
+                    "trend_strength": trend_strength,
+                    "momentum_ratio": momentum_ratio
+                }
+            }
+            
+            return signal
+            
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Error generating momentum signal: {e}")
+            return None
+
+    async def cleanup(self):
+        """Cleanup strategy resources."""
+        try:
+            await self.trading_context.cleanup()
+            await self.trading_research_engine.cleanup()
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Error during strategy cleanup: {e}")

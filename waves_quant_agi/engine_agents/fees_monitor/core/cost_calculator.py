@@ -8,7 +8,7 @@ SIMPLE: ~150 lines focused on cost calculation only
 import time
 import asyncio
 from typing import Dict, Any, List, Optional
-from ...shared_utils import get_shared_logger, get_agent_learner, LearningType
+from ...shared_utils import get_shared_logger
 
 class CostCalculator:
     """

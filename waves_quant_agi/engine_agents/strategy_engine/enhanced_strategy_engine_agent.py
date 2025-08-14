@@ -1,623 +1,892 @@
 #!/usr/bin/env python3
 """
-Enhanced Strategy Engine Agent - INTEGRATED IMPLEMENTATION
-Handles strategy execution and optimization with integrated components.
+Enhanced Strategy Engine Agent - CENTRAL COORDINATOR & STRATEGY MANAGER
+Consolidates all strategy-related functionality from other agents.
+Becomes the single source of truth for strategy execution, strategy optimization (NOT cost optimization), and learning.
+Cost optimization is handled by Fees Monitor Agent.
 """
 
 import asyncio
 import time
+import json
 from typing import Dict, Any, List, Optional
-from engine_agents.shared_utils import BaseAgent, register_agent, get_shared_logger, get_shared_redis
-
-# Import all strategy engine components
-from .strategy_engine_integration import StrategyEngineIntegration
-from .manager.strategy_registry import StrategyRegistry
-from .manager.performance_tracker import PerformanceTracker
-from .manager.deployment_manager import DeploymentManager
-from .core.strategy_applicator import StrategyApplicator
-from .core.strategy_composer import StrategyComposer
-from .composers.ml_composer import MLComposer
-from .composers.online_generator import OnlineGenerator
-from .learning_layer.strategy_learning_manager import StrategyLearningManager
-from .learning_layer.strategy_adaptation_engine import StrategyAdaptationEngine
+from ..shared_utils import BaseAgent, register_agent
 
 class EnhancedStrategyEngineAgent(BaseAgent):
-    """Enhanced strategy engine agent with integrated components."""
+    """Enhanced strategy engine agent - central coordinator for all agents."""
     
     def _initialize_agent_components(self):
         """Initialize strategy engine specific components."""
-        # Initialize all strategy engine components
-        self._initialize_strategy_components()
+        # Initialize strategy engine components
+        self.strategy_manager = None
+        self.optimization_engine = None
+        self.learning_coordinator = None
+        self.order_manager = None
+        
+        # Strategy engine state
+        self.strategy_state = {
+            "active_strategies": {},
+            "strategy_performance": {},
+            "strategy_optimization_queue": [],  # Only strategy optimization, not cost optimization
+            "learning_events": [],
+            "order_queue": [],
+            "last_strategy_update": time.time()
+        }
+        
+        # Strategy engine statistics
+        self.stats = {
+            "total_strategies_executed": 0,
+            "optimizations_applied": 0,
+            "learning_events_processed": 0,
+
+            "orders_managed": 0,
+            "start_time": time.time()
+        }
         
         # Register this agent
         register_agent(self.agent_name, self)
-        
-        # Initialize communication channels
-        self._setup_communication_channels()
-    
-    def _initialize_strategy_components(self):
-        """Initialize all strategy engine components."""
-        try:
-            # Core components
-            self.strategy_applicator = StrategyApplicator(self.config)
-            self.strategy_composer = StrategyComposer(self.config)
-            
-            # Manager components
-            self.strategy_registry = StrategyRegistry(self.config)
-            self.performance_tracker = PerformanceTracker(self.config)
-            self.deployment_manager = DeploymentManager(self.config)
-            
-            # Composer components
-            self.ml_composer = MLComposer(self.config)
-            self.online_generator = OnlineGenerator(self.config)
-            
-            # Learning layer components
-            self.learning_manager = StrategyLearningManager(self.config)
-            self.adaptation_engine = StrategyAdaptationEngine(self.config)
-            
-            # Integration manager
-            self.integration = StrategyEngineIntegration(self.config)
-            
-            self.logger.info("✅ All strategy engine components initialized")
-            
-        except Exception as e:
-            self.logger.error(f"❌ Error initializing strategy components: {e}")
-    
-    def _setup_communication_channels(self):
-        """Setup communication channels between components."""
-        try:
-            # Redis pub/sub channels for inter-component communication
-            self.communication_channels = {
-                "strategy_updates": "strategy_engine:strategy_updates",
-                "performance_alerts": "strategy_engine:performance_alerts",
-                "deployment_notifications": "strategy_engine:deployment_notifications",
-                "learning_events": "strategy_engine:learning_events",
-                "adaptation_triggers": "strategy_engine:adaptation_triggers",
-                "parameter_updates": "strategy_engine:parameter_updates",
-                "regime_changes": "strategy_engine:regime_changes"
-            }
-            
-            # Initialize Redis connection for pub/sub
-            self.redis_conn = get_shared_redis()
-            
-            self.logger.info("✅ Communication channels established")
-            
-        except Exception as e:
-            self.logger.error(f"❌ Error setting up communication channels: {e}")
     
     async def _agent_specific_startup(self):
         """Strategy engine specific startup logic."""
         try:
-            self.logger.info("🚀 Enhanced Strategy Engine starting with integrated components")
+            # Initialize strategy management components
+            await self._initialize_strategy_management()
             
-            # Initialize integration manager
-            integration_success = await self.integration.initialize_integration()
-            if not integration_success:
-                self.logger.error("❌ Failed to initialize strategy engine integration")
-                return False
+            # Initialize optimization engine
+            await self._initialize_optimization_engine()
             
-            # Initialize learning components
-            await self._initialize_learning_components()
+            # Initialize learning coordination
+            await self._initialize_learning_coordination()
             
-            # Initialize manager components
-            await self._initialize_manager_components()
+
             
-            # Initialize composer components
-            await self._initialize_composer_components()
+            # Initialize order management
+            await self._initialize_order_management()
             
-            # Start communication listeners
-            await self._start_communication_listeners()
+            # Initialize strategy composer
+            await self._initialize_strategy_composer()
             
-            self.logger.info("✅ Enhanced Strategy Engine startup completed")
-            return True
+            # Initialize strategy applicator
+            await self._initialize_strategy_applicator()
+            
+            self.logger.info("✅ Strategy Engine Agent: Central coordination systems initialized")
             
         except Exception as e:
             self.logger.error(f"❌ Error in strategy engine startup: {e}")
-            return False
-    
-    async def _initialize_learning_components(self):
-        """Initialize learning layer components."""
-        try:
-            # Initialize learning manager
-            await self.learning_manager.reset_learning()
-            
-            # Initialize adaptation engine
-            await self.adaptation_engine.reset_adaptations()
-            
-            self.logger.info("✅ Learning components initialized")
-            
-        except Exception as e:
-            self.logger.error(f"❌ Error initializing learning components: {e}")
-    
-    async def _initialize_manager_components(self):
-        """Initialize manager components."""
-        try:
-            # Initialize strategy registry
-            await self.strategy_registry.cleanup_expired_strategies()
-            
-            # Initialize performance tracker
-            # (Performance tracker auto-initializes)
-            
-            # Initialize deployment manager
-            # (Deployment manager auto-initializes)
-            
-            self.logger.info("✅ Manager components initialized")
-            
-        except Exception as e:
-            self.logger.error(f"❌ Error initializing manager components: {e}")
-    
-    async def _initialize_composer_components(self):
-        """Initialize composer components."""
-        try:
-            # Initialize ML composer
-            await self.ml_composer.initialize_model()
-            
-            # Initialize online generator
-            # (Online generator auto-initializes)
-            
-            self.logger.info("✅ Composer components initialized")
-            
-        except Exception as e:
-            self.logger.error(f"❌ Error initializing composer components: {e}")
-    
-    async def _start_communication_listeners(self):
-        """Start listening to communication channels."""
-        try:
-            # Start background task for communication monitoring
-            asyncio.create_task(self._monitor_communication_channels())
-            
-            self.logger.info("✅ Communication listeners started")
-            
-        except Exception as e:
-            self.logger.error(f"❌ Error starting communication listeners: {e}")
-    
-    async def _monitor_communication_channels(self):
-        """Monitor communication channels for inter-component messages."""
-        try:
-            while self.is_running:
-                # Check for new messages on each channel
-                for channel_name, channel_key in self.communication_channels.items():
-                    try:
-                        # Get latest message from channel
-                        message = self.redis_conn.get(f"{channel_key}:latest")
-                        if message:
-                            await self._process_communication_message(channel_name, message)
-                    except Exception as e:
-                        self.logger.error(f"Error monitoring channel {channel_name}: {e}")
-                
-                await asyncio.sleep(1)  # Check every second
-                
-        except Exception as e:
-            self.logger.error(f"Error in communication monitoring: {e}")
-    
-    async def _process_communication_message(self, channel_name: str, message: str):
-        """Process messages from communication channels."""
-        try:
-            import json
-            message_data = json.loads(message)
-            
-            if channel_name == "strategy_updates":
-                await self._handle_strategy_update(message_data)
-            elif channel_name == "performance_alerts":
-                await self._handle_performance_alert(message_data)
-            elif channel_name == "deployment_notifications":
-                await self._handle_deployment_notification(message_data)
-            elif channel_name == "learning_events":
-                await self._handle_learning_event(message_data)
-            elif channel_name == "adaptation_triggers":
-                await self._handle_adaptation_trigger(message_data)
-            elif channel_name == "parameter_updates":
-                await self._handle_parameter_update(message_data)
-            elif channel_name == "regime_changes":
-                await self._handle_regime_change(message_data)
-                
-        except Exception as e:
-            self.logger.error(f"Error processing {channel_name} message: {e}")
-    
-    async def _handle_strategy_update(self, message_data: Dict[str, Any]):
-        """Handle strategy update messages."""
-        try:
-            strategy_type = message_data.get("strategy_type")
-            update_type = message_data.get("update_type")
-            
-            if update_type == "new_strategy":
-                # Register new strategy
-                await self.strategy_registry.register_strategy(message_data)
-                self.logger.info(f"Registered new {strategy_type} strategy")
-                
-            elif update_type == "strategy_removal":
-                # Handle strategy removal
-                strategy_id = message_data.get("strategy_id")
-                await self.strategy_registry.remove_strategy(strategy_id)
-                self.logger.info(f"Removed strategy {strategy_id}")
-                
-        except Exception as e:
-            self.logger.error(f"Error handling strategy update: {e}")
-    
-    async def _handle_performance_alert(self, message_data: Dict[str, Any]):
-        """Handle performance alert messages."""
-        try:
-            strategy_id = message_data.get("strategy_id")
-            alert_type = message_data.get("alert_type")
-            
-            if alert_type == "performance_degradation":
-                # Trigger strategy adaptation
-                await self.adaptation_engine.force_adaptation(strategy_id)
-                self.logger.info(f"Triggered adaptation for strategy {strategy_id}")
-                
-        except Exception as e:
-            self.logger.error(f"Error handling performance alert: {e}")
-    
-    async def _handle_deployment_notification(self, message_data: Dict[str, Any]):
-        """Handle deployment notification messages."""
-        try:
-            strategy_id = message_data.get("strategy_id")
-            deployment_status = message_data.get("status")
-            
-            if deployment_status == "deployed":
-                # Update deployment tracking
-                self.logger.info(f"Strategy {strategy_id} deployed successfully")
-            elif deployment_status == "failed":
-                # Handle deployment failure
-                self.logger.warning(f"Strategy {strategy_id} deployment failed")
-                
-        except Exception as e:
-            self.logger.error(f"Error handling deployment notification: {e}")
-    
-    async def _handle_learning_event(self, message_data: Dict[str, Any]):
-        """Handle learning event messages."""
-        try:
-            event_type = message_data.get("event_type")
-            
-            if event_type == "parameter_optimization":
-                # Apply optimized parameters
-                strategy_name = message_data.get("strategy_name")
-                new_params = message_data.get("new_parameters")
-                await self._apply_optimized_parameters(strategy_name, new_params)
-                
-        except Exception as e:
-            self.logger.error(f"Error handling learning event: {e}")
-    
-    async def _handle_adaptation_trigger(self, message_data: Dict[str, Any]):
-        """Handle adaptation trigger messages."""
-        try:
-            trigger_type = message_data.get("trigger_type")
-            
-            if trigger_type == "market_regime_change":
-                # Trigger strategy adaptation
-                market_conditions = message_data.get("market_conditions")
-                await self.adaptation_engine.adapt_strategies(market_conditions, {})
-                
-        except Exception as e:
-            self.logger.error(f"Error handling adaptation trigger: {e}")
-    
-    async def _handle_parameter_update(self, message_data: Dict[str, Any]):
-        """Handle parameter update messages."""
-        try:
-            strategy_type = message_data.get("strategy_type")
-            new_parameters = message_data.get("new_parameters")
-            
-            # Update strategy parameters
-            await self._update_strategy_parameters(strategy_type, new_parameters)
-            
-        except Exception as e:
-            self.logger.error(f"Error handling parameter update: {e}")
-    
-    async def _handle_regime_change(self, message_data: Dict[str, Any]):
-        """Handle market regime change messages."""
-        try:
-            new_regime = message_data.get("new_regime")
-            market_analysis = message_data.get("market_analysis")
-            
-            # Update learning parameters for new regime
-            await self.learning_manager._adapt_to_new_regime(new_regime)
-            
-            # Trigger strategy adaptation
-            await self.adaptation_engine.adapt_strategies(market_analysis, {})
-            
-        except Exception as e:
-            self.logger.error(f"Error handling regime change: {e}")
-    
-    async def _apply_optimized_parameters(self, strategy_name: str, new_params: Dict[str, Any]):
-        """Apply optimized parameters to strategy."""
-        try:
-            # Store optimized parameters
-            params_key = f"strategy_engine:parameters:{strategy_name}:optimized"
-            self.redis_conn.set(params_key, str(new_params), ex=604800)
-            
-            self.logger.info(f"Applied optimized parameters for {strategy_name}")
-            
-        except Exception as e:
-            self.logger.error(f"Error applying optimized parameters: {e}")
-    
-    async def _update_strategy_parameters(self, strategy_type: str, new_params: Dict[str, Any]):
-        """Update strategy parameters."""
-        try:
-            # Store updated parameters
-            params_key = f"strategy_engine:parameters:{strategy_type}"
-            self.redis_conn.set(params_key, str(new_params), ex=604800)
-            
-            self.logger.info(f"Updated parameters for {strategy_type}")
-            
-        except Exception as e:
-            self.logger.error(f"Error updating strategy parameters: {e}")
+            raise
     
     async def _agent_specific_shutdown(self):
         """Strategy engine specific shutdown logic."""
         try:
-            self.logger.info("🛑 Enhanced Strategy Engine shutting down")
+            # Cleanup strategy engine resources
+            await self._cleanup_strategy_components()
             
-            # Shutdown integration manager
-            await self.integration.shutdown()
-            
-            # Cleanup communication channels
-            await self._cleanup_communication_channels()
-            
-            self.logger.info("✅ Enhanced Strategy Engine shutdown completed")
+            self.logger.info("✅ Strategy Engine Agent: Central coordination systems shutdown completed")
             
         except Exception as e:
             self.logger.error(f"❌ Error in strategy engine shutdown: {e}")
     
-    async def _cleanup_communication_channels(self):
-        """Cleanup communication channels."""
+    # ============= BACKGROUND TASKS =============
+    
+    async def _strategy_optimization_loop(self):
+        """Strategy optimization loop."""
+        while self.is_running:
+            try:
+                # Optimize strategies
+                await self._optimize_strategies()
+                
+                await asyncio.sleep(10.0)  # 10 second cycle
+                
+            except Exception as e:
+                self.logger.error(f"Error in strategy optimization loop: {e}")
+                await asyncio.sleep(10.0)
+    
+    async def _strategy_performance_monitoring_loop(self):
+        """Strategy performance monitoring loop."""
+        while self.is_running:
+            try:
+                # Monitor strategy performance
+                await self._monitor_strategy_performance()
+                
+                await asyncio.sleep(5.0)  # 5 second cycle
+                
+            except Exception as e:
+                self.logger.error(f"Error in strategy performance monitoring loop: {e}")
+                await asyncio.sleep(5.0)
+    
+    async def _strategy_reporting_loop(self):
+        """Strategy reporting loop."""
+        while self.is_running:
+            try:
+                # Report strategy status
+                await self._report_strategy_status()
+                
+                await asyncio.sleep(30.0)  # 30 second cycle
+                
+            except Exception as e:
+                self.logger.error(f"Error in strategy reporting loop: {e}")
+                await asyncio.sleep(30.0)
+    
+    async def _optimize_strategies(self):
+        """Optimize strategies."""
         try:
-            # Clear any pending messages
-            for channel_name, channel_key in self.communication_channels.items():
-                try:
-                    self.redis_conn.delete(f"{channel_key}:latest")
-                except:
-                    pass
+            # Placeholder for strategy optimization
+            pass
+        except Exception as e:
+            self.logger.error(f"Error optimizing strategies: {e}")
+    
+    async def _monitor_strategy_performance(self):
+        """Monitor strategy performance."""
+        try:
+            # Placeholder for strategy performance monitoring
+            pass
+        except Exception as e:
+            self.logger.error(f"Error monitoring strategy performance: {e}")
+    
+    async def _report_strategy_status(self):
+        """Report strategy status."""
+        try:
+            # Placeholder for strategy status reporting
+            pass
+        except Exception as e:
+            self.logger.error(f"Error reporting strategy status: {e}")
+
+    def _get_background_tasks(self) -> List[tuple]:
+        """Get background tasks for this agent."""
+        return [
+            (self._strategy_management_loop, "Strategy Management", "fast"),
+            (self._strategy_optimization_loop, "Strategy Optimization", "tactical"),
+            (self._strategy_performance_monitoring_loop, "Strategy Performance Monitoring", "tactical"),
+            (self._strategy_reporting_loop, "Strategy Reporting", "strategic")
+        ]
+    
+    # ============= STRATEGY MANAGEMENT INITIALIZATION =============
+    
+    async def _initialize_strategy_management(self):
+        """Initialize strategy management components."""
+        try:
+            # Initialize strategy manager
+            from .core.strategy_manager import StrategyManager
+            self.strategy_manager = StrategyManager(self.config)
+            await self.strategy_manager.initialize()
             
-            self.logger.info("✅ Communication channels cleaned up")
+            self.logger.info("✅ Strategy management initialized")
             
         except Exception as e:
-            self.logger.error(f"❌ Error cleaning up communication channels: {e}")
+            self.logger.error(f"❌ Error initializing strategy management: {e}")
+            raise
     
-    # TIER 2: FAST STRATEGY APPLICATION (100ms)
-    async def _fast_application_loop(self):
-        """TIER 2: Fast strategy application (100ms)."""
+    async def _initialize_optimization_engine(self):
+        """Initialize optimization engine."""
+        try:
+            # Initialize optimization engine
+            from .core.optimization_engine import OptimizationEngine
+            self.optimization_engine = OptimizationEngine(self.config)
+            await self.optimization_engine.initialize()
+            
+            self.logger.info("✅ Optimization engine initialized")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing optimization engine: {e}")
+            raise
+    
+    async def _initialize_learning_coordination(self):
+        """Initialize learning coordination."""
+        try:
+            # Initialize learning coordinator
+            from .core.learning_coordinator import LearningCoordinator
+            self.learning_coordinator = LearningCoordinator(self.config)
+            await self.learning_coordinator.initialize()
+            
+            self.logger.info("✅ Learning coordination initialized")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing learning coordination: {e}")
+            raise
+    
+
+    
+    async def _initialize_order_management(self):
+        """Initialize order management."""
+        try:
+            # Initialize order manager
+            from .core.order_manager import OrderManager
+            self.order_manager = OrderManager(self.config)
+            await self.order_manager.initialize()
+            
+            self.logger.info("✅ Order management initialized")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing order management: {e}")
+            raise
+    
+    async def _initialize_strategy_composer(self):
+        """Initialize strategy composer."""
+        try:
+            # Initialize strategy composer
+            from .core.strategy_composer import StrategyComposer
+            self.strategy_composer = StrategyComposer(self.config)
+            await self.strategy_composer.initialize()
+            
+            self.logger.info("✅ Strategy composer initialized")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing strategy composer: {e}")
+            raise
+    
+    async def _initialize_strategy_applicator(self):
+        """Initialize strategy applicator."""
+        try:
+            # Initialize strategy applicator
+            from .core.strategy_applicator import StrategyApplicator
+            self.strategy_applicator = StrategyApplicator(self.config)
+            await self.strategy_applicator.initialize()
+            
+            self.logger.info("✅ Strategy applicator initialized")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing strategy applicator: {e}")
+            raise
+    
+    # ============= STRATEGY MANAGEMENT LOOP =============
+    
+    async def _strategy_management_loop(self):
+        """Strategy management loop (30s intervals)."""
         while self.is_running:
             try:
                 start_time = time.time()
                 
-                # Get market data
-                market_data = await self._get_market_data()
+                # Manage active strategies
+                strategies_updated = await self._manage_active_strategies()
                 
-                if market_data:
-                    # Process through integration pipeline
-                    deployed_strategies = await self.integration.process_market_data([market_data])
-                    
-                    # Apply strategies using applicator
-                    signals = await self.strategy_applicator.apply_strategy("comprehensive", market_data, "fast")
-                    
-                    # Process and route signals
-                    if signals:
-                        await self._route_signals(signals)
-                        self.active_signals.extend(signals)
-                    
-                    # Update performance metrics
-                    self._update_performance_metrics(signals)
-                    
-                    # Learn from execution
-                    if signals:
-                        await self._learn_from_execution(signals, market_data)
+                # Update strategy state
+                if strategies_updated > 0:
+                    self._update_strategy_state()
                 
-                # TIER 2 timing: 100ms
-                await asyncio.sleep(0.1)
+                # Record operation
+                duration_ms = (time.time() - start_time) * 1000
+                if hasattr(self, 'status_monitor') and self.status_monitor:
+                    self.status_monitor.record_operation(duration_ms, strategies_updated > 0)
+                
+                await asyncio.sleep(30)  # 30s for strategy management
                 
             except Exception as e:
-                self.logger.error(f"Error in fast application loop: {e}")
-                await asyncio.sleep(0.1)
+                self.logger.error(f"Error in strategy management loop: {e}")
+                await asyncio.sleep(30)
     
-    async def _learn_from_execution(self, signals: List[Dict[str, Any]], market_data: Dict[str, Any]):
-        """Learn from strategy execution."""
+    async def _manage_active_strategies(self) -> int:
+        """Manage active strategies and return number of strategies updated."""
         try:
-            for signal in signals:
-                # Learn from execution result
-                await self.learning_manager.learn_from_strategy_execution(
-                    {"name": signal.get("type", "unknown"), "type": signal.get("type", "unknown")},
-                    {"success": True, "pnl": signal.get("confidence", 0.0)}
-                )
+            strategies_updated = 0
             
-            # Learn from market conditions
-            await self.learning_manager.learn_from_market_conditions(market_data, {})
+            if not self.strategy_manager:
+                return 0
             
-        except Exception as e:
-            self.logger.error(f"Error learning from execution: {e}")
-    
-    async def _get_market_data(self) -> Dict[str, Any]:
-        """Get current market data from Redis."""
-        try:
-            if self.redis_conn:
-                # Get latest market data from the list
-                latest_data = self.redis_conn.lrange("market_data:latest", -1, -1)
-                if latest_data:
-                    import json
-                    try:
-                        market_data = json.loads(latest_data[0])
-                        return market_data
-                    except json.JSONDecodeError:
-                        self.logger.error(f"Error parsing market data JSON: {latest_data[0]}")
-                        return None
+            # Get active strategies from Redis
+            active_strategies = await self._get_active_strategies()
+            
+            for strategy in active_strategies:
+                if await self._update_strategy_performance(strategy):
+                    strategies_updated += 1
                 
-                # Fallback: try to get individual symbol data
-                symbol_data = {}
-                for symbol in ["BTCUSDm", "ETHUSDm", "XRPUSDm"]:
-                    try:
-                        data = self.redis_conn.hgetall(f"market_data:{symbol}")
-                        if data:
-                            symbol_data[symbol] = data
-                    except:
-                        pass
-                
-                if symbol_data:
-                    return {"symbols": symbol_data}
-                
-            return None
+                # Check if strategy needs optimization (strategy parameters only, not costs)
+                if await self._check_strategy_optimization_needed(strategy):
+                    await self._queue_strategy_optimization(strategy)
+            
+            return strategies_updated
             
         except Exception as e:
-            self.logger.error(f"Error getting market data: {e}")
-            return None
+            self.logger.error(f"Error managing active strategies: {e}")
+            return 0
     
-    async def _route_signals(self, signals: List[Dict[str, Any]]):
-        """Route signals to appropriate destinations."""
+    async def _get_active_strategies(self) -> List[Dict[str, Any]]:
+        """Get active strategies from Redis."""
         try:
-            for signal in signals:
-                # Add timestamp and routing info
-                signal["timestamp"] = int(time.time())
-                signal["routed_by"] = "enhanced_strategy_engine"
-                
-                # Route to execution engine
-                await self._route_to_execution(signal)
-                
-                # Route to performance tracker
-                await self._route_to_performance_tracker(signal)
-                
-                # Store signal in Redis
-                await self._store_signal(signal)
-                
-        except Exception as e:
-            self.logger.error(f"Error routing signals: {e}")
-    
-    async def _route_to_execution(self, signal: Dict[str, Any]):
-        """Route signal to execution engine."""
-        try:
-            # Add to execution queue
-            execution_key = "execution_orders"
-            self.redis_conn.lpush(execution_key, str(signal))
+            # Get active strategies from Redis
+            active_strategies = await self.redis_conn.lrange("strategies:active", 0, 19)
+            
+            strategies = []
+            for strategy in active_strategies:
+                try:
+                    strategies.append(json.loads(strategy))
+                except json.JSONDecodeError:
+                    self.logger.warning(f"Invalid strategy format: {strategy}")
+            
+            return strategies
             
         except Exception as e:
-            self.logger.error(f"Error routing to execution: {e}")
+            self.logger.error(f"Error getting active strategies: {e}")
+            return []
     
-    async def _route_to_performance_tracker(self, signal: Dict[str, Any]):
-        """Route signal to performance tracker."""
+    async def _update_strategy_performance(self, strategy: Dict[str, Any]) -> bool:
+        """Update strategy performance metrics."""
         try:
-            # Notify performance tracker
-            performance_key = "strategy_engine:performance:signals"
-            self.redis_conn.lpush(performance_key, str(signal))
+            strategy_id = strategy.get("strategy_id", "unknown")
+            
+            # Get performance data from other agents
+            performance_data = await self._get_strategy_performance_data(strategy_id)
+            
+            if performance_data:
+                # Update strategy performance
+                self.strategy_state["strategy_performance"][strategy_id] = performance_data
+                return True
+            
+            return False
             
         except Exception as e:
-            self.logger.error(f"Error routing to performance tracker: {e}")
+            self.logger.error(f"Error updating strategy performance: {e}")
+            return False
     
-    async def _store_signal(self, signal: Dict[str, Any]):
-        """Store signal in Redis."""
+    async def _get_strategy_performance_data(self, strategy_id: str) -> Dict[str, Any]:
+        """Get strategy performance data from other agents."""
         try:
-            # Store in signals history
-            signals_key = "strategy_engine:signals:history"
-            self.redis_conn.lpush(signals_key, str(signal))
+            # Get performance data from Redis (published by other agents)
+            performance_data = await self.redis_conn.get(f"strategy:performance:{strategy_id}")
             
-            # Keep only last 1000 signals
-            self.redis_conn.ltrim(signals_key, 0, 999)
-            
-        except Exception as e:
-            self.logger.error(f"Error storing signal: {e}")
-    
-    def _update_performance_metrics(self, signals: List[Dict[str, Any]]):
-        """Update performance metrics."""
-        try:
-            if not hasattr(self, 'performance_metrics'):
-                self.performance_metrics = {}
-            
-            for signal in signals:
-                strategy_type = signal.get("type", "unknown")
-                if strategy_type not in self.performance_metrics:
-                    self.performance_metrics[strategy_type] = {"signals": 0, "total_confidence": 0.0}
-                
-                self.performance_metrics[strategy_type]["signals"] += 1
-                self.performance_metrics[strategy_type]["total_confidence"] += signal.get("confidence", 0.0)
+            if performance_data:
+                return json.loads(performance_data)
+            else:
+                return {}
                 
         except Exception as e:
-            self.logger.error(f"Error updating performance metrics: {e}")
+            self.logger.error(f"Error getting strategy performance data: {e}")
+            return {}
     
-    def get_agent_status(self) -> Dict[str, Any]:
-        """Get comprehensive agent status."""
+    async def _check_strategy_optimization_needed(self, strategy: Dict[str, Any]) -> bool:
+        """Check if strategy needs optimization."""
         try:
-            status = {
-                "agent_name": self.agent_name,
-                "status": "running" if self.is_running else "stopped",
-                "uptime": time.time() - self.start_time,
-                "active_signals": len(self.active_signals),
-                "performance_metrics": self.performance_metrics,
-                "component_health": {
-                    "strategy_applicator": True,
-                    "strategy_composer": True,
-                    "strategy_registry": True,
-                    "performance_tracker": True,
-                    "deployment_manager": True,
-                    "ml_composer": True,
-                    "online_generator": True,
-                    "learning_manager": True,
-                    "adaptation_engine": True,
-                    "integration": True
-                }
+            strategy_id = strategy.get("strategy_id", "unknown")
+            performance = self.strategy_state["strategy_performance"].get(strategy_id, {})
+            
+            # Check performance thresholds
+            if performance:
+                performance_score = performance.get("performance_score", 1.0)
+                return performance_score < 0.7  # Below 70% performance
+            
+            return False
+            
+        except Exception as e:
+            self.logger.error(f"Error checking strategy optimization: {e}")
+            return False
+    
+    async def _queue_strategy_optimization(self, strategy: Dict[str, Any]):
+        """Queue strategy for optimization."""
+        try:
+            optimization_request = {
+                "strategy": strategy,
+                "timestamp": time.time(),
+                "priority": "medium"
             }
             
-            return status
+            # Add to strategy optimization queue (strategy parameters only, not costs)
+            self.strategy_state["strategy_optimization_queue"].append(optimization_request)
+            
+            # Publish strategy optimization request
+            await self.redis_conn.publish_async("strategy_engine:strategy_optimization_requests", 
+                                        json.dumps(optimization_request))
             
         except Exception as e:
-            self.logger.error(f"Error getting agent status: {e}")
-            return {"error": str(e)}
+            self.logger.error(f"Error queuing strategy optimization: {e}")
     
-    def _get_background_tasks(self) -> List[tuple]:
-        """Get background tasks for the agent."""
-        return [
-            (self._fast_application_loop, "fast_application_loop"),
-            (self._strategy_monitoring_loop, "strategy_monitoring_loop")
-        ]
+    # ============= OPTIMIZATION ENGINE LOOP =============
     
-    async def _strategy_monitoring_loop(self):
-        """Monitor strategy performance and trigger adaptations."""
+    async def _optimization_engine_loop(self):
+        """Optimization engine loop (60s intervals)."""
         while self.is_running:
             try:
-                # Check if adaptation is needed
-                market_conditions = await self._get_market_conditions()
-                strategy_performance = await self._get_strategy_performance()
+                # Process optimization queue
+                optimizations_processed = await self._process_optimization_queue()
                 
-                if market_conditions and strategy_performance:
-                    # Check if adaptation is needed
-                    if await self.adaptation_engine.check_adaptation_needed(market_conditions, strategy_performance):
-                        # Trigger adaptation
-                        adaptations = await self.adaptation_engine.adapt_strategies(market_conditions, strategy_performance)
-                        if adaptations:
-                            self.logger.info(f"Applied {len(adaptations)} strategy adaptations")
+                # Update optimization statistics
+                if optimizations_processed > 0:
+                    self.stats["optimizations_applied"] += optimizations_processed
                 
-                # Check every 30 seconds
-                await asyncio.sleep(30)
+                await asyncio.sleep(60)  # 60s for optimization engine
                 
             except Exception as e:
-                self.logger.error(f"Error in strategy monitoring loop: {e}")
+                self.logger.error(f"Error in optimization engine loop: {e}")
+                await asyncio.sleep(60)
+    
+    async def _process_optimization_queue(self) -> int:
+        """Process optimization queue and return number of optimizations processed."""
+        try:
+            optimizations_processed = 0
+            
+            if not self.optimization_engine:
+                return 0
+            
+            # Process strategy optimization requests (strategy parameters only, not costs)
+            for optimization_request in self.strategy_state["strategy_optimization_queue"][:5]:  # Process up to 5 at a time
+                if await self._process_optimization_request(optimization_request):
+                    optimizations_processed += 1
+                    
+                    # Remove processed request
+                    self.strategy_state["strategy_optimization_queue"].remove(optimization_request)
+            
+            return optimizations_processed
+            
+        except Exception as e:
+            self.logger.error(f"Error processing optimization queue: {e}")
+            return 0
+    
+    async def _process_optimization_request(self, optimization_request: Dict[str, Any]) -> bool:
+        """Process a single optimization request."""
+        try:
+            strategy = optimization_request.get("strategy", {})
+            
+            # Perform strategy optimization
+            optimization_result = await self.optimization_engine.optimize_strategy(strategy)
+            
+            if optimization_result:
+                # Apply optimization
+                await self._apply_strategy_optimization(strategy, optimization_result)
+                
+                # Publish optimization result
+                await self._publish_optimization_result(strategy, optimization_result)
+                
+                return True
+            
+            return False
+            
+        except Exception as e:
+            self.logger.error(f"Error processing optimization request: {e}")
+            return False
+    
+    async def _apply_strategy_optimization(self, strategy: Dict[str, Any], optimization_result: Dict[str, Any]):
+        """Apply strategy optimization."""
+        try:
+            strategy_id = strategy.get("strategy_id", "unknown")
+            
+            # Update strategy with optimization
+            if strategy_id in self.strategy_state["active_strategies"]:
+                self.strategy_state["active_strategies"][strategy_id].update(optimization_result)
+            
+            # Publish strategy update
+            await self.redis_conn.publish_async("strategy_engine:strategy_updates", 
+                                        json.dumps({
+                                            "strategy_id": strategy_id,
+                                            "optimization": optimization_result,
+                                            "timestamp": time.time()
+                                        }))
+            
+        except Exception as e:
+            self.logger.error(f"Error applying strategy optimization: {e}")
+    
+    # ============= LEARNING COORDINATION LOOP =============
+    
+    async def _learning_coordination_loop(self):
+        """Learning coordination loop (30s intervals)."""
+        while self.is_running:
+            try:
+                # Coordinate learning events
+                learning_events_processed = await self._coordinate_learning_events()
+                
+                # Update learning statistics
+                if learning_events_processed > 0:
+                    self.stats["learning_events_processed"] += learning_events_processed
+                
+                await asyncio.sleep(30)  # 30s for learning coordination
+                
+            except Exception as e:
+                self.logger.error(f"Error in learning coordination loop: {e}")
                 await asyncio.sleep(30)
     
-    async def _get_market_conditions(self) -> Optional[Dict[str, Any]]:
-        """Get current market conditions."""
+    async def _coordinate_learning_events(self) -> int:
+        """Coordinate learning events and return number of events processed."""
         try:
-            # Get market conditions from Redis
-            conditions_key = "market_conditions:current"
-            conditions = self.redis_conn.get(conditions_key)
+            learning_events_processed = 0
             
-            if conditions:
-                import json
-                return json.loads(conditions)
+            if not self.learning_coordinator:
+                return 0
             
-            return None
+            # Get learning events from Redis
+            learning_events = await self._get_learning_events()
+            
+            for event in learning_events:
+                if await self._process_learning_event(event):
+                    learning_events_processed += 1
+                    
+                    # Add to learning events history
+                    self.strategy_state["learning_events"].append({
+                        **event,
+                        "processed_time": time.time()
+                    })
+            
+            return learning_events_processed
             
         except Exception as e:
-            self.logger.error(f"Error getting market conditions: {e}")
-            return None
+            self.logger.error(f"Error coordinating learning events: {e}")
+            return 0
     
-    async def _get_strategy_performance(self) -> Optional[Dict[str, Any]]:
-        """Get current strategy performance."""
+    async def _get_learning_events(self) -> List[Dict[str, Any]]:
+        """Get learning events from Redis."""
         try:
-            # Get performance data from Redis
-            performance_key = "strategy_engine:performance:overall"
-            performance = self.redis_conn.get(performance_key)
+            # Get learning events from Redis
+            learning_events = await self.redis_conn.lrange("learning:events", 0, 9)
             
-            if performance:
-                import json
-                return json.loads(performance)
+            events = []
+            for event in learning_events:
+                try:
+                    events.append(json.loads(event))
+                except json.JSONDecodeError:
+                    self.logger.warning(f"Invalid learning event format: {event}")
             
-            return None
+            return events
             
         except Exception as e:
-            self.logger.error(f"Error getting strategy performance: {e}")
-            return None
+            self.logger.error(f"Error getting learning events: {e}")
+            return []
+    
+    async def _process_learning_event(self, event: Dict[str, Any]) -> bool:
+        """Process a single learning event."""
+        try:
+            event_type = event.get("type", "unknown")
+            
+            # Process learning event based on type
+            if event_type == "performance_improvement":
+                await self._process_performance_improvement(event)
+            elif event_type == "strategy_failure":
+                await self._process_strategy_failure(event)
+            elif event_type == "market_regime_change":
+                await self._process_market_regime_change(event)
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error processing learning event: {e}")
+            return False
+    
+    async def _process_performance_improvement(self, event: Dict[str, Any]):
+        """Process performance improvement learning event."""
+        try:
+            # Extract learning data
+            strategy_id = event.get("strategy_id", "unknown")
+            improvement_data = event.get("improvement_data", {})
+            
+            # Apply learning to strategy
+            if self.learning_coordinator:
+                await self.learning_coordinator.apply_learning(strategy_id, improvement_data)
+            
+        except Exception as e:
+            self.logger.error(f"Error processing performance improvement: {e}")
+    
+    async def _process_strategy_failure(self, event: Dict[str, Any]):
+        """Process strategy failure learning event."""
+        try:
+            # Extract failure data
+            strategy_id = event.get("strategy_id", "unknown")
+            failure_data = event.get("failure_data", {})
+            
+            # Apply failure learning to strategy
+            if self.learning_coordinator:
+                await self.learning_coordinator.apply_failure_learning(strategy_id, failure_data)
+            
+        except Exception as e:
+            self.logger.error(f"Error processing strategy failure: {e}")
+    
+    async def _process_market_regime_change(self, event: Dict[str, Any]):
+        """Process market regime change learning event."""
+        try:
+            # Extract regime change data
+            old_regime = event.get("old_regime", "unknown")
+            new_regime = event.get("new_regime", "unknown")
+            
+            # Apply regime change learning to all strategies
+            if self.learning_coordinator:
+                await self.learning_coordinator.apply_regime_change_learning(old_regime, new_regime)
+            
+        except Exception as e:
+            self.logger.error(f"Error processing market regime change: {e}")
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    # ============= ORDER MANAGEMENT LOOP =============
+    
+    async def _order_management_loop(self):
+        """Order management loop (100ms intervals)."""
+        while self.is_running:
+            try:
+                # Process order management requests
+                orders_managed = await self._process_order_management_requests()
+                
+                # Update order management statistics
+                if orders_managed > 0:
+                    self.stats["orders_managed"] += orders_managed
+                
+                await asyncio.sleep(0.1)  # 100ms for order management
+                
+            except Exception as e:
+                self.logger.error(f"Error in order management loop: {e}")
+                await asyncio.sleep(0.1)
+    
+    async def _process_order_management_requests(self) -> int:
+        """Process order management requests and return number of orders managed."""
+        try:
+            orders_managed = 0
+            
+            if not self.order_manager:
+                return 0
+            
+            # Get order management requests from Redis
+            order_requests = await self._get_order_management_requests()
+            
+            for request in order_requests:
+                if await self._process_order_management_request(request):
+                    orders_managed += 1
+                    
+                    # Add to order queue
+                    self.strategy_state["order_queue"].append({
+                        **request,
+                        "management_time": time.time()
+                    })
+            
+            return orders_managed
+            
+        except Exception as e:
+            self.logger.error(f"Error processing order management requests: {e}")
+            return 0
+    
+    async def _get_order_management_requests(self) -> List[Dict[str, Any]]:
+        """Get order management requests from Redis."""
+        try:
+            # Get order management requests from Redis
+            order_requests = await self.redis_conn.lrange("orders:management_requests", 0, 9)
+            
+            requests = []
+            for request in order_requests:
+                try:
+                    requests.append(json.loads(request))
+                except json.JSONDecodeError:
+                    self.logger.warning(f"Invalid order management request format: {request}")
+            
+            return requests
+            
+        except Exception as e:
+            self.logger.error(f"Error getting order management requests: {e}")
+            return []
+    
+    async def _process_order_management_request(self, request: Dict[str, Any]) -> bool:
+        """Process a single order management request."""
+        try:
+            request_type = request.get("type", "unknown")
+            
+            # Process order management based on type
+            if request_type == "order_creation":
+                return await self._create_order(request)
+            elif request_type == "order_modification":
+                return await self._modify_order(request)
+            elif request_type == "order_cancellation":
+                return await self._cancel_order(request)
+            
+            return False
+            
+        except Exception as e:
+            self.logger.error(f"Error processing order management request: {e}")
+            return False
+    
+    async def _create_order(self, request: Dict[str, Any]) -> bool:
+        """Create an order."""
+        try:
+            order_data = request.get("order_data", {})
+            
+            # Create order using order manager
+            order_result = await self.order_manager.create_order(order_data)
+            
+            if order_result:
+                # Publish order creation result
+                await self._publish_order_result("creation", order_data, order_result)
+                return True
+            
+            return False
+            
+        except Exception as e:
+            self.logger.error(f"Error creating order: {e}")
+            return False
+    
+    async def _modify_order(self, request: Dict[str, Any]) -> bool:
+        """Modify an order."""
+        try:
+            order_id = request.get("order_id", "unknown")
+            modification_data = request.get("modification_data", {})
+            
+            # Modify order using order manager
+            modification_result = await self.order_manager.modify_order(order_id, modification_data)
+            
+            if modification_result:
+                # Publish order modification result
+                await self._publish_order_result("modification", request, modification_result)
+                return True
+            
+            return False
+            
+        except Exception as e:
+            self.logger.error(f"Error modifying order: {e}")
+            return False
+    
+    async def _cancel_order(self, request: Dict[str, Any]) -> bool:
+        """Cancel an order."""
+        try:
+            order_id = request.get("order_id", "unknown")
+            
+            # Cancel order using order manager
+            cancellation_result = await self.order_manager.cancel_order(order_id)
+            
+            if cancellation_result:
+                # Publish order cancellation result
+                await self._publish_order_result("cancellation", request, cancellation_result)
+                return True
+            
+            return False
+            
+        except Exception as e:
+            self.logger.error(f"Error cancelling order: {e}")
+            return False
+    
+    # ============= UTILITY METHODS =============
+    
+    def _update_strategy_state(self):
+        """Update strategy state with current information."""
+        try:
+            # Update last strategy update timestamp
+            self.strategy_state["last_strategy_update"] = time.time()
+            
+            # Clean up old learning events (older than 1 hour)
+            current_time = time.time()
+            self.strategy_state["learning_events"] = [
+                event for event in self.strategy_state["learning_events"]
+                if current_time - event.get("processed_time", 0) < 3600
+            ]
+            
+        except Exception as e:
+            self.logger.error(f"Error updating strategy state: {e}")
+    
+    async def _cleanup_strategy_components(self):
+        """Cleanup strategy engine components."""
+        try:
+            # Cleanup strategy manager
+            if self.strategy_manager:
+                await self.strategy_manager.cleanup()
+            
+            # Cleanup optimization engine
+            if self.optimization_engine:
+                await self.optimization_engine.cleanup()
+            
+            # Cleanup learning coordinator
+            if self.learning_coordinator:
+                await self.learning_coordinator.cleanup()
+            
+
+            
+            # Cleanup order manager
+            if self.order_manager:
+                await self.order_manager.cleanup()
+            
+            self.logger.info("✅ Strategy engine components cleaned up")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error cleaning up strategy components: {e}")
+    
+    # ============= PUBLISHING METHODS =============
+    
+    async def _publish_optimization_result(self, strategy: Dict[str, Any], result: Dict[str, Any]):
+        """Publish optimization result."""
+        try:
+            optimization_update = {
+                "strategy_id": strategy.get("strategy_id", "unknown"),
+                "optimization_result": result,
+                "timestamp": time.time(),
+                "agent": self.agent_name
+            }
+            
+            await self.redis_conn.publish_async("strategy_engine:optimization_results", 
+                                        json.dumps(optimization_update))
+            
+        except Exception as e:
+            self.logger.error(f"Error publishing optimization result: {e}")
+    
+
+    
+    async def _publish_order_result(self, operation: str, request: Dict[str, Any], result: Dict[str, Any]):
+        """Publish order result."""
+        try:
+            order_update = {
+                "operation": operation,
+                "request": request,
+                "result": result,
+                "timestamp": time.time(),
+                "agent": self.agent_name
+            }
+            
+            await self.redis_conn.publish_async("strategy_engine:order_results", 
+                                        json.dumps(order_update))
+            
+        except Exception as e:
+            self.logger.error(f"Error publishing order result: {e}")
+    
+    # ============= PUBLIC INTERFACE =============
+    
+    async def get_strategy_engine_status(self) -> Dict[str, Any]:
+        """Get current strategy engine status."""
+        return {
+            "strategy_state": self.strategy_state,
+            "stats": self.stats,
+            "last_update": time.time()
+        }
+    
+    async def get_active_strategies(self) -> Dict[str, Any]:
+        """Get active strategies."""
+        return self.strategy_state.get("active_strategies", {})
+    
+    async def get_strategy_performance(self) -> Dict[str, Any]:
+        """Get strategy performance metrics."""
+        return self.strategy_state.get("strategy_performance", {})
+    
+    async def get_optimization_queue(self) -> List[Dict[str, Any]]:
+        """Get optimization queue."""
+        return self.strategy_state.get("strategy_optimization_queue", [])
+    
+    async def submit_strategy_optimization_request(self, strategy: Dict[str, Any], priority: str = "medium") -> bool:
+        """Submit a strategy optimization request."""
+        try:
+            optimization_request = {
+                "strategy": strategy,
+                "timestamp": time.time(),
+                "priority": priority
+            }
+            
+            # Add to strategy optimization queue (strategy parameters only, not costs)
+            self.strategy_state["strategy_optimization_queue"].append(optimization_request)
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error submitting strategy optimization request: {e}")
+            return False
+    
+
+    
+    async def submit_order_management_request(self, request_type: str, data: Dict[str, Any]) -> bool:
+        """Submit an order management request."""
+        try:
+            order_request = {
+                "type": request_type,
+                "data": data,
+                "timestamp": time.time()
+            }
+            
+            # Add to order management queue
+            await self.redis_conn.lpush("orders:management_requests", json.dumps(order_request))
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error submitting order management request: {e}")
+            return False

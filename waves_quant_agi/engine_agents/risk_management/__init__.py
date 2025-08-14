@@ -11,6 +11,8 @@ from .core.circuit_breaker import CircuitBreaker, CircuitBreakerManager, Circuit
 from .core.load_balancer import LoadBalancer, Worker, RiskRequest, RequestPriority
 from .core.performance_monitor import PerformanceMonitor, PerformanceMetric, PerformanceAlert, MetricType
 from .core.streamlined_risk_manager import StreamlinedRiskManager, AdaptiveTimer
+from .core.trailing_stop_manager import TrailingStopManager
+from .core.portfolio_performance_tracker import PortfolioPerformanceTracker
 
 # Core components
 from .core.risk_validator import RiskValidator
@@ -27,7 +29,7 @@ __all__ = [
     'ConnectionManager',
     'DynamicRiskLimits',
     'CircuitBreaker',
-    'CircuitBreakerManager', 
+    'CircuitBreakerManager',
     'CircuitState',
     'LoadBalancer',
     'Worker',
@@ -39,6 +41,8 @@ __all__ = [
     'MetricType',
     'StreamlinedRiskManager',
     'AdaptiveTimer',
+    'TrailingStopManager',
+    'PortfolioPerformanceTracker',
     
     # Core components
     'RiskValidator',
@@ -49,10 +53,9 @@ __all__ = [
     'get_config'
 ]
 
-# Version information
-__version__ = "2.0.0"
-__author__ = "Risk Management Team"
-__description__ = "Streamlined risk management system with 2-tier architecture"
+__version__ = "3.0.0"
+__author__ = "Waves Quant AGI Team"
+__description__ = "Advanced Risk Management System with Trailing Stops and Performance Tracking"
 
 # Package metadata
 __package_info__ = {

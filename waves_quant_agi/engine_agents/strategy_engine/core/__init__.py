@@ -1,13 +1,24 @@
 #!/usr/bin/env python3
 """
-Strategy Engine Core Components
-Handles strategy application and composition logic.
+Core Strategy Engine Components
+Provides the fundamental building blocks for strategy management, optimization, and execution.
 """
 
-from .strategy_applicator import StrategyApplicator
+# Core strategy management components
+from .strategy_manager import StrategyManager
+from .optimization_engine import OptimizationEngine
+from .learning_coordinator import LearningCoordinator
+from .order_manager import OrderManager
+
+# Strategy composition and application
 from .strategy_composer import StrategyComposer
+from .strategy_applicator import StrategyApplicator
 
 __all__ = [
-    'StrategyApplicator',
-    'StrategyComposer'
+    "StrategyManager",
+    "OptimizationEngine", 
+    "LearningCoordinator",
+    "OrderManager",
+    "StrategyComposer",
+    "StrategyApplicator",
 ]

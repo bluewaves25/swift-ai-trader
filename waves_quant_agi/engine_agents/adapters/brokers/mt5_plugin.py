@@ -417,3 +417,27 @@ class MT5Broker:
         except Exception as e:
             self.logger.error(f"Error closing all positions: {e}")
             return {"error": str(e)}
+    
+    def get_forex_symbols(self) -> List[str]:
+        """Get list of available forex symbols."""
+        if not self.is_connected:
+            return []
+        
+        try:
+            symbols = mt5.symbols_get()
+            if symbols is None:
+                return []
+            
+            # Filter for forex symbols (typically contain currency pairs)
+            forex_symbols = []
+            for symbol in symbols:
+                symbol_name = symbol.name
+                # Check if it's a forex symbol (contains currency pairs)
+                if any(currency in symbol_name for currency in ['EUR', 'USD', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD']):
+                    forex_symbols.append(symbol_name)
+            
+            return forex_symbols
+            
+        except Exception as e:
+            self.logger.error(f"Error getting forex symbols: {e}")
+            return []

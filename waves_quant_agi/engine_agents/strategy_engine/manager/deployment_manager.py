@@ -1,348 +1,577 @@
 #!/usr/bin/env python3
 """
-Deployment Manager - Fixed and Enhanced
-Manages strategy deployment with risk and fee checks.
+Deployment Manager - Strategy Deployment Management Component
+Manages the deployment and activation of trading strategies, integrating with consolidated trading functionality.
+Focuses purely on strategy-specific deployment, delegating risk management to the risk management agent.
 """
 
-from typing import Dict, Any, List, Optional
-import time
 import asyncio
-from engine_agents.shared_utils import get_shared_redis, get_shared_logger
+import time
+import json
+from typing import Dict, Any, List, Optional
+from dataclasses import dataclass
+from collections import deque
+
+# Import consolidated trading functionality
+from ..trading.interfaces.agent_io import TradingAgentIO
+from ..trading.pipeline.execution_pipeline import TradingExecutionPipeline
+from ..trading.memory.trading_context import TradingContext
+
+@dataclass
+class DeploymentRequest:
+    """A strategy deployment request."""
+    request_id: str
+    strategy_id: str
+    deployment_type: str  # live, paper, backtest
+    target_environment: str
+    parameters: Dict[str, Any]
+    priority: int = 5
+    created_at: float = None
+    status: str = "pending"
+    
+    def __post_init__(self):
+        if self.created_at is None:
+            self.created_at = time.time()
+
+@dataclass
+class DeploymentResult:
+    """Result of strategy deployment."""
+    result_id: str
+    request_id: str
+    strategy_id: str
+    deployment_type: str
+    target_environment: str
+    deployment_status: str
+    deployment_duration: float
+    timestamp: float
+    success: bool
+    deployment_notes: str = ""
 
 class DeploymentManager:
-    """Deployment manager for strategies with risk and fee validation."""
+    """Manages the deployment and activation of trading strategies.
+    
+    Focuses purely on strategy-specific deployment:
+    - Strategy deployment coordination
+    - Environment management
+    - Deployment validation
+    - Deployment monitoring
+    
+    Risk management is delegated to the risk management agent.
+    """
     
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.logger = get_shared_logger("strategy_engine", "deployment_manager")
-        self.redis_conn = get_shared_redis()
         
-        # Risk and fee thresholds
-        self.risk_threshold = config.get("risk_threshold", 0.05)  # Max drawdown threshold
-        self.fee_threshold = config.get("fee_threshold", 0.01)  # Max fee threshold
-        self.max_position_size = config.get("max_position_size", 0.1)  # Max 10% of capital
-        self.min_confidence = config.get("min_confidence", 0.6)  # Minimum confidence
+        # Initialize consolidated trading components
+        self.trading_agent_io = TradingAgentIO(config)
+        self.trading_execution_pipeline = TradingExecutionPipeline(config)
+        self.trading_context = TradingContext(config)
         
-        # Deployment state
-        self.deployed_strategies: Dict[str, Dict[str, Any]] = {}
-        self.deployment_history: List[Dict[str, Any]] = []
+        # Deployment management state
+        self.deployment_queue: deque = deque(maxlen=100)
+        self.active_deployments: Dict[str, DeploymentRequest] = {}
+        self.deployment_results: Dict[str, List[DeploymentResult]] = {}
+        self.deployment_history: deque = deque(maxlen=1000)
         
-        self.stats = {
-            "strategies_deployed": 0,
-            "strategies_blocked": 0,
-            "deployment_errors": 0,
-            "start_time": time.time()
+        # Deployment settings (strategy-specific only)
+        self.deployment_settings = {
+            "max_concurrent_deployments": 10,
+            "deployment_timeout": 600,  # 10 minutes
+            "deployment_environments": ["live", "paper", "backtest"],
+            "deployment_validation": True,
+            "strategy_parameters": {
+                "deployment_retries": 3,
+                "validation_timeout": 120,
+                "health_check_interval": 30
+            }
         }
-
-    async def deploy_strategy(self, strategy: Dict[str, Any]) -> bool:
-        """Deploy a strategy after comprehensive validation checks."""
+        
+        # Deployment statistics
+        self.deployment_stats = {
+            "total_deployments": 0,
+            "successful_deployments": 0,
+            "failed_deployments": 0,
+            "pending_deployments": 0,
+            "total_deployment_time": 0.0,
+            "average_deployment_time": 0.0
+        }
+        
+    async def initialize(self):
+        """Initialize the deployment manager."""
         try:
-            symbol = strategy.get("symbol", "unknown")
-            strategy_id = f"{strategy['type']}:{symbol}:{strategy['timestamp']}"
+            # Initialize trading components
+            await self.trading_agent_io.initialize()
+            await self.trading_execution_pipeline.initialize()
+            await self.trading_context.initialize()
             
-            # Validate strategy structure
-            if not self._validate_strategy(strategy):
-                self.logger.error(f"Strategy {strategy_id} failed validation")
-                return False
+            # Load deployment settings
+            await self._load_deployment_settings()
             
-            # Check risk score
-            risk_score = await self._get_risk_score(symbol)
-            if risk_score > self.risk_threshold:
-                self.logger.warning(f"Strategy {strategy_id} blocked: high risk ({risk_score:.4f})")
-                self.stats["strategies_blocked"] += 1
-                return False
+            print("✅ Deployment Manager initialized")
             
-            # Check fee score
-            fee_score = await self._get_fee_score(symbol)
-            if fee_score > self.fee_threshold:
-                self.logger.warning(f"Strategy {strategy_id} blocked: high fees ({fee_score:.4f})")
-                self.stats["strategies_blocked"] += 1
-                return False
-            
-            # Check confidence
-            confidence = strategy.get("confidence", 0.0)
-            if confidence < self.min_confidence:
-                self.logger.warning(f"Strategy {strategy_id} blocked: low confidence ({confidence:.2f})")
-                self.stats["strategies_blocked"] += 1
-                return False
-            
-            # Check position size
-            if not await self._validate_position_size(strategy):
-                self.logger.warning(f"Strategy {strategy_id} blocked: invalid position size")
-                self.stats["strategies_blocked"] += 1
-                return False
-            
-            # Deploy strategy
-            if await self._execute_deployment(strategy, strategy_id):
-                self.stats["strategies_deployed"] += 1
-                self.logger.info(f"Successfully deployed strategy {strategy_id}")
-                return True
-            else:
-                self.stats["deployment_errors"] += 1
-                return False
-                
         except Exception as e:
-            self.logger.error(f"Error deploying strategy: {e}")
-            self.stats["deployment_errors"] += 1
+            print(f"❌ Error initializing Deployment Manager: {e}")
+            raise
+    
+    async def _load_deployment_settings(self):
+        """Load deployment management settings from configuration."""
+        try:
+            deploy_config = self.config.get("strategy_engine", {}).get("deployment_management", {})
+            self.deployment_settings.update(deploy_config)
+        except Exception as e:
+            print(f"❌ Error loading deployment settings: {e}")
+
+    async def add_deployment_request(self, strategy_id: str, deployment_type: str, 
+                                   target_environment: str, parameters: Dict[str, Any] = None) -> str:
+        """Add a deployment request to the queue."""
+        try:
+            request_id = f"deploy_{strategy_id}_{int(time.time())}"
+            
+            request = DeploymentRequest(
+                request_id=request_id,
+                strategy_id=strategy_id,
+                deployment_type=deployment_type,
+                target_environment=target_environment,
+                parameters=parameters or {}
+            )
+            
+            # Add to deployment queue
+            self.deployment_queue.append(request)
+            
+            # Store request in trading context
+            await self.trading_context.store_signal({
+                "type": "deployment_request",
+                "request_id": request_id,
+                "strategy_id": strategy_id,
+                "deployment_data": {
+                    "type": deployment_type,
+                    "target_environment": target_environment,
+                    "parameters": parameters
+                },
+                "timestamp": int(time.time())
+            })
+            
+            # Update statistics
+            self.deployment_stats["total_deployments"] += 1
+            self.deployment_stats["pending_deployments"] += 1
+            
+            print(f"✅ Added deployment request: {request_id}")
+            return request_id
+            
+        except Exception as e:
+            print(f"❌ Error adding deployment request: {e}")
+            return ""
+
+    async def process_deployment_queue(self) -> List[DeploymentResult]:
+        """Process the deployment queue."""
+        try:
+            results = []
+            
+            while self.deployment_queue and len(self.active_deployments) < self.deployment_settings["max_concurrent_deployments"]:
+                request = self.deployment_queue.popleft()
+                result = await self._execute_deployment(request)
+                if result:
+                    results.append(result)
+            
+            return results
+            
+        except Exception as e:
+            print(f"❌ Error processing deployment queue: {e}")
+            return []
+
+    async def _execute_deployment(self, request: DeploymentRequest) -> Optional[DeploymentResult]:
+        """Execute a single deployment request."""
+        start_time = time.time()
+        
+        try:
+            # Mark as active
+            self.active_deployments[request.request_id] = request
+            request.status = "running"
+            
+            # Validate deployment request
+            if not await self._validate_deployment_request(request):
+                raise ValueError("Deployment validation failed")
+            
+            # Execute deployment based on type
+            if request.deployment_type == "live":
+                deployment_status = await self._deploy_live_strategy(request)
+            elif request.deployment_type == "paper":
+                deployment_status = await self._deploy_paper_strategy(request)
+            elif request.deployment_type == "backtest":
+                deployment_status = await self._deploy_backtest_strategy(request)
+            else:
+                raise ValueError(f"Unknown deployment type: {request.deployment_type}")
+            
+            # Create deployment result
+            result = DeploymentResult(
+                result_id=f"result_{request.request_id}",
+                request_id=request.request_id,
+                strategy_id=request.strategy_id,
+                deployment_type=request.deployment_type,
+                target_environment=request.target_environment,
+                deployment_status=deployment_status,
+                deployment_duration=time.time() - start_time,
+                timestamp=time.time(),
+                success=deployment_status == "deployed",
+                deployment_notes=f"Strategy deployed to {request.target_environment}"
+            )
+            
+            # Store result
+            if request.strategy_id not in self.deployment_results:
+                self.deployment_results[request.strategy_id] = []
+            self.deployment_results[request.strategy_id].append(result)
+            
+            # Update statistics
+            if result.success:
+                self.deployment_stats["successful_deployments"] += 1
+            else:
+                self.deployment_stats["failed_deployments"] += 1
+            
+            self.deployment_stats["pending_deployments"] -= 1
+            self.deployment_stats["total_deployment_time"] += result.deployment_duration
+            
+            # Store result in trading context
+            await self.trading_context.store_signal({
+                "type": "deployment_result",
+                "strategy_id": request.strategy_id,
+                "result_data": {
+                    "deployment_type": request.deployment_type,
+                    "target_environment": request.target_environment,
+                    "status": deployment_status,
+                    "success": result.success
+                },
+                "timestamp": int(time.time())
+            })
+            
+            print(f"✅ Deployment completed: {request.request_id}")
+            return result
+            
+        except Exception as e:
+            print(f"❌ Error executing deployment: {e}")
+            self.deployment_stats["failed_deployments"] += 1
+            self.deployment_stats["pending_deployments"] -= 1
+            
+            # Return failed result
+            return DeploymentResult(
+                result_id=f"failed_{request.request_id}",
+                request_id=request.request_id,
+                strategy_id=request.strategy_id,
+                deployment_type=request.deployment_type,
+                target_environment=request.target_environment,
+                deployment_status="failed",
+                deployment_duration=time.time() - start_time,
+                timestamp=time.time(),
+                success=False,
+                deployment_notes=f"Deployment failed: {str(e)}"
+            )
+        finally:
+            # Remove from active deployments
+            self.active_deployments.pop(request.request_id, None)
+
+    async def _validate_deployment_request(self, request: DeploymentRequest) -> bool:
+        """Validate deployment request (strategy-specific validation only).
+        
+        This does NOT include risk management validation.
+        """
+        try:
+            # Basic parameter validation
+            if not request.strategy_id or not request.deployment_type or not request.target_environment:
+                return False
+            
+            # Deployment type validation
+            if request.deployment_type not in self.deployment_settings["deployment_environments"]:
+                return False
+            
+            # Target environment validation
+            if request.target_environment not in self.deployment_settings["deployment_environments"]:
+                return False
+            
+            # Parameter validation
+            if not self._validate_deployment_parameters(request.parameters):
+                return False
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error validating deployment request: {e}")
             return False
 
-    def _validate_strategy(self, strategy: Dict[str, Any]) -> bool:
-        """Validate strategy structure and required fields."""
+    def _validate_deployment_parameters(self, parameters: Dict[str, Any]) -> bool:
+        """Validate deployment parameters."""
         try:
-            required_fields = ["type", "timestamp", "action"]
-            optional_fields = ["symbol", "confidence", "entry_price", "stop_loss", "take_profit"]
-            
-            # Check required fields
-            for field in required_fields:
-                if field not in strategy:
-                    self.logger.error(f"Missing required field: {field}")
+            # Check for required parameters
+            required_params = ["strategy_config", "environment_config"]
+            for param in required_params:
+                if param not in parameters:
+                    print(f"❌ Missing required parameter: {param}")
                     return False
             
-            # Check timestamp validity
-            timestamp = strategy.get("timestamp", 0)
-            if timestamp <= 0 or timestamp > time.time() + 3600:  # Not in future
-                self.logger.error(f"Invalid timestamp: {timestamp}")
+            # Validate strategy configuration
+            strategy_config = parameters.get("strategy_config", {})
+            if not isinstance(strategy_config, dict):
                 return False
             
-            # Check action validity
-            valid_actions = ["buy", "sell", "hold", "long", "short"]
-            action = strategy.get("action", "")
-            if action not in valid_actions:
-                self.logger.error(f"Invalid action: {action}")
+            # Validate environment configuration
+            environment_config = parameters.get("environment_config", {})
+            if not isinstance(environment_config, dict):
                 return False
             
             return True
             
         except Exception as e:
-            self.logger.error(f"Error validating strategy: {e}")
+            print(f"❌ Error validating deployment parameters: {e}")
             return False
 
-    async def _get_risk_score(self, symbol: str) -> float:
-        """Get risk score for a symbol."""
+    async def _deploy_live_strategy(self, request: DeploymentRequest) -> str:
+        """Deploy strategy to live environment."""
         try:
-            risk_key = f"risk_management:{symbol}:risk_score"
-            risk_score = self.redis_conn.get(risk_key)
+            # Send deployment request to execution pipeline
+            deployment_result = await self.trading_execution_pipeline.send_to_execution({
+                "type": "strategy_deployment",
+                "strategy_id": request.strategy_id,
+                "deployment_type": "live",
+                "target_environment": request.target_environment,
+                "parameters": request.parameters
+            })
             
-            if risk_score:
-                return float(risk_score)
-            
-            # Default risk score based on asset type
-            if any(crypto in symbol.upper() for crypto in ["BTC", "ETH", "USDT", "USDC"]):
-                return 0.03  # Crypto: 3% default risk
-            elif any(forex in symbol.upper() for forex in ["EUR", "USD", "GBP", "JPY"]):
-                return 0.02  # Forex: 2% default risk
-            elif any(stock in symbol.upper() for stock in ["AAPL", "MSFT", "GOOGL"]):
-                return 0.04  # Stocks: 4% default risk
+            if deployment_result.get("success", False):
+                # Notify other agents about live deployment
+                await self.trading_agent_io.broadcast_to_all_trading_agents({
+                    "type": "strategy_live_deployment",
+                    "strategy_id": request.strategy_id,
+                    "deployment_info": deployment_result
+                })
+                
+                return "deployed"
             else:
-                return 0.05  # Default: 5% risk
-            
+                return "failed"
+                
         except Exception as e:
-            self.logger.error(f"Error getting risk score: {e}")
-            return 0.05  # Conservative default
+            print(f"❌ Error deploying live strategy: {e}")
+            return "failed"
 
-    async def _get_fee_score(self, symbol: str) -> float:
-        """Get fee score for a symbol."""
+    async def _deploy_paper_strategy(self, request: DeploymentRequest) -> str:
+        """Deploy strategy to paper trading environment."""
         try:
-            fee_key = f"fee_monitor:{symbol}:fee_score"
-            fee_score = self.redis_conn.get(fee_key)
+            # Send deployment request to execution pipeline
+            deployment_result = await self.trading_execution_pipeline.send_to_execution({
+                "type": "strategy_deployment",
+                "strategy_id": request.strategy_id,
+                "deployment_type": "paper",
+                "target_environment": request.target_environment,
+                "parameters": request.parameters
+            })
             
-            if fee_score:
-                return float(fee_score)
-            
-            # Default fee score based on asset type
-            if any(crypto in symbol.upper() for crypto in ["BTC", "ETH", "USDT", "USDC"]):
-                return 0.002  # Crypto: 0.2% default fee
-            elif any(forex in symbol.upper() for forex in ["EUR", "USD", "GBP", "JPY"]):
-                return 0.001  # Forex: 0.1% default fee
-            elif any(stock in symbol.upper() for stock in ["AAPL", "MSFT", "GOOGL"]):
-                return 0.005  # Stocks: 0.5% default fee
+            if deployment_result.get("success", False):
+                # Notify other agents about paper deployment
+                await self.trading_agent_io.broadcast_to_all_trading_agents({
+                    "type": "strategy_paper_deployment",
+                    "strategy_id": request.strategy_id,
+                    "deployment_info": deployment_result
+                })
+                
+                return "deployed"
             else:
-                return 0.003  # Default: 0.3% fee
-            
+                return "failed"
+                
         except Exception as e:
-            self.logger.error(f"Error getting fee score: {e}")
-            return 0.003  # Conservative default
+            print(f"❌ Error deploying paper strategy: {e}")
+            return "failed"
 
-    async def _validate_position_size(self, strategy: Dict[str, Any]) -> bool:
-        """Validate position size and risk management."""
+    async def _deploy_backtest_strategy(self, request: DeploymentRequest) -> str:
+        """Deploy strategy to backtest environment."""
         try:
-            # Get current capital
-            capital_key = "trading_engine:capital"
-            capital_data = self.redis_conn.get(capital_key)
+            # Send deployment request to execution pipeline
+            deployment_result = await self.trading_execution_pipeline.send_to_execution({
+                "type": "strategy_deployment",
+                "strategy_id": request.strategy_id,
+                "deployment_type": "backtest",
+                "target_environment": request.target_environment,
+                "parameters": request.parameters
+            })
             
-            if not capital_data:
-                # Assume default capital if not available
-                available_capital = 100000.0
+            if deployment_result.get("success", False):
+                # Notify other agents about backtest deployment
+                await self.trading_agent_io.broadcast_to_all_trading_agents({
+                    "type": "strategy_backtest_deployment",
+                    "strategy_id": request.strategy_id,
+                    "deployment_info": deployment_result
+                })
+                
+                return "deployed"
             else:
-                import json
-                capital_info = json.loads(capital_data)
-                available_capital = float(capital_info.get("available_capital", 100000.0))
+                return "failed"
+                
+        except Exception as e:
+            print(f"❌ Error deploying backtest strategy: {e}")
+            return "failed"
+
+    async def cancel_deployment(self, request_id: str) -> bool:
+        """Cancel a pending deployment."""
+        try:
+            # Find deployment in queue
+            for i, request in enumerate(self.deployment_queue):
+                if request.request_id == request_id:
+                    # Remove from queue
+                    self.deployment_queue.pop(i)
+                    
+                    # Update statistics
+                    self.deployment_stats["pending_deployments"] -= 1
+                    
+                    # Store cancellation in trading context
+                    await self.trading_context.store_signal({
+                        "type": "deployment_cancellation",
+                        "request_id": request_id,
+                        "strategy_id": request.strategy_id,
+                        "cancellation_data": {
+                            "reason": "user_requested",
+                            "timestamp": int(time.time())
+                        },
+                        "timestamp": int(time.time())
+                    })
+                    
+                    print(f"✅ Deployment cancelled: {request_id}")
+                    return True
             
-            # Calculate position size
-            entry_price = float(strategy.get("entry_price", 0.0))
-            if entry_price <= 0:
-                return False
+            # Check if deployment is active
+            if request_id in self.active_deployments:
+                request = self.active_deployments[request_id]
+                request.status = "cancelled"
+                
+                # Update statistics
+                self.deployment_stats["pending_deployments"] -= 1
+                
+                print(f"✅ Active deployment cancelled: {request_id}")
+                return True
             
-            # Estimate position value (simplified)
-            position_value = entry_price * 1.0  # Assume 1 unit for now
-            
-            # Check if position size is within limits
-            position_ratio = position_value / available_capital if available_capital > 0 else 0
-            
-            if position_ratio > self.max_position_size:
-                self.logger.warning(f"Position size {position_ratio:.2%} exceeds limit {self.max_position_size:.2%}")
-                return False
-            
-            return True
+            print(f"⚠️ Deployment not found: {request_id}")
+            return False
             
         except Exception as e:
-            self.logger.error(f"Error validating position size: {e}")
+            print(f"❌ Error cancelling deployment: {e}")
             return False
 
-    async def _execute_deployment(self, strategy: Dict[str, Any], strategy_id: str) -> bool:
-        """Execute the actual strategy deployment."""
+    async def get_deployment_status(self, request_id: str) -> Optional[Dict[str, Any]]:
+        """Get the status of a specific deployment."""
         try:
-            # Store in deployed strategies
-            self.deployed_strategies[strategy_id] = strategy
+            # Check active deployments
+            if request_id in self.active_deployments:
+                request = self.active_deployments[request_id]
+                return {
+                    "request_id": request_id,
+                    "status": request.status,
+                    "strategy_id": request.strategy_id,
+                    "deployment_type": request.deployment_type,
+                    "target_environment": request.target_environment,
+                    "created_at": request.created_at
+                }
             
-            # Add to deployment history
-            deployment_record = {
-                "strategy_id": strategy_id,
-                "deployment_time": time.time(),
-                "strategy_data": strategy,
-                "status": "deployed"
+            # Check queue
+            for request in self.deployment_queue:
+                if request.request_id == request_id:
+                    return {
+                        "request_id": request_id,
+                        "status": "queued",
+                        "strategy_id": request.strategy_id,
+                        "deployment_type": request.deployment_type,
+                        "target_environment": request.target_environment,
+                        "created_at": request.created_at
+                    }
+            
+            # Check results
+            for strategy_id, results in self.deployment_results.items():
+                for result in results:
+                    if result.request_id == request_id:
+                        return {
+                            "request_id": request_id,
+                            "status": "completed" if result.success else "failed",
+                            "strategy_id": result.strategy_id,
+                            "deployment_type": result.deployment_type,
+                            "target_environment": result.target_environment,
+                            "deployment_status": result.deployment_status,
+                            "success": result.success,
+                            "notes": result.deployment_notes
+                        }
+            
+            return None
+            
+        except Exception as e:
+            print(f"❌ Error getting deployment status: {e}")
+            return None
+
+    async def get_deployments_by_strategy(self, strategy_id: str) -> List[Dict[str, Any]]:
+        """Get all deployments for a specific strategy."""
+        try:
+            deployments = []
+            
+            # Get deployments from queue
+            for request in self.deployment_queue:
+                if request.strategy_id == strategy_id:
+                    deployments.append({
+                        "request_id": request.request_id,
+                        "status": "queued",
+                        "deployment_type": request.deployment_type,
+                        "target_environment": request.target_environment,
+                        "created_at": request.created_at
+                    })
+            
+            # Get active deployments
+            for request_id, request in self.active_deployments.items():
+                if request.strategy_id == strategy_id:
+                    deployments.append({
+                        "request_id": request_id,
+                        "status": request.status,
+                        "deployment_type": request.deployment_type,
+                        "target_environment": request.target_environment,
+                        "created_at": request.created_at
+                    })
+            
+            # Get completed deployments
+            if strategy_id in self.deployment_results:
+                for result in self.deployment_results[strategy_id]:
+                    deployments.append({
+                        "request_id": result.request_id,
+                        "status": "completed" if result.success else "failed",
+                        "deployment_type": result.deployment_type,
+                        "target_environment": result.target_environment,
+                        "deployment_status": result.deployment_status,
+                        "success": result.success,
+                        "notes": result.deployment_notes
+                    })
+            
+            return deployments
+            
+        except Exception as e:
+            print(f"❌ Error getting deployments by strategy: {e}")
+            return []
+
+    async def get_deployment_summary(self) -> Dict[str, Any]:
+        """Get summary of deployment management statistics."""
+        try:
+            # Calculate average deployment time
+            if self.deployment_stats["successful_deployments"] > 0:
+                avg_deployment_time = self.deployment_stats["total_deployment_time"] / self.deployment_stats["successful_deployments"]
+            else:
+                avg_deployment_time = 0.0
+            
+            return {
+                "stats": {**self.deployment_stats, "average_deployment_time": avg_deployment_time},
+                "queue_size": len(self.deployment_queue),
+                "active_deployments": len(self.active_deployments),
+                "deployment_history_size": len(self.deployment_history),
+                "deployment_settings": self.deployment_settings
             }
-            self.deployment_history.append(deployment_record)
-            
-            # Store deployment record in Redis with proper JSON serialization
-            try:
-                import json
-                self.redis_conn.set(
-                    f"strategy_engine:deployment:{strategy_id}", 
-                    json.dumps(deployment_record), 
-                    ex=604800
-                )
-                
-            except json.JSONEncodeError as e:
-                self.logger.error(f"JSON encoding error storing deployment record: {e}")
-                return False
-            except ConnectionError as e:
-                self.logger.error(f"Redis connection error storing deployment record: {e}")
-                return False
-            except Exception as e:
-                self.logger.error(f"Unexpected error storing deployment record: {e}")
-                return False
-            
-            # Notify execution engine
-            try:
-                self.redis_conn.publish("execution_agent", json.dumps(strategy))
-            except json.JSONEncodeError as e:
-                self.logger.error(f"JSON encoding error notifying execution agent: {e}")
-            except ConnectionError as e:
-                self.logger.error(f"Redis connection error notifying execution agent: {e}")
-            except Exception as e:
-                self.logger.error(f"Unexpected error notifying execution agent: {e}")
-            
-            # Log deployment
-            self.logger.info(f"Strategy {strategy_id} deployed successfully")
-            
-            # Notify core
-            await self.notify_core({
-                "type": "strategy_deployed",
-                "strategy_id": strategy_id,
-                "timestamp": int(time.time()),
-                "description": f"Deployed strategy {strategy_id}"
-            })
-            
-            return True
             
         except Exception as e:
-            self.logger.error(f"Error executing deployment: {e}")
-            return False
+            print(f"❌ Error getting deployment summary: {e}")
+            return {}
 
-    async def undeploy_strategy(self, strategy_id: str) -> bool:
-        """Undeploy a strategy."""
+    async def cleanup(self):
+        """Clean up resources."""
         try:
-            if strategy_id not in self.deployed_strategies:
-                self.logger.warning(f"Strategy {strategy_id} not found for undeployment")
-                return False
-            
-            # Remove from deployed strategies
-            del self.deployed_strategies[strategy_id]
-            
-            # Update deployment history
-            for record in self.deployment_history:
-                if record.get("strategy_id") == strategy_id:
-                    record["status"] = "undeployed"
-                    record["undeployment_time"] = time.time()
-                    break
-            
-            # Remove from Redis
-            self.redis_conn.delete(f"strategy_engine:deployed:{strategy_id}")
-            
-            self.logger.info(f"Strategy {strategy_id} undeployed successfully")
-            
-            # Notify core
-            await self.notify_core({
-                "type": "strategy_undeployed",
-                "strategy_id": strategy_id,
-                "timestamp": int(time.time()),
-                "description": f"Undeployed strategy {strategy_id}"
-            })
-            
-            return True
-            
+            await self.trading_agent_io.cleanup()
+            await self.trading_execution_pipeline.cleanup()
+            await self.trading_context.cleanup()
+            print("✅ Deployment Manager cleaned up")
         except Exception as e:
-            self.logger.error(f"Error undeploying strategy: {e}")
-            return False
-
-    async def get_deployed_strategies(self) -> List[Dict[str, Any]]:
-        """Get all currently deployed strategies."""
-        try:
-            return list(self.deployed_strategies.values())
-        except Exception as e:
-            self.logger.error(f"Error getting deployed strategies: {e}")
-            return []
-
-    async def get_deployment_history(self) -> List[Dict[str, Any]]:
-        """Get deployment history."""
-        try:
-            return self.deployment_history.copy()
-        except Exception as e:
-            self.logger.error(f"Error getting deployment history: {e}")
-            return []
-
-    def get_deployment_stats(self) -> Dict[str, Any]:
-        """Get deployment manager statistics."""
-        return {
-            **self.stats,
-            "deployed_strategies": len(self.deployed_strategies),
-            "uptime": time.time() - self.stats["start_time"]
-        }
-
-    async def notify_core(self, issue: Dict[str, Any]):
-        """Notify Core Agent of deployment updates."""
-        try:
-            if not isinstance(issue, dict):
-                self.logger.error(f"Invalid issue type: {type(issue)}, expected dict")
-                return
-                
-            self.logger.info(f"Notifying Core Agent: {issue.get('description', 'unknown')}")
-            
-            # Publish with proper JSON serialization
-            try:
-                import json
-                self.redis_conn.publish("strategy_engine_output", json.dumps(issue))
-            except json.JSONEncodeError as e:
-                self.logger.error(f"JSON encoding error notifying core: {e}")
-                self.stats["errors"] += 1
-            except ConnectionError as e:
-                self.logger.error(f"Redis connection error notifying core: {e}")
-                self.stats["errors"] += 1
-            except Exception as e:
-                self.logger.error(f"Unexpected error notifying core: {e}")
-                self.stats["errors"] += 1
-                
-        except Exception as e:
-            self.logger.error(f"Unexpected error in notify_core: {e}")
-            self.stats["errors"] += 1
+            print(f"❌ Error cleaning up Deployment Manager: {e}")

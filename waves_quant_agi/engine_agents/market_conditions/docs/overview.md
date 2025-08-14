@@ -1,17 +1,39 @@
-Quantum Supply-Demand Intelligence Agent: Overview
-Purpose
-The Quantum Supply-Demand Intelligence Agent is a core component of the Waves Quant trading platform, designed to analyze real-time market conditions using quantum-inspired algorithms. It integrates external data (e.g., financial press, social media, global events) and internal model performance to provide predictive insights, detect anomalies, and optimize trading decisions.
-Why It’s Critical
+# Enhanced Market Conditions Agent: Overview
 
-Real-Time Awareness: Continuously monitors market signals (e.g., sentiment, macro events) to anticipate supply-demand shifts.
-Quantum-Inspired Processing: Leverages parallel hypothesis testing (q_interpreter.py), pattern convergence (entanglement_matrix.py), and uncertainty resolution (uncertainty_solver.py) for robust predictions.
-Scalability: Modular design supports multiple assets (e.g., BTC, ETH) and integrates with other agents (e.g., Core, Fees Monitor).
-Risk Mitigation: Identifies anomalies and chaotic patterns, enabling proactive risk management in high-frequency trading.
+## Purpose
+The Enhanced Market Conditions Agent is a core component of the Waves Quant trading platform, designed to provide **comprehensive early warning capabilities** for market anomalies and regime changes. It uses a sophisticated 4-tier timing system to monitor ALL market aspects in real-time, detecting strange behaviors BEFORE they fully manifest.
 
-Key Components
+## Why It's Critical
 
-Learning Layer: Processes external (e.g., quantum_web_watch, macro_sensor_fusion) and internal data, with adaptive training (hybrid_training).
-Quantum Core: Applies quantum-inspired methods for signal interpretation, pattern detection, and uncertainty resolution.
-Output: Publishes actionable insights to Redis channel market_conditions_output for Core Agent consumption.
+- **Early Warning System**: Continuously monitors market signals to anticipate supply-demand shifts, regime changes, and potential crises
+- **4-Tier Timing Architecture**: Multi-frequency analysis (100ms, 1s, 60s) for comprehensive market coverage
+- **Wide Anomaly Detection**: Scans across price, volume, volatility, correlation, liquidity, and order flow patterns
+- **Predictive Capabilities**: Identifies market structure shifts and strange behaviors before they become critical
+- **Risk Mitigation**: Enables proactive risk management through early anomaly detection
 
-This module ensures the platform remains agile, predictive, and resilient in dynamic markets.
+## Key Components
+
+### **4-Tier Timing System**
+- **TIER 1 (100ms)**: Ultra-fast imbalance detection for immediate response
+- **TIER 2 (1s)**: Tactical anomaly scanning and early warning evaluation
+- **TIER 3 (60s)**: Strategic regime analysis and behavior prediction
+- **TIER 4 (60s)**: Communication heartbeat and status reporting
+
+### **Core Analysis Modules**
+- **Anomaly Detection**: Wide scanning across all market aspects using `AnomalyDetector`
+- **Early Warning System**: Proactive alert generation using `EarlyWarningSystem`
+- **Quantum Core**: Quantum-inspired methods for signal interpretation and uncertainty resolution
+- **Learning Layer**: Adaptive training and signal fusion for continuous improvement
+
+### **Real-Time Capabilities**
+- **Market Microstructure Analysis**: Order book dynamics, spreads, order flow analysis
+- **Cross-Asset Monitoring**: Correlation breakdown detection and cross-market anomalies
+- **Liquidity Warnings**: Early detection of market maker withdrawal and order book deterioration
+- **Flash Crash Precursors**: Identification of cascading selling patterns and market stress
+
+## Output & Integration
+- **Redis Channels**: Publishes alerts to `market_conditions_output`, `immediate_alerts`, and `agent_heartbeat`
+- **Agent Coordination**: Direct communication with Strategy Engine, Risk Management, and Execution agents
+- **Real-Time Updates**: Continuous market state tracking and anomaly level monitoring
+
+This module ensures the platform remains agile, predictive, and resilient in dynamic markets by providing comprehensive early warning capabilities across all market dimensions.

@@ -1,7 +1,8 @@
+import time
 from typing import Dict, Any, List
 import redis
 from ...logs.failure_agent_logger import FailureAgentLogger
-from ...memory.incident_cache import IncidentCache
+from ...logs.incident_cache import IncidentCache
 
 class QuantumSignalCombiner:
     def __init__(self, config: Dict[str, Any], logger: FailureAgentLogger, cache: IncidentCache):

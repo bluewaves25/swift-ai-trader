@@ -1,35 +1,53 @@
 from typing import Dict, Any
 from ..logs.core_agent_logger import CoreAgentLogger
 
-class SignalFilter:
+class SystemSignalFilter:
+    """System coordination signal filter - focused ONLY on system coordination."""
+    
     def __init__(self, config: Dict[str, Any] = None):
         self.config = config or {}
-        self.logger = CoreAgentLogger("signal_filter")
-        self.required_fields = {"signal_id": str, "strategy": str, "params": dict, "timestamp": float}
-        self.valid_strategies = {"momentum", "mean_reversion", "arbitrage"}
+        self.logger = CoreAgentLogger("system_signal_filter")
+        
+        # System coordination signal types only
+        self.valid_system_signals = {
+            "health_check", "timing_sync", "agent_status", 
+            "system_command", "coordination_event"
+        }
+        
+        # Required fields for system signals
+        self.required_fields = {
+            "signal_id": str, 
+            "signal_type": str, 
+            "timestamp": float,
+            "source_agent": str
+        }
 
-    def validate_signal(self, signal: Dict[str, Any]) -> bool:
-        """Validate signal format and content."""
+    def validate_system_signal(self, signal: Dict[str, Any]) -> bool:
+        """Validate system coordination signal format and content."""
         try:
             # Check required fields and types
             for field, expected_type in self.required_fields.items():
                 if field not in signal or not isinstance(signal[field], expected_type):
-                    self.logger.log_action("validate_signal", {"result": "failed", "reason": f"Invalid {field}"})
+                    self.logger.log_action("validate_system_signal", {
+                        "result": "failed", 
+                        "reason": f"Invalid {field}"
+                    })
                     return False
             
-            # Check strategy validity
-            if signal["strategy"] not in self.valid_strategies:
-                self.logger.log_action("validate_signal", {"result": "failed", "reason": f"Invalid strategy: {signal['strategy']}"})
+            # Check signal type validity
+            if signal["signal_type"] not in self.valid_system_signals:
+                self.logger.log_action("validate_system_signal", {
+                    "result": "failed", 
+                    "reason": f"Invalid system signal type: {signal['signal_type']}"
+                })
                 return False
             
-            # Check params content
-            params = signal["params"]
-            if not all(key in params for key in ["amount", "base", "quote"]):
-                self.logger.log_action("validate_signal", {"result": "failed", "reason": "Missing required params"})
-                return False
-            
-            self.logger.log_action("validate_signal", {"result": "passed"})
+            self.logger.log_action("validate_system_signal", {"result": "passed"})
             return True
+            
         except Exception as e:
-            self.logger.log_action("validate_signal", {"result": "failed", "reason": str(e)})
+            self.logger.log_action("validate_system_signal", {
+                "result": "failed", 
+                "reason": str(e)
+            })
             return False

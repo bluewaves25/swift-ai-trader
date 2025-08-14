@@ -215,3 +215,16 @@ class CircuitBreakerManager:
             'health_score': closed_circuits / max(total_circuits, 1),
             'timestamp': time.time()
         }
+    
+    def get_status(self) -> Dict[str, Any]:
+        """Get status of all circuit breakers."""
+        return {
+            name: {
+                'state': cb.state.value,
+                'failure_count': cb.failure_count,
+                'is_open': cb.is_open(),
+                'is_closed': cb.is_closed(),
+                'is_half_open': cb.is_half_open()
+            }
+            for name, cb in self.circuit_breakers.items()
+        }
