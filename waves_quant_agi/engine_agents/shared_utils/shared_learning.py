@@ -13,6 +13,16 @@ class LearningType(Enum):
     PATTERN_RECOGNITION = "pattern_recognition"
     RISK_ASSESSMENT = "risk_assessment"
     STRATEGY_OPTIMIZATION = "strategy_optimization"
+    DATA_QUALITY = "data_quality"
+    PERFORMANCE_OPTIMIZATION = "performance_optimization"
+    RISK_OPTIMIZATION = "risk_optimization"
+    MARKET_PREDICTION = "market_prediction"
+    STRATEGY_ADAPTATION = "strategy_adaptation"
+    EXECUTION_OPTIMIZATION = "execution_optimization"
+    CONNECTIVITY_OPTIMIZATION = "connectivity_optimization"
+    COST_OPTIMIZATION = "cost_optimization"
+    FAILURE_PREDICTION = "failure_prediction"
+    PORTFOLIO_OPTIMIZATION = "portfolio_optimization"
 
 @dataclass
 class LearningData:
@@ -54,6 +64,6 @@ class SharedLearningLayer:
         """Get performance metrics."""
         return {"accuracy": 0.95, "confidence": 0.85}
 
-def get_agent_learner(agent_name: str) -> SharedLearningLayer:
+def get_agent_learner(agent_name: str, learning_type=None, feature_count: int = 10, learning_rate: float = 0.01) -> SharedLearningLayer:
     """Get agent learner instance."""
     return SharedLearningLayer(agent_name)
