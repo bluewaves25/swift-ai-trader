@@ -11,7 +11,7 @@ class VisualRiskTrace:
     def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
         self.connection_manager = connection_manager
-                self.output_path = config.get("output_path", "risk_traces/")
+        self.output_path = config.get("output_path", "risk_traces/")
 
     async def visualize_risk_decisions(self, risk_data: pd.DataFrame) -> List[Dict[str, Any]]:
         """Visualize risk decisions for transparency."""
