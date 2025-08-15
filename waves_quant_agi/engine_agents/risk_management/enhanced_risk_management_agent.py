@@ -160,11 +160,11 @@ class EnhancedRiskManagementAgent(BaseAgent):
             
             # Initialize portfolio monitor
             from .core.portfolio_monitor import PortfolioMonitor
-            self.portfolio_monitor = PortfolioMonitor(self.config)
+            self.portfolio_monitor = PortfolioMonitor(self.redis_conn, self.config)
             
             # Initialize portfolio performance tracker (risk-focused only, not system performance)
             from .core.portfolio_performance_tracker import PortfolioPerformanceTracker
-            self.performance_tracker = PortfolioPerformanceTracker(self.config)
+            self.performance_tracker = PortfolioPerformanceTracker(self.redis_conn, self.config)
             
             self.logger.info("✅ Risk management components initialized")
             
@@ -176,7 +176,7 @@ class EnhancedRiskManagementAgent(BaseAgent):
         """Initialize circuit breakers for risk management."""
         try:
             from .core.circuit_breaker import CircuitBreakerManager
-            self.circuit_breaker = CircuitBreakerManager(self.config)
+            self.circuit_breaker = CircuitBreakerManager()
             
             # Set up default circuit breakers
             await self._setup_default_circuit_breakers()
@@ -191,7 +191,7 @@ class EnhancedRiskManagementAgent(BaseAgent):
         """Initialize risk limits for different asset classes."""
         try:
             from .core.dynamic_risk_limits import DynamicRiskLimits
-            self.risk_limits = DynamicRiskLimits(self.config)
+            self.risk_limits = DynamicRiskLimits(self.redis_conn, self.config)
             
             # Set up default risk limits
             await self._setup_default_risk_limits()
@@ -214,10 +214,10 @@ class EnhancedRiskManagementAgent(BaseAgent):
             }
             
             for name, config in circuit_breakers_config.items():
-                await self.circuit_breaker.create_circuit_breaker(
+                self.circuit_breaker.create_circuit_breaker(
                     name=name,
-                    threshold=config["threshold"],
-                    timeout=config["timeout"]
+                    failure_threshold=5,  # Use default failure threshold
+                    recovery_timeout=config["timeout"]
                 )
                 
         except Exception as e:

@@ -290,6 +290,19 @@ class SlippageManager:
             self.logger.error(f"Error getting active alerts: {e}")
             return []
     
+    async def check_slippage_events(self) -> List[Dict[str, Any]]:
+        """Check for slippage events and return them."""
+        try:
+            # Check for new alerts
+            await self._check_slippage_alerts()
+            
+            # Return active alerts
+            return self.get_active_alerts()
+            
+        except Exception as e:
+            self.logger.error(f"Error checking slippage events: {e}")
+            return []
+    
     def acknowledge_alert(self, order_id: str):
         """Acknowledge a slippage alert."""
         try:

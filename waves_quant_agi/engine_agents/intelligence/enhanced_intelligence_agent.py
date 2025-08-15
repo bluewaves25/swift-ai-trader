@@ -220,8 +220,8 @@ class EnhancedIntelligenceAgent(BaseAgent):
     async def _get_market_data_for_patterns(self) -> Dict[str, Any]:
         """Get market data for pattern recognition."""
         try:
-            # Get market data from Redis
-            market_data = await self.redis_conn.get("market:data:patterns")
+            # Get market data from Redis using async method
+            market_data = await self.redis_conn.async_get("market:data:patterns")
             
             if market_data:
                 return json.loads(market_data)

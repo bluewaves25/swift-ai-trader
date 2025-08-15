@@ -1,4 +1,11 @@
-import MetaTrader5 as mt5
+try:
+    import MetaTrader5 as mt5
+    MT5_AVAILABLE = True
+except ImportError:
+    MT5_AVAILABLE = False
+    mt5 = None
+    print("Warning: MetaTrader5 module not available (likely running on non-Windows system)")
+
 import pandas as pd
 from datetime import datetime
 from typing import Dict, List, Optional, Any
@@ -8,6 +15,9 @@ class MT5Broker:
     """MetaTrader 5 broker implementation for Exness integration."""
     
     def __init__(self, login: int, password: str, server: str):
+        if not MT5_AVAILABLE:
+            raise ImportError("MetaTrader5 module is not available on this system")
+        
         self.login = login
         self.password = password
         self.server = server
