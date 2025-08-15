@@ -1,4 +1,7 @@
-import MetaTrader5 as mt5
+# Use centralized MT5 connector
+from ...shared_utils.mt5_connector import mt5, is_mock_mode
+MT5_MOCK_MODE = is_mock_mode()
+
 import pandas as pd
 from datetime import datetime
 from typing import Dict, List, Optional, Any
@@ -17,7 +20,10 @@ class MT5Broker:
     def connect(self) -> bool:
         """Connect to MT5 terminal with Exness credentials."""
         try:
-            self.logger.info(f"🔄 Attempting to connect to MT5 with login: {self.login}, server: {self.server}")
+            if MT5_MOCK_MODE:
+                self.logger.info(f"🎭 MOCK MODE: Simulating MT5 connection to {self.server} with login {self.login}")
+            else:
+                self.logger.info(f"🔄 REAL MT5: Attempting to connect to your MT5 desktop app with login: {self.login}, server: {self.server}")
             
             # Initialize MT5 connection
             if not mt5.initialize():
@@ -25,7 +31,10 @@ class MT5Broker:
                 self.logger.error(f"MT5 initialize() failed with error: {error_code}")
                 return False
             
-            self.logger.info("✅ MT5 initialized successfully")
+            if MT5_MOCK_MODE:
+                self.logger.info("✅ MT5 MOCK: Initialized successfully")
+            else:
+                self.logger.info("✅ REAL MT5: Initialized successfully")
             
             # Attempt to login
             authorized = mt5.login(login=self.login, password=self.password, server=self.server)
@@ -38,7 +47,10 @@ class MT5Broker:
             self.is_connected = True
             account_info = mt5.account_info()
             if account_info:
-                self.logger.info(f"✅ Connected to MT5 - Account: {account_info.login}, Server: {account_info.server}")
+                if MT5_MOCK_MODE:
+                    self.logger.info(f"✅ MOCK MT5 Connected - Account: {account_info.get('login', self.login)}, Server: {account_info.get('server', self.server)}")
+                else:
+                    self.logger.info(f"🎯 REAL MT5 Connected to your desktop app - Account: {account_info.login}, Server: {account_info.server}")
             return True
             
         except Exception as e:

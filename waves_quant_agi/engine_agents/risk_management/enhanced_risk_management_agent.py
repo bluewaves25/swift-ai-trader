@@ -160,7 +160,7 @@ class EnhancedRiskManagementAgent(BaseAgent):
             
             # Initialize portfolio monitor
             from .core.portfolio_monitor import PortfolioMonitor
-            self.portfolio_monitor = PortfolioMonitor(self.config)
+            self.portfolio_monitor = PortfolioMonitor(connection_manager, self.config)
             
             # Initialize portfolio performance tracker (risk-focused only, not system performance)
             from .core.portfolio_performance_tracker import PortfolioPerformanceTracker

@@ -7,9 +7,12 @@ Connects strategy signals directly to live MT5 trading
 import asyncio
 import time
 import os
-import MetaTrader5 as mt5
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
+
+# Use centralized MT5 connector
+from engine_agents.shared_utils.mt5_connector import mt5, is_mock_mode
+MT5_MOCK_MODE = is_mock_mode()
 from engine_agents.shared_utils import get_shared_logger, get_shared_redis
 
 # Load environment variables from .env file

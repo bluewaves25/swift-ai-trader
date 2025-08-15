@@ -76,6 +76,25 @@ class BrokerRouter:
             "average_routing_time_ms": 0.0
         }
     
+    async def initialize_routing(self):
+        """Initialize routing strategies and configurations."""
+        try:
+            self.logger.info("✅ Broker routing initialized")
+            self.logger.info(f"✅ Routing rules configured for {len(self.routing_rules)} strategies")
+            
+            # Initialize routing state
+            self.routing_state["initialization_time"] = time.time()
+            self.routing_state["ready"] = True
+            
+            # Log routing capabilities
+            for strategy, rules in self.routing_rules.items():
+                preferred_brokers = ", ".join(rules["preferred_brokers"])
+                self.logger.info(f"✅ {strategy} strategy: {preferred_brokers} (latency: {rules['latency_requirement']}ms)")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing broker routing: {e}")
+            raise
+    
     async def route_order(self, order_data: Dict[str, Any], strategy_type: str) -> Dict[str, Any]:
         """Route order to appropriate broker based on strategy."""
         try:
