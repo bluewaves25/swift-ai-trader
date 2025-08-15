@@ -51,6 +51,54 @@ class CostAnalyzer:
         
         self.logger.info("Cost Analyzer initialized")
     
+    async def initialize_analysis(self):
+        """Initialize cost analysis system - missing method that was being called."""
+        try:
+            self.logger.info("Initializing cost analysis system...")
+            
+            # Initialize cost tracking databases
+            await self._initialize_cost_tracking()
+            
+            # Setup analysis metrics
+            await self._setup_analysis_metrics()
+            
+            # Start analysis if enabled
+            if self.analysis_enabled:
+                await self.start_analysis()
+            
+            self.logger.info("✅ Cost analysis system initialized successfully")
+            
+        except Exception as e:
+            self.logger.error(f"Error initializing cost analysis: {e}")
+            raise
+    
+    async def _initialize_cost_tracking(self):
+        """Initialize cost tracking components."""
+        try:
+            # Initialize cost tracking metrics
+            self.cost_metrics = {
+                "total_trades": 0,
+                "total_costs": 0.0,
+                "average_cost": 0.0,
+                "last_analysis": 0
+            }
+            self.logger.info("Cost tracking initialized")
+        except Exception as e:
+            self.logger.error(f"Error initializing cost tracking: {e}")
+    
+    async def _setup_analysis_metrics(self):
+        """Setup analysis metrics tracking."""
+        try:
+            # Setup analysis metrics
+            self.analysis_metrics = {
+                "analyses_performed": 0,
+                "alerts_generated": 0,
+                "optimizations_suggested": 0
+            }
+            self.logger.info("Analysis metrics setup completed")
+        except Exception as e:
+            self.logger.error(f"Error setting up analysis metrics: {e}")
+    
     async def start_analysis(self):
         """Start cost analysis monitoring."""
         if not self.analysis_enabled or self.is_analyzing:
