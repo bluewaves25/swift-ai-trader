@@ -6,7 +6,7 @@ class CapitalAllocator:
     def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
         self.connection_manager = connection_manager
-                self.max_allocation = config.get("max_allocation", 0.2)  # Max 20% per strategy
+        self.max_allocation = config.get("max_allocation", 0.2)  # Max 20% per strategy
         self.total_capital = config.get("total_capital", 1000000.0)  # Default $1M
 
     async def allocate_capital(self, market_data: pd.DataFrame) -> Dict[str, Any]:
@@ -28,8 +28,8 @@ class CapitalAllocator:
                     "sharpe_ratio": sharpe_ratio
                 }
                 redis_client = await self.connection_manager.get_redis_client()
-                        if redis_client:
-                            redis_client.set(f"risk_management:allocation:{strategy_id}", str(allocations[strategy_id]), ex=3600)
+                if redis_client:
+                    redis_client.set(f"risk_management:allocation:{strategy_id}", str(allocations[strategy_id]), ex=3600)
 
             summary = {
                 "type": "capital_allocation_summary",
@@ -49,7 +49,6 @@ class CapitalAllocator:
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of allocation results."""
-        }")
         redis_client = await self.connection_manager.get_redis_client()
         if redis_client:
             redis_client.publish("risk_management_output", str(issue))

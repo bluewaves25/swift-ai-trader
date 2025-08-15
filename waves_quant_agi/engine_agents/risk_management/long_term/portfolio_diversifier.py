@@ -7,12 +7,12 @@ class PortfolioDiversifier:
     def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
         self.connection_manager = connection_manager
-                self.correlation_threshold = config.get("correlation_threshold", 0.3)  # Max correlation for diversification
+        self.correlation_threshold = config.get("correlation_threshold", 0.3)  # Max correlation for diversification
 
     async def assess_diversification(self, portfolio_data: pd.DataFrame) -> float:
         """Assess portfolio diversification across uncorrelated assets."""
         try:
-            symbols = portfolio_data.get("symbol", []).unique()
+        symbols = portfolio_data.get("symbol", []).unique()
             if len(symbols) < 2:
                 
                 return 0.0
@@ -46,7 +46,7 @@ class PortfolioDiversifier:
             await self.notify_core(summary)
             return diversification_score
         except Exception as e:
-            print(f"Error in {os.path.basename(file_path)}: {e}")
+        print(f"Error in {os.path.basename(file_path)}: {e}")
             return 0.0
 
     async def notify_core(self, issue: Dict[str, Any]):
@@ -54,4 +54,4 @@ class PortfolioDiversifier:
         }")
         redis_client = await self.connection_manager.get_redis_client()
         if redis_client:
-            redis_client.publish("risk_management_output", str(issue))
+        redis_client.publish("risk_management_output", str(issue))

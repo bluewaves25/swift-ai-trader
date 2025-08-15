@@ -7,13 +7,13 @@ class StrategyPortfolioOptimizer:
     def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
         self.connection_manager = connection_manager
-                self.model = RandomForestRegressor(n_estimators=config.get("n_estimators", 100))
+        self.model = RandomForestRegressor(n_estimators=config.get("n_estimators", 100))
         self.sharpe_threshold = config.get("sharpe_threshold", 2.0)
 
     async def optimize_portfolio(self, strategy_data: pd.DataFrame) -> Dict[str, Any]:
         """Balance alpha across strategies for optimal risk-reward."""
         try:
-            features = strategy_data[["sharpe_ratio", "volatility", "win_rate"]].fillna(0).values
+        features = strategy_data[["sharpe_ratio", "volatility", "win_rate"]].fillna(0).values
             targets = strategy_data["returns"].fillna(0).values
             self.model.fit(features, targets)
 
@@ -46,7 +46,7 @@ class StrategyPortfolioOptimizer:
             await self.notify_core(summary)
             return allocations
         except Exception as e:
-            print(f"Error in {os.path.basename(file_path)}: {e}")
+        print(f"Error in {os.path.basename(file_path)}: {e}")
             return {}
 
     async def notify_core(self, issue: Dict[str, Any]):
@@ -54,4 +54,4 @@ class StrategyPortfolioOptimizer:
         }")
         redis_client = await self.connection_manager.get_redis_client()
         if redis_client:
-            redis_client.publish("risk_management_output", str(issue))
+        redis_client.publish("risk_management_output", str(issue))

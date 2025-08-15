@@ -6,12 +6,12 @@ class MacroExposureManager:
     def __init__(self, connection_manager, config: Dict[str, Any]):
         self.config = config
         self.connection_manager = connection_manager
-                self.macro_risk_threshold = config.get("macro_risk_threshold", 0.6)  # Macro risk score
+        self.macro_risk_threshold = config.get("macro_risk_threshold", 0.6)  # Macro risk score
 
     async def track_macro_alignment(self, macro_data: pd.DataFrame) -> List[Dict[str, Any]]:
         """Track portfolio alignment with macro themes."""
         try:
-            alignments = []
+        alignments = []
             for _, row in macro_data.iterrows():
                 symbol = row.get("symbol", "USD/JPY")
                 macro_score = float(row.get("macro_score", 0.0))  # Score from macro indicators
@@ -41,7 +41,7 @@ class MacroExposureManager:
             await self.notify_core(summary)
             return alignments
         except Exception as e:
-            print(f"Error in {os.path.basename(file_path)}: {e}")
+        print(f"Error in {os.path.basename(file_path)}: {e}")
             return []
 
     async def notify_execution(self, alignment: Dict[str, Any]):
@@ -49,11 +49,11 @@ class MacroExposureManager:
         }")
         redis_client = await self.connection_manager.get_redis_client()
         if redis_client:
-            redis_client.publish("execution_agent", str(alignment))
+        redis_client.publish("execution_agent", str(alignment))
 
     async def notify_core(self, issue: Dict[str, Any]):
         """Notify Core Agent of macro alignment results."""
         }")
         redis_client = await self.connection_manager.get_redis_client()
         if redis_client:
-            redis_client.publish("risk_management_output", str(issue))
+        redis_client.publish("risk_management_output", str(issue))
