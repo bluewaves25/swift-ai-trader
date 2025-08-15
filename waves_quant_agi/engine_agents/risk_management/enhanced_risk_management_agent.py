@@ -164,7 +164,7 @@ class EnhancedRiskManagementAgent(BaseAgent):
             
             # Initialize portfolio performance tracker (risk-focused only, not system performance)
             from .core.portfolio_performance_tracker import PortfolioPerformanceTracker
-            self.performance_tracker = PortfolioPerformanceTracker(self.config)
+            self.performance_tracker = PortfolioPerformanceTracker(connection_manager, self.config)
             
             self.logger.info("✅ Risk management components initialized")
             
