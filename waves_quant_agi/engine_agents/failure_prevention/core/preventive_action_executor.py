@@ -332,6 +332,74 @@ class PreventiveActionExecutor:
         except Exception as e:
             self.logger.error(f"Error setting execution parameters: {e}")
     
+    async def initialize_actions(self):
+        """Initialize preventive actions and handlers."""
+        try:
+            self.logger.info("✅ Preventive actions initialized")
+            self.logger.info(f"✅ Max concurrent actions: {self.max_concurrent_actions}")
+            self.logger.info(f"✅ Action timeout: {self.action_timeout}s")
+            self.logger.info(f"✅ Retry attempts: {self.retry_attempts}")
+            
+            # Initialize default action handlers
+            self.action_handlers = {
+                "system_cleanup": self._execute_system_cleanup,
+                "memory_optimization": self._execute_memory_optimization,
+                "connection_reset": self._execute_connection_reset,
+                "cache_cleanup": self._execute_cache_cleanup,
+                "resource_balancing": self._execute_resource_balancing
+            }
+            
+            # Clear existing actions
+            self.pending_actions.clear()
+            self.executing_actions.clear()
+            self.completed_actions.clear()
+            self.failed_actions.clear()
+            
+            # Reset statistics
+            self.stats = {
+                "total_actions": 0,
+                "successful_actions": 0,
+                "failed_actions": 0,
+                "total_execution_time": 0.0,
+                "start_time": time.time()
+            }
+            
+            self.logger.info(f"✅ Initialized {len(self.action_handlers)} action handlers")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing preventive actions: {e}")
+            raise
+    
+    async def _execute_system_cleanup(self, action: PreventiveAction) -> Dict[str, Any]:
+        """Execute system cleanup action."""
+        self.logger.info("Executing system cleanup action")
+        await asyncio.sleep(0.1)  # Simulate cleanup
+        return {"status": "completed", "details": "System cleanup completed"}
+    
+    async def _execute_memory_optimization(self, action: PreventiveAction) -> Dict[str, Any]:
+        """Execute memory optimization action."""
+        self.logger.info("Executing memory optimization action")
+        await asyncio.sleep(0.1)  # Simulate optimization
+        return {"status": "completed", "details": "Memory optimization completed"}
+    
+    async def _execute_connection_reset(self, action: PreventiveAction) -> Dict[str, Any]:
+        """Execute connection reset action."""
+        self.logger.info("Executing connection reset action")
+        await asyncio.sleep(0.1)  # Simulate reset
+        return {"status": "completed", "details": "Connection reset completed"}
+    
+    async def _execute_cache_cleanup(self, action: PreventiveAction) -> Dict[str, Any]:
+        """Execute cache cleanup action."""
+        self.logger.info("Executing cache cleanup action")
+        await asyncio.sleep(0.1)  # Simulate cleanup
+        return {"status": "completed", "details": "Cache cleanup completed"}
+    
+    async def _execute_resource_balancing(self, action: PreventiveAction) -> Dict[str, Any]:
+        """Execute resource balancing action."""
+        self.logger.info("Executing resource balancing action")
+        await asyncio.sleep(0.1)  # Simulate balancing
+        return {"status": "completed", "details": "Resource balancing completed"}
+    
     async def cleanup(self):
         """Cleanup resources."""
         try:

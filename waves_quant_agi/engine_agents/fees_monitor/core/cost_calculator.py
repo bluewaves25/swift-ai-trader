@@ -259,3 +259,22 @@ class CostCalculator:
             "efficiency_score": self._calculate_cost_efficiency(),
             "optimization_savings": self._calculate_optimization_savings()
         }
+    
+    async def cleanup(self):
+        """Cleanup cost calculator resources."""
+        try:
+            self.logger.info("Cleaning up cost calculator resources...")
+            
+            # Reset cost state
+            self.cost_state = {
+                "total_fees": 0.0,
+                "total_slippage": 0.0,
+                "total_trades": 0,
+                "average_cost_per_trade": 0.0
+            }
+            
+            self.logger.info("✅ Cost calculator cleanup completed")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error during cost calculator cleanup: {e}")
+            raise

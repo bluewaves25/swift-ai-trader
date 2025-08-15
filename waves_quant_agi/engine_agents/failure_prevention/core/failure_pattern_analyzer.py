@@ -258,3 +258,51 @@ class FailurePatternAnalyzer:
         except Exception as e:
             self.logger.error(f"❌ Error predicting failure probability: {e}")
             return 0.0
+    
+    async def cleanup(self):
+        """Cleanup failure pattern analyzer resources."""
+        try:
+            self.logger.info("Cleaning up failure pattern analyzer resources...")
+            
+            # Clear pattern storage
+            for pattern_queue in self.failure_patterns.values():
+                pattern_queue.clear()
+            
+            # Reset pattern metrics
+            self.pattern_metrics = {
+                "common_failure_sequences": [],
+                "failure_correlation_score": 0.0,
+                "prediction_accuracy": 0.0,
+                "pattern_confidence": 0.0
+            }
+            
+            self.logger.info("✅ Failure pattern analyzer cleanup completed")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error during failure pattern analyzer cleanup: {e}")
+            raise
+    
+    async def initialize_analysis(self):
+        """Initialize failure pattern analysis systems."""
+        try:
+            self.logger.info("✅ Failure pattern analysis initialized")
+            self.logger.info(f"✅ Pattern thresholds configured: {self.thresholds}")
+            
+            # Initialize pattern storage
+            for pattern_type in self.failure_patterns.keys():
+                self.failure_patterns[pattern_type].clear()
+                self.logger.info(f"✅ {pattern_type} pattern storage initialized")
+            
+            # Reset pattern metrics
+            self.pattern_metrics = {
+                "common_failure_sequences": [],
+                "failure_correlation_score": 0.0,
+                "prediction_accuracy": 0.0,
+                "pattern_confidence": 0.0
+            }
+            
+            self.logger.info("✅ Pattern analysis systems ready")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing failure pattern analysis: {e}")
+            raise

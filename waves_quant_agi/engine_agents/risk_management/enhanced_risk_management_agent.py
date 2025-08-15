@@ -176,7 +176,7 @@ class EnhancedRiskManagementAgent(BaseAgent):
         """Initialize circuit breakers for risk management."""
         try:
             from .core.circuit_breaker import CircuitBreakerManager
-            self.circuit_breaker = CircuitBreakerManager(self.config)
+            self.circuit_breaker = CircuitBreakerManager()
             
             # Set up default circuit breakers
             await self._setup_default_circuit_breakers()
@@ -191,7 +191,7 @@ class EnhancedRiskManagementAgent(BaseAgent):
         """Initialize risk limits for different asset classes."""
         try:
             from .core.dynamic_risk_limits import DynamicRiskLimits
-            self.risk_limits = DynamicRiskLimits(self.config)
+            self.risk_limits = DynamicRiskLimits(self.connection_manager, self.config)
             
             # Set up default risk limits
             await self._setup_default_risk_limits()
