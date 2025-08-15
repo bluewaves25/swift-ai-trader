@@ -432,8 +432,13 @@ class DataFeedsAgent(BaseAgent):
     async def _init_mt5_connection(self):
         """Initialize MT5 connection for data fetching."""
         try:
-            # Import MT5 broker
-            from engine_agents.adapters.brokers.mt5_plugin import MT5Broker
+            # Try to import MT5 broker (optional for non-Windows systems)
+            try:
+                from engine_agents.adapters.brokers.mt5_plugin import MT5Broker
+            except ImportError as ie:
+                self.logger.warning(f"⚠️ MT5 plugin not available (likely running on non-Windows system): {ie}")
+                self.stats["mt5_connection_status"] = "unavailable"
+                return
             
             # Initialize MT5 adapter
             self.mt5_adapter = MT5Broker(
@@ -453,7 +458,8 @@ class DataFeedsAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"❌ Error initializing MT5 connection: {e}")
             self.stats["mt5_connection_status"] = "failed"
-            raise
+            # Don't raise - continue without MT5
+            self.logger.warning("⚠️ Continuing without MT5 connection")
     
     def _init_core_price_feeds(self):
         """Initialize core price feeds."""

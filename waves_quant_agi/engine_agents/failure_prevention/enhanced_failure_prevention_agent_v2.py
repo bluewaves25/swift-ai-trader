@@ -237,8 +237,8 @@ class EnhancedFailurePreventionAgentV2(BaseAgent):
     async def _get_system_metrics_from_core(self) -> Dict[str, Any]:
         """Get system metrics from Core Agent (no duplicate health monitoring)."""
         try:
-            # Get system health from Core Agent via Redis
-            health_data = await self.redis_conn.get("system:health:latest")
+            # Get system health from Core Agent via Redis using async method
+            health_data = await self.redis_conn.async_get("system:health:latest")
             
             if health_data:
                 return json.loads(health_data)

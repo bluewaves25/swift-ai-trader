@@ -251,8 +251,8 @@ class EnhancedMarketConditionsAgent(BaseAgent):
     async def _get_real_time_market_data(self) -> Dict[str, Any]:
         """Get real-time market data from Redis."""
         try:
-            # Get latest market data from Redis
-            market_data = await self.redis_conn.get("market:data:latest")
+            # Get latest market data from Redis using async method
+            market_data = await self.redis_conn.async_get("market:data:latest")
             
             if market_data:
                 return json.loads(market_data)
@@ -350,8 +350,8 @@ class EnhancedMarketConditionsAgent(BaseAgent):
     async def _get_comprehensive_market_data(self) -> Dict[str, Any]:
         """Get comprehensive market data."""
         try:
-            # Get comprehensive market data from Redis
-            market_data = await self.redis_conn.get("market:data:comprehensive")
+            # Get comprehensive market data from Redis using async method
+            market_data = await self.redis_conn.async_get("market:data:comprehensive")
             
             if market_data:
                 return json.loads(market_data)
@@ -523,8 +523,8 @@ class EnhancedMarketConditionsAgent(BaseAgent):
     async def _get_historical_market_data(self) -> Dict[str, Any]:
         """Get historical market data."""
         try:
-            # Get historical market data from Redis
-            historical_data = await self.redis_conn.get("market:data:historical")
+            # Get historical market data from Redis using async method
+            historical_data = await self.redis_conn.async_get("market:data:historical")
             
             if historical_data:
                 return json.loads(historical_data)
