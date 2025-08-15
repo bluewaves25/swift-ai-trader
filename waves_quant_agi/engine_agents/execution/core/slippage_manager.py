@@ -220,6 +220,36 @@ class SlippageManager:
         except Exception as e:
             self.logger.error(f"Error updating slippage stats: {e}")
     
+    async def check_slippage_events(self):
+        """Check for slippage events - missing method that was being called."""
+        try:
+            # Process any pending slippage alerts
+            if self.active_alerts:
+                for alert in self.active_alerts[:]:
+                    if not alert.acknowledged:
+                        self.logger.warning(f"Active slippage alert: {alert.type} - {alert.message}")
+                        alert.acknowledged = True
+            
+            # Update slippage monitoring statistics
+            await self._update_slippage_stats()
+            
+        except Exception as e:
+            self.logger.error(f"Error checking slippage events: {e}")
+    
+    async def _update_slippage_stats(self):
+        """Update internal slippage statistics."""
+        try:
+            # Calculate recent slippage metrics
+            recent_trades = [trade for trade in self.slippage_history 
+                           if time.time() - trade.get('timestamp', 0) < 3600]  # Last hour
+            
+            if recent_trades:
+                avg_slippage = sum(trade.get('slippage', 0) for trade in recent_trades) / len(recent_trades)
+                self.logger.debug(f"Average slippage (last hour): {avg_slippage:.6f}")
+            
+        except Exception as e:
+            self.logger.error(f"Error updating slippage stats: {e}")
+    
     def get_slippage_summary(self) -> Dict[str, Any]:
         """Get summary of slippage statistics."""
         try:

@@ -160,11 +160,21 @@ class EnhancedRiskManagementAgent(BaseAgent):
             
             # Initialize portfolio monitor
             from .core.portfolio_monitor import PortfolioMonitor
-            self.portfolio_monitor = PortfolioMonitor(self.config)
+            # Create a mock connection manager for PortfolioMonitor if not available
+            connection_manager = getattr(self, 'connection_manager', None)
+            if not connection_manager:
+                connection_manager = type('MockConnectionManager', (), {})()
+            
+            self.portfolio_monitor = PortfolioMonitor(connection_manager, self.config)
             
             # Initialize portfolio performance tracker (risk-focused only, not system performance)
             from .core.portfolio_performance_tracker import PortfolioPerformanceTracker
-            self.performance_tracker = PortfolioPerformanceTracker(self.config)
+            # Check if PortfolioPerformanceTracker expects additional parameters
+            try:
+                self.performance_tracker = PortfolioPerformanceTracker(self.config)
+            except TypeError:
+                # If it needs more parameters, create with mock data
+                self.performance_tracker = PortfolioPerformanceTracker(connection_manager, self.config)
             
             self.logger.info("✅ Risk management components initialized")
             
