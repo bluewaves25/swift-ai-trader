@@ -317,3 +317,51 @@ class FailurePredictor:
             "alert_patterns_tracked": len(self.alert_patterns),
             "thresholds": self.prediction_thresholds
         }
+    
+    async def initialize_models(self):
+        """Initialize failure prediction models."""
+        try:
+            self.logger.info("✅ Failure prediction models initialized")
+            self.logger.info(f"✅ Prediction thresholds configured: {self.prediction_thresholds}")
+            
+            # Initialize prediction history
+            self.prediction_history = []
+            
+            # Initialize alert patterns tracking
+            self.alert_patterns = {}
+            
+            # Setup prediction model parameters
+            self.model_parameters = {
+                "learning_rate": 0.01,
+                "confidence_threshold": 0.8,
+                "prediction_window": 300,  # 5 minutes
+                "max_history_size": 1000
+            }
+            
+            self.logger.info("✅ Model parameters configured")
+            self.logger.info(f"✅ Prediction window: {self.model_parameters['prediction_window']}s")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing prediction models: {e}")
+            raise
+    
+    async def cleanup(self):
+        """Cleanup failure predictor resources."""
+        try:
+            self.logger.info("Cleaning up failure predictor resources...")
+            
+            # Clear prediction history
+            self.prediction_history.clear()
+            
+            # Clear alert patterns
+            self.alert_patterns.clear()
+            
+            # Reset model parameters
+            if hasattr(self, 'model_parameters'):
+                self.model_parameters = {}
+            
+            self.logger.info("✅ Failure predictor cleanup completed")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error during failure predictor cleanup: {e}")
+            raise

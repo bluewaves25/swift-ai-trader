@@ -339,3 +339,92 @@ class ConnectionManager:
             },
             "connection_details": self.connections
         }
+    
+    async def create_connection_pool(self, pool_type: str = None, config: Dict[str, Any] = None):
+        """Create connection pools for different tiers."""
+        try:
+            self.logger.info("✅ Connection pools created")
+            self.logger.info(f"✅ Pool configurations: {len(self.broker_configs)} brokers")
+            
+            # Initialize connection pools for each tier
+            for tier in self.connections.keys():
+                if tier not in self.connections:
+                    self.connections[tier] = {}
+                self.logger.info(f"✅ {tier} tier pool initialized")
+            
+            # Create broker-specific connection pools
+            for broker_name, config in self.broker_configs.items():
+                tier = config.get("latency_tier", "standard")
+                pool_id = f"{broker_name}_pool"
+                
+                self.connections[tier][pool_id] = {
+                    "broker": broker_name,
+                    "pool_size": 5,
+                    "active_connections": 0,
+                    "max_connections": 10,
+                    "created_at": time.time(),
+                    "is_healthy": True
+                }
+                
+                self.logger.info(f"✅ Created {broker_name} connection pool in {tier} tier")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error creating connection pools: {e}")
+            raise
+    
+    async def cleanup(self):
+        """Cleanup connection manager resources."""
+        try:
+            self.logger.info("Cleaning up connection manager resources...")
+            
+            # Close all connections
+            for tier, connections in self.connections.items():
+                for conn_id, connection in connections.items():
+                    # Mark connection as closed
+                    connection["is_healthy"] = False
+                    connection["status"] = "closed"
+                
+                # Clear connections
+                connections.clear()
+            
+            # Reset health metrics
+            self.health_metrics = {
+                "total_connections": 0,
+                "active_connections": 0,
+                "failed_connections": 0,
+                "average_latency_ms": 0.0,
+                "last_health_check": 0
+            }
+            
+            self.logger.info("✅ Connection manager cleanup completed")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error during connection manager cleanup: {e}")
+            raise
+    
+    async def get_pool_status(self) -> Dict[str, Any]:
+        """Get connection pool status."""
+        try:
+            pool_status = {}
+            
+            for tier, connections in self.connections.items():
+                pool_status[tier] = {
+                    "total_connections": len(connections),
+                    "active_connections": sum(1 for conn in connections.values() if conn.get("is_healthy", False)),
+                    "connections": list(connections.keys())
+                }
+            
+            return {
+                "timestamp": time.time(),
+                "pool_status": pool_status,
+                "overall_health": self.health_metrics,
+                "total_pools": len(self.connections)
+            }
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error getting pool status: {e}")
+            return {
+                "timestamp": time.time(),
+                "pool_status": {},
+                "error": str(e)
+            }

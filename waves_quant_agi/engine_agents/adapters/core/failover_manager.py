@@ -39,6 +39,53 @@ class FailoverManager:
         
         self.logger.info("Failover Manager initialized")
     
+    async def initialize_failover(self):
+        """Initialize failover management systems."""
+        try:
+            self.logger.info("✅ Failover management initialized")
+            self.logger.info(f"✅ Failover enabled: {self.failover_enabled}")
+            self.logger.info(f"✅ Max retry attempts: {self.max_retry_attempts}")
+            self.logger.info(f"✅ Health check interval: {self.health_check_interval}s")
+            
+            # Initialize backup connections list if not set
+            if not self.backup_connections:
+                self.backup_connections = []
+            
+            # Reset failover state
+            self.is_failing_over = False
+            self.failover_count = 0
+            self.last_failover_time = 0
+            
+            # Start health monitoring if enabled
+            if self.failover_enabled:
+                await self.start_monitoring()
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing failover management: {e}")
+            raise
+    
+    async def set_thresholds(self, thresholds: Dict[str, Any]):
+        """Set failover thresholds."""
+        try:
+            self.logger.info("✅ Failover thresholds configured")
+            self.logger.info(f"✅ Thresholds: {thresholds}")
+            
+            # Update configuration with new thresholds
+            self.config.update(thresholds)
+            
+            # Update internal thresholds
+            self.max_retry_attempts = thresholds.get("max_retry_attempts", self.max_retry_attempts)
+            self.retry_delay = thresholds.get("retry_delay", self.retry_delay)
+            self.health_check_interval = thresholds.get("health_check_interval", self.health_check_interval)
+            
+            self.logger.info(f"✅ Updated retry attempts: {self.max_retry_attempts}")
+            self.logger.info(f"✅ Updated retry delay: {self.retry_delay}s")
+            self.logger.info(f"✅ Updated health check interval: {self.health_check_interval}s")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error setting failover thresholds: {e}")
+            raise
+    
     async def start_monitoring(self):
         """Start health monitoring and failover management."""
         if self.is_monitoring:

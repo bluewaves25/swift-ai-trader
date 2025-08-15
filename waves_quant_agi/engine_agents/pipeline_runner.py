@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from engine_agents.core.pipeline_orchestrator import PipelineOrchestrator
-from shared_utils.redis_connector import SharedRedisConnector
+from engine_agents.shared_utils.redis_connector import SharedRedisConnector
 
 class PipelineRunner:
     """Main pipeline runner for the AI trading engine."""

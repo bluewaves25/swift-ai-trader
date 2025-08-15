@@ -51,6 +51,33 @@ class CostAnalyzer:
         
         self.logger.info("Cost Analyzer initialized")
     
+    async def initialize_analysis(self):
+        """Initialize cost analysis systems."""
+        try:
+            self.logger.info("✅ Cost analysis systems initialized")
+            self.logger.info(f"✅ Cost thresholds configured: {self.cost_thresholds}")
+            
+            # Initialize analysis state
+            self.cost_statistics = {
+                "total_costs": 0.0,
+                "average_cost": 0.0,
+                "cost_trends": {},
+                "initialization_time": time.time()
+            }
+            
+            # Clear any existing alerts
+            self.cost_alerts.clear()
+            
+            # Log analysis capabilities
+            if self.analysis_enabled:
+                self.logger.info("✅ Real-time cost analysis enabled")
+            else:
+                self.logger.info("ℹ️ Cost analysis disabled in configuration")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing cost analysis: {e}")
+            raise
+    
     async def start_analysis(self):
         """Start cost analysis monitoring."""
         if not self.analysis_enabled or self.is_analyzing:

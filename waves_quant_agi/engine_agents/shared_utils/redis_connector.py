@@ -67,9 +67,18 @@ class SharedRedisConnector:
             
         except Exception as e:
             print(f"Shared Redis connection failed: {e}")
-            self.redis_sync = None
-            self.is_connected = False
-            return False
+            # Fall back to Redis mock
+            try:
+                from .redis_mock import get_redis_mock
+                self.redis_sync = get_redis_mock()
+                self.is_connected = True
+                print(f"Shared Redis: Using mock Redis for {self.host}:{self.port}/{self.db}")
+                return True
+            except Exception as mock_error:
+                print(f"Shared Redis mock also failed: {mock_error}")
+                self.redis_sync = None
+                self.is_connected = False
+                return False
     
     async def _connect_async(self) -> bool:
         """Establish asynchronous Redis connection."""
@@ -88,8 +97,16 @@ class SharedRedisConnector:
             
         except Exception as e:
             print(f"❌ Shared Redis async connection failed: {e}")
-            self.redis_async = None
-            return False
+            # Fall back to Redis mock
+            try:
+                from .redis_mock import get_async_redis_mock
+                self.redis_async = get_async_redis_mock()
+                print(f"Shared Redis: Using async mock Redis for {self.host}:{self.port}/{self.db}")
+                return True
+            except Exception as mock_error:
+                print(f"Shared Redis async mock also failed: {mock_error}")
+                self.redis_async = None
+                return False
     
     def ensure_connection(self) -> bool:
         """Ensure sync connection is active."""

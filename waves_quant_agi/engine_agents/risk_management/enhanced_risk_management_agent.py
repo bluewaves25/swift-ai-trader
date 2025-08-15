@@ -160,11 +160,11 @@ class EnhancedRiskManagementAgent(BaseAgent):
             
             # Initialize portfolio monitor
             from .core.portfolio_monitor import PortfolioMonitor
-            self.portfolio_monitor = PortfolioMonitor(self.config)
+            self.portfolio_monitor = PortfolioMonitor(connection_manager, self.config)
             
             # Initialize portfolio performance tracker (risk-focused only, not system performance)
             from .core.portfolio_performance_tracker import PortfolioPerformanceTracker
-            self.performance_tracker = PortfolioPerformanceTracker(self.config)
+            self.performance_tracker = PortfolioPerformanceTracker(connection_manager, self.config)
             
             self.logger.info("✅ Risk management components initialized")
             
@@ -176,7 +176,7 @@ class EnhancedRiskManagementAgent(BaseAgent):
         """Initialize circuit breakers for risk management."""
         try:
             from .core.circuit_breaker import CircuitBreakerManager
-            self.circuit_breaker = CircuitBreakerManager(self.config)
+            self.circuit_breaker = CircuitBreakerManager()
             
             # Set up default circuit breakers
             await self._setup_default_circuit_breakers()
@@ -191,7 +191,7 @@ class EnhancedRiskManagementAgent(BaseAgent):
         """Initialize risk limits for different asset classes."""
         try:
             from .core.dynamic_risk_limits import DynamicRiskLimits
-            self.risk_limits = DynamicRiskLimits(self.config)
+            self.risk_limits = DynamicRiskLimits(self.connection_manager, self.config)
             
             # Set up default risk limits
             await self._setup_default_risk_limits()

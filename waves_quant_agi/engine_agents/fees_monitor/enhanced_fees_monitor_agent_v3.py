@@ -644,3 +644,110 @@ class EnhancedFeesMonitorAgentV3(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error submitting cost tracking request: {e}")
             return False
+    
+    # ============= BACKGROUND LOOP METHODS =============
+    
+    async def _fee_monitoring_loop(self):
+        """Fee monitoring background loop."""
+        while True:
+            try:
+                # Monitor real-time fees
+                await self._monitor_current_fees()
+                
+                # Check for fee anomalies
+                await self._check_fee_anomalies()
+                
+                # Update fee metrics
+                await self._update_fee_metrics()
+                
+                await asyncio.sleep(1)  # Fast monitoring - 1 second
+                
+            except Exception as e:
+                self.logger.error(f"Error in fee monitoring loop: {e}")
+                await asyncio.sleep(5)  # Error backoff
+    
+    async def _profitability_audit_loop(self):
+        """Profitability audit background loop."""
+        while True:
+            try:
+                # Audit profitability metrics
+                await self._audit_profitability()
+                
+                # Analyze cost efficiency
+                await self._analyze_cost_efficiency()
+                
+                await asyncio.sleep(30)  # Tactical monitoring - 30 seconds
+                
+            except Exception as e:
+                self.logger.error(f"Error in profitability audit loop: {e}")
+                await asyncio.sleep(60)  # Error backoff
+    
+    async def _slippage_tracking_loop(self):
+        """Slippage tracking background loop."""
+        while True:
+            try:
+                # Track slippage costs
+                await self._track_slippage_costs()
+                
+                # Update slippage metrics
+                await self._update_slippage_metrics()
+                
+                await asyncio.sleep(2)  # Fast tracking - 2 seconds
+                
+            except Exception as e:
+                self.logger.error(f"Error in slippage tracking loop: {e}")
+                await asyncio.sleep(10)  # Error backoff
+    
+    async def _fee_reporting_loop(self):
+        """Fee reporting background loop."""
+        while True:
+            try:
+                # Generate fee reports
+                await self._generate_fee_reports()
+                
+                # Update reporting metrics
+                await self._update_reporting_metrics()
+                
+                await asyncio.sleep(300)  # Strategic reporting - 5 minutes
+                
+            except Exception as e:
+                self.logger.error(f"Error in fee reporting loop: {e}")
+                await asyncio.sleep(600)  # Error backoff
+    
+    # ============= HELPER METHODS FOR LOOPS =============
+    
+    async def _monitor_current_fees(self):
+        """Monitor current fee levels."""
+        pass  # Placeholder - would implement real fee monitoring
+    
+    async def _check_fee_anomalies(self):
+        """Check for fee anomalies."""
+        pass  # Placeholder - would implement anomaly detection
+    
+    async def _update_fee_metrics(self):
+        """Update fee metrics."""
+        pass  # Placeholder - would implement metrics updates
+    
+    async def _audit_profitability(self):
+        """Audit profitability."""
+        pass  # Placeholder - would implement profitability audit
+    
+    async def _analyze_cost_efficiency(self):
+        """Analyze cost efficiency."""
+        pass  # Placeholder - would implement efficiency analysis
+    
+    async def _track_slippage_costs(self):
+        """Track slippage costs."""
+        pass  # Placeholder - would implement slippage cost tracking
+    
+    async def _update_slippage_metrics(self):
+        """Update slippage metrics."""
+        pass  # Placeholder - would implement slippage metrics updates
+    
+    async def _generate_fee_reports(self):
+        """Generate fee reports."""
+        pass  # Placeholder - would implement report generation
+    
+    async def _update_reporting_metrics(self):
+        """Update reporting metrics."""
+        pass  # Placeholder - would implement reporting metrics updates

@@ -328,6 +328,38 @@ class SlippageManager:
         except Exception as e:
             self.logger.error(f"Error setting monitoring state: {e}")
     
+    async def check_slippage_events(self) -> List[Dict[str, Any]]:
+        """Check for new slippage events that need processing."""
+        try:
+            if not self.slippage_monitoring_enabled:
+                return []
+            
+            # Return recent alerts as events
+            events = []
+            current_time = time.time()
+            
+            for alert in self.active_alerts:
+                # Convert alerts to events
+                event = {
+                    "type": "slippage_alert",
+                    "symbol": alert.symbol,
+                    "order_id": alert.order_id,
+                    "slippage_amount": alert.slippage_amount,
+                    "slippage_type": alert.slippage_type.value,
+                    "severity": "high" if abs(alert.slippage_amount) > self.max_allowed_slippage else "medium",
+                    "timestamp": current_time
+                }
+                events.append(event)
+            
+            # Clear processed alerts
+            self.active_alerts.clear()
+            
+            return events
+            
+        except Exception as e:
+            self.logger.error(f"Error checking slippage events: {e}")
+            return []
+    
     async def cleanup(self):
         """Cleanup resources."""
         try:

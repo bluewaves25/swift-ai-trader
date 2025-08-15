@@ -41,6 +41,24 @@ class PatternRecognizer:
             self.logger.error(f"Error in pattern recognition: {e}")
             return []
     
+    async def adjust_sensitivity_for_regime(self, regime: str, confidence: float):
+        """Adjust pattern recognition sensitivity for market regime."""
+        try:
+            self.logger.info(f"Adjusting sensitivity for regime: {regime} (confidence: {confidence})")
+            # Placeholder - would implement regime-based sensitivity adjustment
+            pass
+        except Exception as e:
+            self.logger.error(f"Error adjusting sensitivity for regime: {e}")
+    
+    async def update_correlation_data(self, correlation_data: Dict[str, Any]):
+        """Update pattern recognition with correlation data."""
+        try:
+            self.logger.info("Updating correlation data for pattern recognition")
+            # Placeholder - would implement correlation data integration
+            pass
+        except Exception as e:
+            self.logger.error(f"Error updating correlation data: {e}")
+    
     async def cleanup(self):
         """Cleanup resources."""
         pass
