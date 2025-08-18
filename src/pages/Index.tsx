@@ -51,19 +51,19 @@ const Index = () => {
       <header className="sticky top-0 z-30 w-full flex justify-center items-center pt-6">
         <nav className="flex items-center justify-between p-2 space-x-8 bg-white/80 dark:bg-gray-800/60 backdrop-blur-md rounded-full border border-gray-200 dark:border-gray-700 shadow-sm">
           <Link to="/" className="flex items-center space-x-2 pl-4">
-            <Brain className="h-6 w-6 text-primary" />
+            <Brain className="h-4 w-4 text-primary" />
             <span className="text-xl font-bold text-gray-900 dark:text-white">
               Waves Quant
             </span>
           </Link>
                 <div className="hidden md:flex items-center space-x-6">
-            <Link to="/about" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary">About</Link>
-            <Link to="/contact" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary">Contact</Link>
-            <Link to="/terms" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary">Terms</Link>
+            <Link to="/about" className="text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-primary">About</Link>
+            <Link to="/contact" className="text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-primary">Contact</Link>
+            <Link to="/terms" className="text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-primary">Terms</Link>
                 </div>
                 <Button 
                   onClick={() => navigate('/auth')} 
-            className="rounded-full bg-gray-900 text-white dark:bg-black dark:text-white hover:bg-gray-800 dark:hover:bg-gray-700 px-5 py-2 text-sm font-semibold"
+            className="rounded-full bg-gray-900 text-white dark:bg-black dark:text-white hover:bg-gray-800 dark:hover:bg-gray-700 px-5 py-2 text-xs font-semibold"
                 >
                   Sign In
                 </Button>
@@ -79,7 +79,7 @@ const Index = () => {
 
         <div className="relative z-10 px-4">
           <Badge variant="outline" className="mb-6 rounded-full border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50">
-            <Zap className="h-4 w-4 mr-2" />
+            <Zap className="h-3 w-3 mr-2" />
             AI-POWERED TRADING PLATFORM
               </Badge>
               
@@ -103,9 +103,9 @@ const Index = () => {
               { icon: DollarSign, label: "Total Profits", value: `$${(stats.totalProfit / 1000000).toFixed(1)}M`, color: "text-yellow-500" },
             ].map((stat, index) => (
               <div key={index} className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-                <stat.icon className={`h-6 w-6 mb-2 mx-auto ${stat.color}`} />
+                <stat.icon className={`h-4 w-4 mb-2 mx-auto ${stat.color}`} />
                 <div className="text-xl font-bold text-gray-900 dark:text-white">{stat.value}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">{stat.label}</div>
               </div>
             ))}
               </div>
@@ -113,7 +113,7 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" onClick={() => navigate('/auth')} className="rounded-full px-8 py-6 text-base font-bold">
               Get Started
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <ArrowRight className="ml-2 h-3 w-3" />
                 </Button>
             <Button size="lg" variant="outline" onClick={() => navigate('/about')} className="rounded-full px-8 py-6 text-base font-bold">
                   Learn More
@@ -150,7 +150,7 @@ const Index = () => {
               <Card key={index} className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className={`p-3 rounded-lg w-fit bg-${feature.color}-100 dark:bg-${feature.color}-900/30 mb-4`}>
-                    <feature.icon className={`h-6 w-6 text-${feature.color}-600 dark:text-${feature.color}-400`} />
+                    <feature.icon className={`h-5 w-5 text-${feature.color}-600 dark:text-${feature.color}-400`} />
                   </div>
                   <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">{feature.title}</CardTitle>
                 </CardHeader>
@@ -187,13 +187,13 @@ const Index = () => {
                 <CardContent className="p-6">
                   <div className="flex mb-4">
                     {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
+                      <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
                     ))}
                   </div>
                   <p className="mb-6 text-gray-700 dark:text-gray-300 italic">"{testimonial.content}"</p>
                   <div>
                     <div className="font-semibold text-gray-900 dark:text-white">{testimonial.name}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">{testimonial.role}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{testimonial.role}</div>
                   </div>
                 </CardContent>
               </Card>
@@ -215,14 +215,14 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <Button size="lg" onClick={() => navigate('/auth')} className="rounded-full px-8 py-6 text-base font-bold">
               Get Started Free
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <ArrowRight className="ml-2 h-3 w-3" />
             </Button>
             <Button size="lg" variant="outline" onClick={() => navigate('/contact')} className="rounded-full px-8 py-6 text-base font-bold">
               Contact Sales
             </Button>
           </div>
 
-          <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex flex-wrap justify-center items-center gap-6 text-xs text-gray-500 dark:text-gray-400">
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-500" />
               <span>No Hidden Fees</span>
@@ -242,7 +242,7 @@ const Index = () => {
       {/* Partners/Social Proof Section */}
       <div className="w-full py-12 bg-white dark:bg-gray-900">
         <div className="container mx-auto px-4">
-          <p className="text-center text-sm font-semibold text-gray-500 dark:text-gray-400 mb-6">
+          <p className="text-center text-xs font-semibold text-gray-500 dark:text-gray-400 mb-6">
             TRUSTED BY INDUSTRY LEADERS
           </p>
           <div className="flex justify-center items-center space-x-8 md:space-x-12 opacity-70">
@@ -281,7 +281,7 @@ const Index = () => {
               <Card key={index} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-lg transition-shadow flex flex-col">
               <CardHeader>
                   <div className={`p-3 rounded-lg w-fit bg-${feature.color}-100 dark:bg-${feature.color}-900/30 mb-4`}>
-                    <feature.icon className={`h-6 w-6 text-${feature.color}-600 dark:text-${feature.color}-400`} />
+                    <feature.icon className={`h-4 w-4 text-${feature.color}-600 dark:text-${feature.color}-400`} />
                 </div>
                   <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">{feature.title}</CardTitle>
               </CardHeader>
@@ -304,25 +304,25 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center text-center md:text-left">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <Brain className="h-6 w-6 text-primary" />
+              <Brain className="h-4 w-4 text-primary" />
               <span className="font-bold text-gray-800 dark:text-gray-200">Waves Quant Engine</span>
             </div>
-            <div className="flex items-center space-x-6 text-sm text-gray-600 dark:text-gray-400 mb-4 md:mb-0">
+            <div className="flex items-center space-x-6 text-xs text-gray-600 dark:text-gray-400 mb-4 md:mb-0">
               <Link to="/about" className="hover:text-primary transition-colors">About</Link>
               <Link to="/contact" className="hover:text-primary transition-colors">Contact</Link>
               <Link to="/terms" className="hover:text-primary transition-colors">Terms</Link>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <svg className="h-4 w-4 text-gray-600 dark:text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                <svg className="h-3 w-3 text-gray-600 dark:text-gray-400" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                 </svg>
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MessageCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                <MessageCircle className="h-3 w-3 text-gray-600 dark:text-gray-400" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Send className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                <Send className="h-3 w-3 text-gray-600 dark:text-gray-400" />
               </Button>
             </div>
           </div>

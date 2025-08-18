@@ -100,7 +100,7 @@ export default function InvestorProfile() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <User className="h-5 w-5" />
+            <User className="h-4 w-4" />
             <span>Personal Information</span>
           </CardTitle>
         </CardHeader>

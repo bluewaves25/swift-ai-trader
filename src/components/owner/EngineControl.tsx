@@ -208,7 +208,7 @@ export function EngineControl() {
         <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-purple-50/50" />
         <CardHeader className="relative">
           <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-blue-600" />
+            <Zap className="h-4 w-4 text-blue-600" />
             Engine Controls
           </CardTitle>
           <CardDescription>

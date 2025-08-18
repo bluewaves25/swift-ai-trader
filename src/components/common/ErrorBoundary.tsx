@@ -33,7 +33,7 @@ export class ErrorBoundary extends React.Component<
           <Card className="w-full max-w-md">
             <CardHeader className="text-center">
               <div className="flex justify-center mb-4">
-                <AlertTriangle className="h-12 w-12 text-red-500" />
+                <AlertTriangle className="h-8 w-8 text-red-500" />
               </div>
               <CardTitle>Something went wrong</CardTitle>
               <CardDescription>
@@ -51,7 +51,7 @@ export class ErrorBoundary extends React.Component<
                 onClick={() => window.location.reload()}
                 className="w-full"
               >
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="h-3 w-3 mr-2" />
                 Refresh Page
               </Button>
             </CardContent>

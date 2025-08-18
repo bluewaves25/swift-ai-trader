@@ -25,7 +25,7 @@ export function PaymentMethodSelector({ onSelect, selectedMethod }: PaymentMetho
               onClick={() => onSelect(method)}
             >
               <span className="text-2xl">{method.icon}</span>
-              <span className="text-sm">{method.name}</span>
+                              <span className="text-xs">{method.name}</span>
             </Button>
           ))}
         </div>

@@ -160,7 +160,7 @@ export function PaymentForm({ transactionType }: PaymentFormProps) {
       <CardContent>
         {/* Current Balance */}
         <div className="mb-6 p-4 rounded-lg bg-muted">
-          <div className="text-sm text-muted-foreground">Current Balance</div>
+                          <div className="text-xs text-muted-foreground">Current Balance</div>
           <div className="text-2xl font-bold">${balance.toLocaleString()}</div>
         </div>
 
@@ -179,7 +179,7 @@ export function PaymentForm({ transactionType }: PaymentFormProps) {
               required
             />
             {transactionType === "withdrawal" && amount > balance && (
-              <p className="text-sm text-destructive">Amount exceeds available balance</p>
+              <p className="text-xs text-destructive">Amount exceeds available balance</p>
             )}
           </div>
 
@@ -300,7 +300,7 @@ export function PaymentForm({ transactionType }: PaymentFormProps) {
           >
             {loading ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
                 Processing...
               </>
             ) : (

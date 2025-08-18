@@ -55,7 +55,7 @@ const Contact = () => {
           <div className="flex items-center justify-between">
             <Link to="/">
               <Button variant="ghost" size="icon" className="hover:bg-muted">
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-3 w-3" />
                 <span className="sr-only">Back</span>
               </Button>
             </Link>
@@ -69,7 +69,7 @@ const Contact = () => {
         {/* Hero Section */}
         <div className="text-center mb-6 md:mb-16">
           <Badge variant="secondary" className="mb-3 md:mb-6 bg-card border-card-foreground/30 backdrop-blur-sm text-xs md:text-sm">
-            <MessageCircle className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+            <MessageCircle className="h-2 w-2 md:h-3 md:w-3 mr-1 md:mr-2" />
             Get In Touch
           </Badge>
           
@@ -160,7 +160,7 @@ const Contact = () => {
                   {loading ? "Sending..." : (
                     <>
                       Send Message
-                      <Send className="ml-1 md:ml-2 h-3 w-3 md:h-4 md:w-4" />
+                      <Send className="ml-1 md:ml-2 h-2 w-2 md:h-3 md:w-3" />
                     </>
                   )}
                 </Button>
@@ -179,7 +179,7 @@ const Contact = () => {
               </CardHeader>
               <CardContent className="p-3 md:p-6 space-y-3 md:space-y-4">
                 <div className="flex items-center space-x-2 md:space-x-3">
-                  <Mail className="h-4 w-4 md:h-5 md:w-5 text-blue-300" />
+                  <Mail className="h-3 w-3 md:h-4 md:w-4 text-blue-300" />
                   <div>
                     <p className="text-xs md:text-sm font-medium text-foreground">Email</p>
                     <p className="text-xs md:text-sm text-foreground/80">support@wavesquant.com</p>
@@ -187,7 +187,7 @@ const Contact = () => {
                 </div>
                 
                 <div className="flex items-center space-x-2 md:space-x-3">
-                  <Phone className="h-4 w-4 md:h-5 md:w-5 text-green-300" />
+                  <Phone className="h-3 w-3 md:h-4 md:w-4 text-green-300" />
                   <div>
                     <p className="text-xs md:text-sm font-medium text-foreground">Phone</p>
                     <p className="text-xs md:text-sm text-foreground/80">+233 (500) 33-4946</p>
@@ -195,7 +195,7 @@ const Contact = () => {
                 </div>
                 
                 <div className="flex items-center space-x-2 md:space-x-3">
-                  <MapPin className="h-4 w-4 md:h-5 md:w-5 text-purple-300" />
+                  <MapPin className="h-3 w-3 md:h-4 md:w-4 text-purple-300" />
                   <div>
                     <p className="text-xs md:text-sm font-medium text-foreground">Address</p>
                     <p className="text-xs md:text-sm text-foreground/80">

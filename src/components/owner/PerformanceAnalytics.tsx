@@ -178,7 +178,7 @@ export function PerformanceAnalytics() {
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-50/50" />
           <CardHeader className="relative">
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
+              <TrendingUp className="h-4 w-4 text-blue-600" />
               Profit Trend ({timeframe})
             </CardTitle>
             <CardDescription>
@@ -220,7 +220,7 @@ export function PerformanceAnalytics() {
           <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-emerald-50/50" />
           <CardHeader className="relative">
             <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-green-600" />
+              <BarChart3 className="h-4 w-4 text-green-600" />
               Win Rate Analysis
             </CardTitle>
             <CardDescription>
@@ -261,7 +261,7 @@ export function PerformanceAnalytics() {
           <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-pink-50/50" />
           <CardHeader className="relative">
             <CardTitle className="flex items-center gap-2">
-              <PieChartIcon className="h-5 w-5 text-purple-600" />
+              <PieChartIcon className="h-4 w-4 text-purple-600" />
               Strategy Performance
             </CardTitle>
             <CardDescription>
@@ -295,7 +295,7 @@ export function PerformanceAnalytics() {
           <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 to-red-50/50" />
           <CardHeader className="relative">
             <CardTitle className="flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-orange-600" />
+              <TrendingDown className="h-4 w-4 text-orange-600" />
               Risk Management Impact
             </CardTitle>
             <CardDescription>

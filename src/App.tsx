@@ -1,6 +1,6 @@
 
 import { Suspense, lazy } from "react";
-import { Toaster } from "@/components/ui/sonner";
+import { ToastProvider } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -10,15 +10,15 @@ import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ProtectedRoute } from "@/components/common/ProtectedRoute";
 // No longer importing SignOutTest
 
-// Lazy load pages for better performance
-const Index = lazy(() => import("./pages/Index"));
-const AuthPage = lazy(() => import("./pages/AuthPage"));
-const InvestorDashboard = lazy(() => import("./pages/InvestorDashboard"));
-const OwnerDashboard = lazy(() => import("./pages/OwnerDashboard"));
-const About = lazy(() => import("./pages/About"));
-const Contact = lazy(() => import("./pages/Contact"));
-const Terms = lazy(() => import("./pages/Terms"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+// Import pages directly to avoid dynamic import issues
+import Index from "./pages/Index";
+import AuthPage from "./pages/AuthPage";
+import InvestorDashboard from "./pages/InvestorDashboard";
+import OwnerDashboard from "./pages/OwnerDashboard";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import Terms from "./pages/Terms";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,7 +32,7 @@ const queryClient = new QueryClient({
 
 const LoadingSpinner = () => (
   <div className="min-h-screen flex items-center justify-center">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
   </div>
 );
 
@@ -41,39 +41,40 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-          <TooltipProvider>
-            <BrowserRouter>
-              <AuthProvider>
-                <Suspense fallback={<LoadingSpinner />}>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/auth" element={<AuthPage />} />
-                    <Route
-                      path="/investor-dashboard"
-                      element={
-                        <ProtectedRoute>
-                          <InvestorDashboard />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/owner-dashboard"
-                      element={
-                        <ProtectedRoute>
-                          <OwnerDashboard />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route path="/about" element={<About />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/terms" element={<Terms />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Suspense>
-                <Toaster />
-              </AuthProvider>
-            </BrowserRouter>
-          </TooltipProvider>
+          <ToastProvider>
+            <TooltipProvider>
+              <BrowserRouter>
+                <AuthProvider>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/auth" element={<AuthPage />} />
+                      <Route
+                        path="/investor-dashboard"
+                        element={
+                          <ProtectedRoute>
+                            <InvestorDashboard />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/owner-dashboard"
+                        element={
+                          <ProtectedRoute>
+                            <OwnerDashboard />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route path="/about" element={<About />} />
+                      <Route path="/contact" element={<Contact />} />
+                      <Route path="/terms" element={<Terms />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                </AuthProvider>
+              </BrowserRouter>
+            </TooltipProvider>
+          </ToastProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </ErrorBoundary>

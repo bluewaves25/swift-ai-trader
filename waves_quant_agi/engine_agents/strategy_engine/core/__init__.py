@@ -1,24 +1,61 @@
 #!/usr/bin/env python3
 """
-Core Strategy Engine Components
-Provides the fundamental building blocks for strategy management, optimization, and execution.
+Core Engine Module - Consolidated Core Components
+Contains all core engine functionality organized by responsibility.
 """
 
-# Core strategy management components
-from .strategy_manager import StrategyManager
-from .optimization_engine import OptimizationEngine
-from .learning_coordinator import LearningCoordinator
-from .order_manager import OrderManager
+# Core engine components
+from .engine import (
+    StrategyEngineCore,
+    StrategyManager
+)
 
-# Strategy composition and application
-from .strategy_composer import StrategyComposer
-from .strategy_applicator import StrategyApplicator
+# Execution components
+from .execution import (
+    FlowManager,
+    TradingLogicExecutor,
+    TradingSignalProcessor,
+    OrderManager
+)
+
+# Strategy components
+from .strategy import (
+    StrategyApplicator,
+    StrategyComposer,
+    PerformanceTracker
+)
+
+# Optimization components
+from .optimization import (
+    OptimizationEngine,
+    LearningCoordinator
+)
+
+# Deployment components
+from .deployment import (
+    DeploymentManager
+)
 
 __all__ = [
-    "StrategyManager",
-    "OptimizationEngine", 
-    "LearningCoordinator",
-    "OrderManager",
-    "StrategyComposer",
-    "StrategyApplicator",
+    # Core engine components
+    'StrategyEngineCore',
+    'StrategyManager',
+    
+    # Execution components
+    'FlowManager',
+    'TradingLogicExecutor',
+    'TradingSignalProcessor',
+    'OrderManager',
+    
+    # Strategy components
+    'StrategyApplicator',
+    'StrategyComposer',
+    'PerformanceTracker',
+    
+    # Optimization components
+    'OptimizationEngine',
+    'LearningCoordinator',
+    
+    # Deployment components
+    'DeploymentManager'
 ]

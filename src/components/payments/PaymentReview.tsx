@@ -70,7 +70,7 @@ export function PaymentReview({
 
         <div className="bg-muted/50 p-4 rounded-lg">
           <h4 className="font-medium mb-2">Important Notes</h4>
-          <ul className="text-sm space-y-1 text-muted-foreground">
+                          <ul className="text-xs space-y-1 text-muted-foreground">
             <li>• Your deposit will be processed within 24 hours</li>
             <li>• Funds will be available in your trading account</li>
             <li>• You can track the progress in Transactions</li>

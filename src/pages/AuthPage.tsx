@@ -61,15 +61,15 @@ const AuthPage = () => {
     >
       <div className="absolute inset-0 bg-black/50 z-0"></div>
       <Link to="/" className="absolute top-4 right-4 z-20">
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/20">
-          <X className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/20">
+          <X className="h-3 w-3" />
         </Button>
       </Link>
       
       <Card className="w-full max-w-md bg-white/10 dark:bg-black/30 backdrop-blur-lg border-white/20 text-white rounded-2xl z-10">
         <CardHeader className="text-center">
           <div className="flex justify-center items-center gap-2 mb-2">
-            <Brain className="h-7 w-7" />
+            <Brain className="h-6 w-6" />
             <CardTitle className="text-2xl font-bold">Waves Quant</CardTitle>
           </div>
           <CardDescription className="text-gray-300">
@@ -92,7 +92,7 @@ const AuthPage = () => {
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <Label htmlFor="password">Password</Label>
-                    <Link to="#" onClick={(e) => { e.preventDefault(); setShowReset(true); }} className="ml-auto inline-block text-sm text-blue-400 hover:underline">
+                    <Link to="#" onClick={(e) => { e.preventDefault(); setShowReset(true); }} className="ml-auto inline-block text-xs text-blue-400 hover:underline">
                       Forgot your password?
                     </Link>
                   </div>
@@ -124,7 +124,7 @@ const AuthPage = () => {
           {showReset && (
             <div className="mt-4 p-4 border border-white/20 rounded-lg bg-black/20">
               <form onSubmit={handleResetPassword} className="space-y-3">
-                <p className="text-sm font-medium">Reset Password</p>
+                <p className="text-xs font-medium">Reset Password</p>
                 <Input id="reset-email" type="email" placeholder="Enter your email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} required className="bg-transparent" />
                 <div className="flex gap-2">
                   <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={resetLoading}>

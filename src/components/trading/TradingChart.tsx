@@ -141,16 +141,16 @@ export default function TradingChart() {
             <div className="flex items-center space-x-4">
               <div>
                 <p className="text-2xl font-bold">{currentPrice.toFixed(5)}</p>
-                <p className="text-sm text-muted-foreground">{selectedPair}</p>
+                <p className="text-xs text-muted-foreground">{selectedPair}</p>
               </div>
               <Badge variant={priceChange >= 0 ? "default" : "destructive"} className="flex items-center space-x-1">
-                {priceChange >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                                  {priceChange >= 0 ? <TrendingUp className="h-1.5 w-1.5" /> : <TrendingDown className="h-1.5 w-1.5" />}
                 <span>{priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}%</span>
               </Badge>
             </div>
             <div className="flex items-center space-x-2">
-              <Activity className="h-4 w-4 text-green-500" />
-              <span className="text-sm text-green-500">Live</span>
+                              <Activity className="h-2 w-2 text-green-500" />
+                              <span className="text-xs text-green-500">Live</span>
             </div>
           </div>
 

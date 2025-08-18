@@ -179,7 +179,7 @@ export function OwnerSettings() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Building className="h-5 w-5" />
+                <Building className="h-4 w-4" />
                 Company Information
               </CardTitle>
               <CardDescription>Basic company details and localization settings</CardDescription>
@@ -265,7 +265,7 @@ export function OwnerSettings() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5" />
+                <Zap className="h-4 w-4" />
                 Trading Configuration
               </CardTitle>
               <CardDescription>Configure default trading parameters and system behavior</CardDescription>
@@ -325,7 +325,7 @@ export function OwnerSettings() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
+                <Shield className="h-4 w-4" />
                 Security Settings
               </CardTitle>
               <CardDescription>Configure security policies and access controls</CardDescription>
@@ -396,7 +396,7 @@ export function OwnerSettings() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
+                <Bell className="h-4 w-4" />
                 Notification Settings
               </CardTitle>
               <CardDescription>Configure system notifications and alerts</CardDescription>
@@ -441,7 +441,7 @@ export function OwnerSettings() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Key className="h-5 w-5" />
+                <Key className="h-4 w-4" />
                 API Configuration
               </CardTitle>
               <CardDescription>Configure API settings and rate limiting</CardDescription>
@@ -490,7 +490,7 @@ export function OwnerSettings() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5" />
+                <Database className="h-4 w-4" />
                 Backup & Recovery
               </CardTitle>
               <CardDescription>Configure automatic backups and data retention</CardDescription>

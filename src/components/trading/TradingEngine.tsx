@@ -60,7 +60,7 @@ const TradingEngine = ({ isRunning }: TradingEngineProps) => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Cpu className="h-5 w-5" />
+            <Cpu className="h-3 w-3" />
             <span>Trading Engine Status</span>
             <Badge variant={isRunning ? "default" : "secondary"} className="ml-2">
               {isRunning ? "Running" : "Stopped"}
@@ -85,7 +85,7 @@ const TradingEngine = ({ isRunning }: TradingEngineProps) => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
-          <Cpu className="h-5 w-5" />
+          <Cpu className="h-3 w-3" />
           <span>Trading Engine Status</span>
           <Badge variant={isRunning ? "default" : "secondary"} className="ml-2">
             {isRunning ? "Running" : "Stopped"}
@@ -106,7 +106,7 @@ const TradingEngine = ({ isRunning }: TradingEngineProps) => {
               disabled={!isRunning}
             />
             <Label htmlFor="auto-trading" className="flex items-center space-x-2">
-              <Zap className="h-4 w-4" />
+              <Zap className="h-3 w-3" />
               <span>Auto Trading</span>
             </Label>
           </div>
@@ -118,7 +118,7 @@ const TradingEngine = ({ isRunning }: TradingEngineProps) => {
               onCheckedChange={handleRiskToggle}
             />
             <Label htmlFor="risk-management" className="flex items-center space-x-2">
-              <AlertTriangle className="h-4 w-4" />
+              <AlertTriangle className="h-3 w-3" />
               <span>Risk Management</span>
             </Label>
           </div>
@@ -128,7 +128,7 @@ const TradingEngine = ({ isRunning }: TradingEngineProps) => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
-              <Brain className="h-4 w-4 text-blue-500" />
+              <Brain className="h-3 w-3 text-blue-500" />
               <span className="text-sm text-muted-foreground">Signals</span>
             </div>
             <p className="text-2xl font-bold">{engineStats.signalsGenerated}</p>
@@ -136,7 +136,7 @@ const TradingEngine = ({ isRunning }: TradingEngineProps) => {
           
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
-              <Activity className="h-4 w-4 text-green-500" />
+              <Activity className="h-3 w-3 text-green-500" />
               <span className="text-sm text-muted-foreground">Trades</span>
             </div>
             <p className="text-2xl font-bold">{engineStats.tradesExecuted}</p>
@@ -144,7 +144,7 @@ const TradingEngine = ({ isRunning }: TradingEngineProps) => {
           
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
-              <CheckCircle className="h-4 w-4 text-purple-500" />
+              <CheckCircle className="h-3 w-3 text-purple-500" />
               <span className="text-sm text-muted-foreground">Success Rate</span>
             </div>
             <p className="text-2xl font-bold">{engineStats.successRate.toFixed(1)}%</p>
@@ -152,7 +152,7 @@ const TradingEngine = ({ isRunning }: TradingEngineProps) => {
           
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-orange-500" />
+              <Clock className="h-3 w-3 text-orange-500" />
               <span className="text-sm text-muted-foreground">Avg Time (ms)</span>
             </div>
             <p className="text-2xl font-bold">{engineStats.avgExecutionTime.toFixed(0)}</p>
@@ -200,7 +200,7 @@ const TradingEngine = ({ isRunning }: TradingEngineProps) => {
           </div>
           
           {isRunning && (
-            <TrendingUp className="h-6 w-6 text-green-500" />
+                            <TrendingUp className="h-4 w-4 text-green-500" />
           )}
         </div>
 

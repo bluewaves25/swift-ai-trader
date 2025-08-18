@@ -32,7 +32,7 @@ export default function AffiliateDashboard() {
       <h2 className="text-2xl font-bold mb-4">Affiliate Dashboard</h2>
       <div className="p-4 border rounded bg-gray-50 mb-4">
         <div className="flex items-center gap-2 mb-2">
-          <Gift className="h-5 w-5 text-yellow-500" />
+          <Gift className="h-4 w-4 text-yellow-500" />
           <span className="font-semibold">Your Referral Link:</span>
         </div>
         <div className="flex items-center gap-2">
@@ -42,12 +42,12 @@ export default function AffiliateDashboard() {
       </div>
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="p-4 border rounded bg-white/80 flex flex-col items-center">
-          <Users className="h-6 w-6 text-blue-600 mb-1" />
+          <Users className="h-5 w-5 text-blue-600 mb-1" />
           <div className="font-bold text-lg">{stats.referrals}</div>
           <div className="text-xs text-muted-foreground">Referrals</div>
         </div>
         <div className="p-4 border rounded bg-white/80 flex flex-col items-center">
-          <DollarSign className="h-6 w-6 text-green-600 mb-1" />
+          <DollarSign className="h-5 w-5 text-green-600 mb-1" />
           <div className="font-bold text-lg">₦{(stats.earnings / 100).toLocaleString()}</div>
           <div className="text-xs text-muted-foreground">Total Earnings</div>
         </div>

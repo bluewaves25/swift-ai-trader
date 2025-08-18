@@ -121,7 +121,7 @@ export default function TradeHistory() {
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Search className="absolute left-3 top-3 h-3 w-3 text-muted-foreground" />
           <Input
             placeholder="Search trades..."
             value={searchTerm}
@@ -132,7 +132,7 @@ export default function TradeHistory() {
         
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-48">
-            <Filter className="h-4 w-4 mr-2" />
+            <Filter className="h-3 w-3 mr-2" />
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -152,9 +152,9 @@ export default function TradeHistory() {
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
                     {trade.trade_type === 'buy' ? (
-                      <TrendingUp className="h-5 w-5 text-green-500" />
+                      <TrendingUp className="h-3 w-3 text-green-500" />
                     ) : (
-                      <TrendingDown className="h-5 w-5 text-red-500" />
+                                              <TrendingDown className="h-3 w-3 text-red-500" />
                     )}
                     <div>
                       <p className="font-semibold">{trade.symbol}</p>
@@ -175,7 +175,7 @@ export default function TradeHistory() {
                     {trade.profit_loss >= 0 ? '+' : ''}${trade.profit_loss.toFixed(2)}
                   </p>
                   <div className="flex items-center text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4 mr-1" />
+                    <Calendar className="h-3 w-3 mr-1" />
                     {new Date(trade.timestamp).toLocaleString()}
                   </div>
                 </div>

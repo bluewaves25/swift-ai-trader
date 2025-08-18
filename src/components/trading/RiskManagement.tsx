@@ -112,14 +112,14 @@ export default function RiskManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Risk Management</h2>
-        <Shield className="h-8 w-8 text-blue-500" />
+                        <Shield className="h-6 w-6 text-blue-500" />
       </div>
 
       <div className="grid gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <AlertTriangle className="h-5 w-5 text-orange-500" />
+                              <AlertTriangle className="h-3 w-3 text-orange-500" />
               <span>Daily Risk Limits</span>
             </CardTitle>
           </CardHeader>
@@ -159,7 +159,7 @@ export default function RiskManagement() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <TrendingDown className="h-5 w-5 text-red-500" />
+                              <TrendingDown className="h-3 w-3 text-red-500" />
               <span>Position Management</span>
             </CardTitle>
           </CardHeader>
@@ -199,7 +199,7 @@ export default function RiskManagement() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Target className="h-5 w-5 text-green-500" />
+                              <Target className="h-3 w-3 text-green-500" />
               <span>Trade Size Management</span>
             </CardTitle>
           </CardHeader>

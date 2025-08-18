@@ -1,17 +1,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
-} from "@/components/ui/sidebar";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -112,83 +102,93 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
   };
 
   const NavItem = ({ item, isActive = false }: { item: any; isActive?: boolean }) => (
-    <SidebarMenuButton
+    <Button
       onClick={() => onSectionChange(item.id)}
       className={cn(
         "w-full justify-start h-12 mb-2 transition-all duration-300 group relative rounded-lg",
         isCollapsed ? "px-3" : "px-4",
-        isActive && "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-700 dark:text-blue-400 border-r-2 border-blue-500 shadow-md",
-        !isActive && "hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-[1.02] hover:shadow-sm"
+        isActive && "bg-white/20 text-white border-r-2 border-white/50 shadow-md",
+        !isActive && "hover:bg-white/10 hover:scale-[1.02] hover:shadow-sm"
       )}
     >
       <item.icon className={cn(
-        "h-5 w-5 transition-colors duration-300 flex-shrink-0",
+        "h-4 w-4 transition-colors duration-300 flex-shrink-0",
         isCollapsed ? "mx-auto" : "mr-3",
-        isActive ? item.color : "text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
+        isActive ? "text-white" : "text-white/70 group-hover:text-white"
       )} />
       {!isCollapsed && (
-        <span className="font-medium transition-all duration-300 text-sm truncate">{item.label}</span>
+        <span className="font-medium transition-all duration-300 text-xs truncate">{item.label}</span>
       )}
       {isActive && !isCollapsed && (
-        <div className="absolute right-2 w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+        <div className="absolute right-2 w-2 h-2 rounded-full bg-white animate-pulse"></div>
       )}
-    </SidebarMenuButton>
+    </Button>
   );
 
   return (
-    <div className={cn(
-      "flex flex-col h-screen max-h-screen overflow-hidden bg-card border-r transition-all duration-300 relative",
-      isCollapsed ? "w-16" : "w-64",
-      "md:relative md:translate-x-0",
-      "fixed inset-y-0 left-0 z-50 md:z-auto",
-      isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-    )}>
-      {/* Header */}
-      <SidebarHeader className="flex-shrink-0">
-        <div className="p-4">
-          <div className="flex items-center justify-between">
-            {!isCollapsed && (
-              <div className="flex items-center space-x-2">
-                <span className="font-semibold text-sm">{user?.email?.split('@')[0] || 'User'}</span>
-                <ChevronDown className="h-4 w-4 text-gray-400" />
-              </div>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="h-8 w-8 p-0 hidden md:flex hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-full"
-            >
-              {isCollapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronLeft className="h-4 w-4" />
+          <div className={cn(
+        "flex flex-col h-[calc(100vh-20px)] max-h-[calc(100vh-20px)] overflow-hidden bg-sidebar text-sidebar-foreground border-r transition-all duration-300 relative rounded-2xl mx-[10px] my-[10px]",
+        isCollapsed ? "w-16" : "w-64",
+        "md:relative md:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 md:z-auto",
+        isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      )}>
+              {/* Header */}
+        <div className="flex-shrink-0">
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              {!isCollapsed && (
+                <div className="flex items-center space-x-2">
+                  <span className="font-bold text-base text-white">Swift AI Trader™</span>
+                </div>
               )}
-            </Button>
+                      <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="h-7 w-7 p-0 hidden md:flex hover:bg-white/10 rounded-full text-sidebar-foreground"
+        >
+                {isCollapsed ? (
+                                <ChevronRight className="h-3 w-3" />
+            ) : (
+              <ChevronLeft className="h-3 w-3" />
+                )}
+              </Button>
+            </div>
+            
+            {/* User Info */}
+            <div className="flex items-center space-x-2">
+                          <div className="w-7 h-7 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+              <span className="text-[8px] font-semibold text-white">{user?.email?.split('@')[0]?.[0]?.toUpperCase() || 'U'}</span>
+              </div>
+              {!isCollapsed && (
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold text-xs text-white">{user?.email?.split('@')[0] || 'User'}</span>
+                  <ChevronDown className="h-4 w-4 text-white/60" />
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </SidebarHeader>
-
-      {/* User Info - This section is removed as it's merged into the header */}
+                </div>
 
       {/* Scroll Up Button */}
       {showScrollUp && (
         <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-10">
-          <Button size="sm" variant="secondary" onClick={scrollToTop} className="h-6 w-6 p-0 rounded-full shadow-lg">
-            <ChevronUp className="h-3 w-3" />
+                      <Button size="sm" variant="secondary" onClick={scrollToTop} className="h-5 w-5 p-0 rounded-full shadow-lg">
+              <ChevronUp className="h-2 w-2" />
           </Button>
         </div>
       )}
-      <SidebarContent 
+      <div 
         ref={sidebarContentRef}
-        className="flex-1 min-h-0 overflow-auto p-2 space-y-2 relative"
+        className="flex-1 min-h-0 overflow-auto p-2 space-y-2 relative scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/20 hover:scrollbar-thumb-white/40"
       >
         <div className={cn("space-y-2", !isCollapsed && "px-2")}>
-          {!isCollapsed && (
-            <p className="text-sm font-medium text-muted-foreground mb-2 px-2">
-              Main Menu
-            </p>
-          )}
+                      {!isCollapsed && (
+              <p className="text-[10px] font-medium text-white/60 mb-2 px-2">
+                Main Menu
+              </p>
+            )}
           {sidebarItems.slice(0, 5).map((item) => (
             <NavItem
               key={item.id}
@@ -202,14 +202,14 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
 
         {/* Payments Collapsible Menu */}
         <div className={cn("space-y-2", !isCollapsed && "px-2")}>
-          {!isCollapsed && (
-            <p className="text-sm font-medium text-muted-foreground mb-2 px-2">
-              Financial Hub
-            </p>
-          )}
+                      {!isCollapsed && (
+              <p className="text-[10px] font-medium text-white/60 mb-2 px-2">
+                Financial Hub
+              </p>
+            )}
           <Collapsible open={paymentsOpen} onOpenChange={setPaymentsOpen}>
             <CollapsibleTrigger asChild>
-              <SidebarMenuButton
+              <Button
                 className={cn(
                   "w-full justify-start h-12 mb-2 transition-all duration-300 rounded-lg group",
                   isCollapsed ? "px-3" : "px-4",
@@ -230,17 +230,18 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
                     }
                   </>
                 )}
-              </SidebarMenuButton>
+              </Button>
             </CollapsibleTrigger>
             {!isCollapsed && (
               <CollapsibleContent className="space-y-1">
-                <SidebarMenuSub>
+                <div>
                   {paymentItems.map((item) => (
-                    <SidebarMenuSubItem key={item.id}>
-                      <SidebarMenuSubButton
+                    <div key={item.id}>
+                      <Button
                         onClick={() => onSectionChange(item.id)}
+                        variant="ghost"
                         className={cn(
-                          "transition-all duration-300 group hover:scale-[1.02] rounded-lg relative",
+                          "w-full justify-start transition-all duration-300 group hover:scale-[1.02] rounded-lg relative",
                           activeSection === item.id && "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-700 dark:text-blue-400 shadow-sm"
                         )}
                       >
@@ -257,10 +258,10 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
                         {activeSection === item.id && (
                           <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
                         )}
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
+                      </Button>
+                    </div>
                   ))}
-                </SidebarMenuSub>
+                </div>
               </CollapsibleContent>
             )}
           </Collapsible>
@@ -270,11 +271,11 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
 
         {/* Account Section */}
         <div className={cn("space-y-2", !isCollapsed && "px-2")}>
-          {!isCollapsed && (
-            <p className="text-sm font-medium text-muted-foreground mb-2 px-2">
-              Account
-            </p>
-          )}
+                      {!isCollapsed && (
+              <p className="text-[10px] font-medium text-white/60 mb-2 px-2">
+                Account
+              </p>
+            )}
           {sidebarItems.slice(5).map((item) => (
             <NavItem
               key={item.id}
@@ -283,12 +284,12 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
             />
           ))}
         </div>
-      </SidebarContent>
+              </div>
       {/* Scroll Down Button */}
       {showScrollDown && (
         <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-10">
-          <Button size="sm" variant="secondary" onClick={scrollToBottom} className="h-6 w-6 p-0 rounded-full shadow-lg">
-            <ChevronDown className="h-3 w-3" />
+                      <Button size="sm" variant="secondary" onClick={scrollToBottom} className="h-5 w-5 p-0 rounded-full shadow-lg">
+              <ChevronDown className="h-2 w-2" />
           </Button>
         </div>
       )}
@@ -298,12 +299,12 @@ export function InvestorSidebar({ activeSection, onSectionChange, isMobileOpen =
         <Button
           variant="ghost"
           className={cn(
-            "w-full justify-start h-12 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-300 rounded-lg",
+            "w-full justify-start h-12 text-white/70 hover:text-red-300 hover:bg-red-500/20 transition-all duration-300 rounded-lg",
             isCollapsed ? "px-3" : "px-4"
           )}
           onClick={signOut}
         >
-          <LogOut className={cn("h-5 w-5", isCollapsed ? "mx-auto" : "mr-3")} />
+          <LogOut className={cn("h-4 w-4", isCollapsed ? "mx-auto" : "mr-3")} />
           {!isCollapsed && <span className="font-medium text-sm">Sign Out</span>}
         </Button>
       </div>

@@ -100,7 +100,7 @@ export default function InvestorSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Bell className="h-5 w-5" />
+            <Bell className="h-4 w-4" />
             <span>Notifications</span>
           </CardTitle>
         </CardHeader>
@@ -132,7 +132,7 @@ export default function InvestorSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Settings className="h-5 w-5" />
+            <Settings className="h-4 w-4" />
             <span>Preferences</span>
           </CardTitle>
         </CardHeader>

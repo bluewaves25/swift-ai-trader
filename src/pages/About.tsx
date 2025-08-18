@@ -25,7 +25,7 @@ const About = () => {
           <div className="flex items-center justify-between">
             <Link to="/">
               <Button variant="ghost" size="icon" className="hover:bg-muted">
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-3 w-3" />
                 <span className="sr-only">Back</span>
               </Button>
             </Link>
@@ -39,7 +39,7 @@ const About = () => {
         {/* Hero Section */}
         <div className="text-center mb-8 md:mb-16">
           <Badge variant="secondary" className="mb-3 md:mb-6">
-            <Zap className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+            <Zap className="h-2 w-2 md:h-3 md:w-3 mr-1 md:mr-2" />
             About Our Platform
           </Badge>
           <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-8 leading-tight">
@@ -59,7 +59,7 @@ const About = () => {
           <Card className="bg-card border-border text-card-foreground">
             <CardHeader className="p-3 md:p-6">
               <div className="flex items-center space-x-2 mb-2 md:mb-4">
-                <Target className="h-5 w-5 md:h-6 md:w-6 text-blue-300" />
+                <Target className="h-3 w-3 md:h-4 md:w-4 text-blue-300" />
                 <CardTitle className="text-lg md:text-2xl">Our Mission</CardTitle>
               </div>
               <CardDescription className="text-sm md:text-base text-card-foreground">
@@ -72,7 +72,7 @@ const About = () => {
           <Card className="bg-card border-border text-card-foreground">
             <CardHeader className="p-3 md:p-6">
               <div className="flex items-center space-x-2 mb-2 md:mb-4">
-                <Globe className="h-5 w-5 md:h-6 md:w-6 text-purple-300" />
+                <Globe className="h-3 w-3 md:h-4 md:w-4 text-purple-300" />
                 <CardTitle className="text-lg md:text-2xl">Our Vision</CardTitle>
               </div>
               <CardDescription className="text-sm md:text-base text-card-foreground">
@@ -136,7 +136,7 @@ const About = () => {
               <Card key={index} className="group hover:shadow-lg transition-all duration-300 bg-card border-border text-card-foreground">
                 <CardHeader className="p-3 md:p-6">
                   <div className={`p-2 md:p-3 rounded-lg w-fit bg-${feature.color}-100/20 group-hover:scale-110 transition-transform duration-300`}>
-                    <feature.icon className={`h-4 w-4 md:h-6 md:w-6 text-${feature.color}-300`} />
+                    <feature.icon className={`h-3 w-3 md:h-5 md:w-5 text-${feature.color}-300`} />
                   </div>
                   <CardTitle className="text-base md:text-xl">{feature.title}</CardTitle>
                 </CardHeader>

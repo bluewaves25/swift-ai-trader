@@ -115,7 +115,7 @@ export function RiskManagement() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Risk Management</h2>
         <Badge className={cn("px-3 py-1", getRiskLevelColor(getRiskLevel()))}>
-          <Shield className="h-3 w-3 mr-1" />
+          <Shield className="h-2 w-2 mr-1" />
           {getRiskLevel().charAt(0).toUpperCase() + getRiskLevel().slice(1)} Risk
         </Badge>
       </div>
@@ -126,7 +126,7 @@ export function RiskManagement() {
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-50/50" />
           <CardHeader className="relative">
             <CardTitle className="flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-blue-600" />
+              <TrendingDown className="h-4 w-4 text-blue-600" />
               Risk Per Trade
             </CardTitle>
             <CardDescription>
@@ -137,7 +137,7 @@ export function RiskManagement() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <Label>Risk Percentage</Label>
-                <span className="text-sm font-medium text-blue-600">
+                <span className="text-xs font-medium text-blue-600">
                   {riskSettings.maxRiskPerTrade}%
                 </span>
               </div>
@@ -189,7 +189,7 @@ export function RiskManagement() {
           <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 to-red-50/50" />
           <CardHeader className="relative">
             <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-600" />
+              <AlertTriangle className="h-4 w-4 text-orange-600" />
               Time-Based Risk Limits
             </CardTitle>
             <CardDescription>
@@ -200,7 +200,7 @@ export function RiskManagement() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <Label>Daily Risk Limit</Label>
-                <span className="text-sm font-medium text-orange-600">
+                <span className="text-xs font-medium text-orange-600">
                   {riskSettings.maxRiskPerDay}%
                 </span>
               </div>
@@ -217,7 +217,7 @@ export function RiskManagement() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <Label>Weekly Risk Limit</Label>
-                <span className="text-sm font-medium text-red-600">
+                <span className="text-xs font-medium text-red-600">
                   {riskSettings.maxRiskPerWeek}%
                 </span>
               </div>
@@ -238,7 +238,7 @@ export function RiskManagement() {
           <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-pink-50/50" />
           <CardHeader className="relative">
             <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5 text-purple-600" />
+              <Settings className="h-4 w-4 text-purple-600" />
               Position Management
             </CardTitle>
             <CardDescription>
@@ -249,7 +249,7 @@ export function RiskManagement() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <Label>Max Position Size</Label>
-                <span className="text-sm font-medium text-purple-600">
+                <span className="text-xs font-medium text-purple-600">
                   {riskSettings.maxPositionSize}%
                 </span>
               </div>
@@ -282,7 +282,7 @@ export function RiskManagement() {
           <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-teal-50/50" />
           <CardHeader className="relative">
             <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-green-600" />
+              <Shield className="h-4 w-4 text-green-600" />
               Risk Profile
             </CardTitle>
             <CardDescription>
@@ -308,7 +308,7 @@ export function RiskManagement() {
             </div>
 
             <div className="space-y-2">
-              <div className="text-sm font-medium">Current Risk Assessment</div>
+              <div className="text-xs font-medium">Current Risk Assessment</div>
               <div className="space-y-1">
                 <div className="flex justify-between text-xs">
                   <span>Daily Risk Used</span>
@@ -334,7 +334,7 @@ export function RiskManagement() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-medium">Save Risk Settings</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Apply these settings to the trading engine
               </p>
             </div>
@@ -351,7 +351,7 @@ export function RiskManagement() {
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" />
+                  <Save className="h-3 w-3 mr-2" />
                   Save Settings
                 </>
               )}

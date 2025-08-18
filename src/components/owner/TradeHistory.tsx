@@ -172,7 +172,7 @@ export function TradeHistory() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
-            <History className="h-6 w-6" />
+            <History className="h-5 w-5" />
             Trade History
           </h2>
           <p className="text-muted-foreground">Complete trading history (manual + engine, open + closed)</p>
@@ -201,7 +201,7 @@ export function TradeHistory() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
+            <Filter className="h-4 w-4" />
             Filters & Search
           </CardTitle>
         </CardHeader>

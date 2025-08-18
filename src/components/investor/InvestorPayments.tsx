@@ -27,7 +27,7 @@ export default function InvestorPayments() {
               onClick={() => setCurrentView('deposit')}>
           <CardHeader className="text-center pb-3">
             <div className="mx-auto w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-              <PlusCircle className="h-6 w-6 text-white" />
+              <PlusCircle className="h-5 w-5 text-white" />
             </div>
             <CardTitle className="text-lg font-semibold text-green-700 dark:text-green-400">
               Deposit Funds
@@ -48,7 +48,7 @@ export default function InvestorPayments() {
               onClick={() => setCurrentView('withdraw')}>
           <CardHeader className="text-center pb-3">
             <div className="mx-auto w-12 h-12 bg-gradient-to-r from-red-500 to-rose-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-              <MinusCircle className="h-6 w-6 text-white" />
+              <MinusCircle className="h-5 w-5 text-white" />
             </div>
             <CardTitle className="text-lg font-semibold text-red-700 dark:text-red-400">
               Withdraw Funds
@@ -69,7 +69,7 @@ export default function InvestorPayments() {
               onClick={() => setCurrentView('transactions')}>
           <CardHeader className="text-center pb-3">
             <div className="mx-auto w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-              <List className="h-6 w-6 text-white" />
+              <List className="h-5 w-5 text-white" />
             </div>
             <CardTitle className="text-lg font-semibold text-blue-700 dark:text-blue-400">
               Transaction History

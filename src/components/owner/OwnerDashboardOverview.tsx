@@ -253,7 +253,7 @@ const OwnerDashboardOverview = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-blue-600" />
+              <Zap className="h-4 w-4 text-blue-600" />
               Trading Engine Status
             </CardTitle>
             <CardDescription>Current engine performance and status</CardDescription>
@@ -276,7 +276,7 @@ const OwnerDashboardOverview = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-blue-600" />
+              <Activity className="h-4 w-4 text-blue-600" />
               Trading Engine Status
             </CardTitle>
             <CardDescription>Current engine performance and status</CardDescription>

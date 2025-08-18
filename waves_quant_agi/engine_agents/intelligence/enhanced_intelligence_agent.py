@@ -49,8 +49,8 @@ class EnhancedIntelligenceAgent(BaseAgent):
             # Initialize pattern recognition components
             await self._initialize_pattern_recognition()
             
-            # Initialize signal generation systems
-            await self._initialize_signal_generation()
+            # Initialize pattern analysis systems
+            await self._initialize_pattern_analysis()
             
             # Initialize market intelligence
             await self._initialize_market_intelligence()
@@ -121,7 +121,7 @@ class EnhancedIntelligenceAgent(BaseAgent):
         return [
             (self._pattern_recognition_loop, "Pattern Recognition", "fast"),
             (self._intelligence_gathering_loop, "Intelligence Gathering", "tactical"),
-            (self._signal_generation_loop, "Signal Generation", "fast"),
+            (self._pattern_analysis_loop, "Pattern Analysis", "fast"),
             (self._intelligence_reporting_loop, "Intelligence Reporting", "strategic")
         ]
     
@@ -146,24 +146,24 @@ class EnhancedIntelligenceAgent(BaseAgent):
             self.logger.error(f"❌ Error initializing pattern recognition: {e}")
             self.pattern_recognizer = None
     
-    async def _initialize_signal_generation(self):
-        """Initialize signal generation systems."""
+    async def _initialize_pattern_analysis(self):
+        """Initialize pattern analysis systems."""
         try:
-            # Initialize signal generator
-            from .core.signal_generator import SignalGenerator
-            self.logger.info("Importing SignalGenerator...")
+            # Initialize pattern analyzer
+            from .core.pattern_analyzer import PatternAnalyzer
+            self.logger.info("Importing PatternAnalyzer...")
             
-            self.signal_generator = SignalGenerator(self.config)
-            self.logger.info("SignalGenerator instance created")
+            self.pattern_analyzer = PatternAnalyzer(self.config)
+            self.logger.info("PatternAnalyzer instance created")
             
-            self.logger.info("✅ Signal generation systems initialized")
+            self.logger.info("✅ Pattern analysis systems initialized")
             
         except ImportError as e:
-            self.logger.error(f"❌ Import error in signal generation: {e}")
-            self.signal_generator = None
+            self.logger.error(f"❌ Import error in pattern analysis: {e}")
+            self.pattern_analyzer = None
         except Exception as e:
-            self.logger.error(f"❌ Error initializing signal generation: {e}")
-            self.signal_generator = None
+            self.logger.error(f"❌ Error initializing pattern analysis: {e}")
+            self.pattern_analyzer = None
     
     async def _initialize_market_intelligence(self):
         """Initialize market intelligence."""
@@ -281,59 +281,47 @@ class EnhancedIntelligenceAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error processing patterns: {e}")
     
-    # ============= SIGNAL GENERATION LOOP =============
+    # ============= PATTERN ANALYSIS LOOP =============
     
-    async def _signal_generation_loop(self):
-        """Signal generation loop (100ms intervals)."""
+    async def _pattern_analysis_loop(self):
+        """Pattern analysis loop (100ms intervals)."""
         while self.is_running:
             try:
-                # Generate signals from detected patterns
-                signals_generated = await self._generate_signals_from_patterns()
+                # Analyze patterns for insights
+                patterns_analyzed = await self._analyze_patterns_for_insights()
                 
-                # Update signal statistics
-                if signals_generated > 0:
-                    self.stats["signals_generated"] += signals_generated
+                # Update pattern statistics
+                if patterns_analyzed > 0:
+                    self.stats["patterns_analyzed"] += patterns_analyzed
                 
-                await asyncio.sleep(0.1)  # 100ms for signal generation
+                await asyncio.sleep(0.1)  # 100ms for pattern analysis
                 
             except Exception as e:
-                self.logger.error(f"Error in signal generation loop: {e}")
+                self.logger.error(f"Error in pattern analysis loop: {e}")
                 await asyncio.sleep(0.1)
     
-    async def _generate_signals_from_patterns(self) -> int:
-        """Generate signals from detected patterns."""
+    async def _analyze_patterns_for_insights(self) -> int:
+        """Analyze patterns for market insights (not signals)."""
         try:
-            signals_generated = 0
-            
-            if not self.signal_generator:
-                self.logger.warning("Signal generator not initialized, skipping signal generation")
-                return 0
+            patterns_analyzed = 0
             
             # Get active patterns
             active_patterns = [p for p in self.intelligence_state["detected_patterns"] 
                              if p.get("status") == "active"]
             
             for pattern in active_patterns:
-                # Generate signal from pattern
-                signal = await self.signal_generator.generate_signal(pattern)
+                # Analyze pattern for market insights
+                insights = await self._extract_pattern_insights(pattern)
                 
-                if signal:
-                    # Add to active signals
-                    self.intelligence_state["active_signals"].append({
-                        **signal,
-                        "generation_time": time.time(),
-                        "source_pattern": pattern.get("id", "unknown")
-                    })
-                    
-                    signals_generated += 1
-                    
-                    # Publish signal alert
-                    await self._publish_signal_alert(signal)
+                if insights:
+                    # Store insights for strategy engine consumption
+                    await self._store_pattern_insights(pattern, insights)
+                    patterns_analyzed += 1
             
-            return signals_generated
+            return patterns_analyzed
             
         except Exception as e:
-            self.logger.error(f"Error generating signals from patterns: {e}")
+            self.logger.error(f"Error analyzing patterns for insights: {e}")
             return 0
     
     # ============= MARKET INTELLIGENCE LOOP =============

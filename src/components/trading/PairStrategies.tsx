@@ -115,33 +115,33 @@ export default function PairStrategies() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                 <div className="flex items-center space-x-2">
-                  <Target className="h-4 w-4 text-blue-500" />
+                  <Target className="h-2 w-2 text-blue-500" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Confidence</p>
+                                          <p className="text-xs text-muted-foreground">Confidence</p>
                     <p className="font-semibold">{strategy.confidence_score.toFixed(1)}%</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <BarChart3 className="h-4 w-4 text-green-500" />
+                  <BarChart3 className="h-2 w-2 text-green-500" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Performance</p>
+                                          <p className="text-xs text-muted-foreground">Performance</p>
                     <p className="font-semibold">{strategy.performance_score.toFixed(1)}%</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <TrendingUp className="h-4 w-4 text-purple-500" />
+                  <TrendingUp className="h-2 w-2 text-purple-500" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Win Rate</p>
+                                          <p className="text-xs text-muted-foreground">Win Rate</p>
                     <p className="font-semibold">{strategy.win_rate.toFixed(1)}%</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <Zap className="h-4 w-4 text-orange-500" />
+                  <Zap className="h-2 w-2 text-orange-500" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Trades</p>
+                                          <p className="text-xs text-muted-foreground">Total Trades</p>
                     <p className="font-semibold">{strategy.total_trades}</p>
                   </div>
                 </div>

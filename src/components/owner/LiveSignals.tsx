@@ -199,7 +199,7 @@ export function LiveSignals() {
         <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-purple-50/50" />
         <CardHeader className="relative">
           <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-blue-600" />
+            <Activity className="h-4 w-4 text-blue-600" />
             Trading Engine Control
           </CardTitle>
           <CardDescription>
@@ -251,7 +251,7 @@ export function LiveSignals() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-blue-600" />
+              <Activity className="h-4 w-4 text-blue-600" />
               Live AI Signals
             </CardTitle>
             <CardDescription>

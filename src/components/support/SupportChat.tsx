@@ -276,9 +276,9 @@ export function SupportChat() {
       <div className="fixed bottom-4 right-4 z-50">
         <Button
           onClick={() => setIsOpen(true)}
-          className="h-12 w-12 rounded-full shadow-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-0 relative"
+          className="h-10 w-10 rounded-full shadow-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-0 relative"
         >
-          <MessageCircle className="h-5 w-5 text-white" />
+                      <MessageCircle className="h-3 w-3 text-white" />
           <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
         </Button>
       </div>
@@ -302,7 +302,7 @@ export function SupportChat() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="relative">
-                      <Bot className="h-6 w-6 p-1 bg-white/20 rounded-full" />
+                      <Bot className="h-4 w-4 p-1 bg-white/20 rounded-full" />
                       <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-400 rounded-full border border-white"></div>
                     </div>
                     <div>
@@ -315,7 +315,7 @@ export function SupportChat() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setIsMinimized(!isMinimized)}
-                      className="h-6 w-6 p-0 text-white hover:bg-white/20"
+                      className="h-4 w-4 p-0 text-white hover:bg-white/20"
                     >
                       <Minimize2 className="h-3 w-3" />
                     </Button>
@@ -323,7 +323,7 @@ export function SupportChat() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setIsOpen(false)}
-                      className="h-6 w-6 p-0 text-white hover:bg-white/20"
+                      className="h-4 w-4 p-0 text-white hover:bg-white/20"
                     >
                       <X className="h-3 w-3" />
                     </Button>
@@ -443,7 +443,7 @@ export function SupportChat() {
                           onClick={scrollToTop}
                           aria-label="Scroll to top"
                         >
-                          <ChevronUp className="h-4 w-4" />
+                          <ChevronUp className="h-3 w-3" />
                         </button>
                       )}
                       {showScrollDown && (
@@ -452,7 +452,7 @@ export function SupportChat() {
                           onClick={scrollToBottom}
                           aria-label="Scroll to bottom"
                         >
-                          <ChevronDown className="h-4 w-4" />
+                          <ChevronDown className="h-3 w-3" />
                         </button>
                       )}
                     </div>
@@ -473,14 +473,14 @@ export function SupportChat() {
                           size="sm"
                           className="rounded-full w-8 h-8 p-0"
                         >
-                          {isRecording ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
+                          {isRecording ? <MicOff className="h-2 w-2" /> : <Mic className="h-2 w-2" />}
                         </Button>
                         <Button
                           onClick={handleSendMessage}
                           disabled={loading || !newMessage.trim()}
                           className="rounded-full w-8 h-8 p-0 bg-blue-500 hover:bg-blue-600"
                         >
-                          <Send className="h-3 w-3" />
+                          <Send className="h-2 w-2" />
                         </Button>
                       </div>
                     </div>

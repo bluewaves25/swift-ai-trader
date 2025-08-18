@@ -67,7 +67,7 @@ export default function InvestorJournal() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <BarChart3 className="h-5 w-5 text-blue-500" />
+              <BarChart3 className="h-4 w-4 text-blue-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Trades</p>
                 <p className="text-2xl font-bold">{totalTrades}</p>
@@ -79,7 +79,7 @@ export default function InvestorJournal() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-green-500" />
+              <TrendingUp className="h-4 w-4 text-green-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Win Rate</p>
                 <p className="text-2xl font-bold">
@@ -94,9 +94,9 @@ export default function InvestorJournal() {
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               {totalProfit >= 0 ? (
-                <TrendingUp className="h-5 w-5 text-green-500" />
+                <TrendingUp className="h-4 w-4 text-green-500" />
               ) : (
-                <TrendingDown className="h-5 w-5 text-red-500" />
+                <TrendingDown className="h-4 w-4 text-red-500" />
               )}
               <div>
                 <p className="text-sm text-muted-foreground">Total P&L</p>

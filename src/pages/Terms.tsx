@@ -15,7 +15,7 @@ const Terms = () => {
           <div className="flex items-center justify-between">
             <Link to="/">
               <Button variant="ghost" size="icon" className="hover:bg-muted">
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-3 w-3" />
                 <span className="sr-only">Back</span>
               </Button>
             </Link>
@@ -28,7 +28,7 @@ const Terms = () => {
         {/* Hero Section */}
         <div className="text-center mb-6 md:mb-16">
           <Badge variant="secondary" className="mb-3 md:mb-6 bg-card text-card-foreground border-card-foreground/30 backdrop-blur-sm text-xs md:text-sm">
-            <FileText className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+            <FileText className="h-2 w-2 md:h-3 md:w-3 mr-1 md:mr-2" />
             Legal Information
           </Badge>
           

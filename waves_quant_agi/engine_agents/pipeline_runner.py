@@ -72,9 +72,9 @@ class PipelineRunner:
                 'startup_order': 6
             },
             'strategy_engine': {
-                'class': 'EnhancedStrategyEngineAgent',
-                'module': 'engine_agents.strategy_engine.enhanced_strategy_engine_agent',
-                'role': 'Strategy management + strategy optimization (NOT cost optimization)',
+                'class': 'StrategyEnhancementManager',
+                'module': 'engine_agents.strategy_engine.strategy_enhancement_manager',
+                'role': 'Strategy management + optimization + learning',
                 'startup_order': 7
             },
             'risk_management': {

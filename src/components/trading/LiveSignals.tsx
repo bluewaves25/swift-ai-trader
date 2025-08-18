@@ -129,7 +129,7 @@ const LiveSignals = () => {
   const getSignalIcon = (signal: string) => {
     switch (signal?.toLowerCase()) {
       case 'buy':
-        return <TrendingUp className="h-4 w-4 text-green-600" />;
+        return <TrendingUp className="h-3 w-3 text-green-600" />;
       case 'sell':
         return <TrendingDown className="h-4 w-4 text-red-600" />;
       default:
@@ -159,7 +159,7 @@ const LiveSignals = () => {
         {signals.length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center">
-              <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <AlertCircle className="h-7 w-7 text-muted-foreground mx-auto mb-2" />
               <p className="text-muted-foreground">No live signals available at the moment</p>
             </CardContent>
           </Card>

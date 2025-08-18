@@ -84,8 +84,8 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
       className={cn(
         "w-full justify-start h-12 mb-2 transition-all duration-300 group relative rounded-lg",
         isCollapsed ? "px-3" : "px-4",
-        isActive && "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-700 dark:text-blue-400 border-r-2 border-blue-500",
-        !isActive && "hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105"
+        isActive && "bg-white/20 text-white border-r-2 border-white/50",
+        !isActive && "hover:bg-white/10 hover:scale-105"
       )}
       onClick={() => {
         onSectionChange(item.id);
@@ -93,15 +93,15 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
       }}
     >
       <item.icon className={cn(
-        "h-5 w-5 transition-colors duration-300",
+        "h-4 w-4 transition-colors duration-300",
         isCollapsed ? "mx-auto" : "mr-3",
-        isActive ? item.color : "text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
+        isActive ? "text-white" : "text-white/70 group-hover:text-white"
       )} />
       {!isCollapsed && (
-        <span className="font-medium transition-all duration-300 text-sm">{item.label}</span>
+        <span className="font-medium transition-all duration-300 text-xs">{item.label}</span>
       )}
       {isActive && !isCollapsed && (
-        <div className="absolute right-2 w-2 h-2 rounded-full bg-blue-500"></div>
+        <div className="absolute right-2 w-2 h-2 rounded-full bg-white"></div>
       )}
     </Button>
   );
@@ -115,7 +115,7 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
         className="fixed top-4 left-4 z-50 md:hidden"
         onClick={() => setIsMobileOpen(!isMobileOpen)}
       >
-        {isMobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+        {isMobileOpen ? <X className="h-3 w-3" /> : <Menu className="h-3 w-3" />}
       </Button>
 
       {/* Mobile Overlay */}
@@ -125,7 +125,7 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
 
       {/* Sidebar */}
       <div className={cn(
-        "flex flex-col h-screen max-h-screen overflow-hidden bg-card border-r transition-all duration-300 relative",
+        "flex flex-col h-[calc(100vh-20px)] max-h-[calc(100vh-20px)] overflow-hidden bg-sidebar text-sidebar-foreground border-r transition-all duration-300 relative rounded-2xl mx-[10px] my-[10px]",
         isCollapsed ? "w-16" : "w-64",
         "md:relative md:translate-x-0",
         "fixed inset-y-0 left-0 z-50 md:z-auto",
@@ -133,43 +133,53 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
       )}>
         {/* Header */}
         <div className="p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             {!isCollapsed && (
               <div className="flex items-center space-x-2">
-                <span className="font-semibold text-sm">{user?.email?.split('@')[0] || 'User'}</span>
-                <ChevronDown className="h-4 w-4 text-gray-400" />
+                <span className="font-bold text-base text-white">Swift AI Trader™</span>
               </div>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="h-8 w-8 p-0 hidden md:flex hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-full"
-            >
+                    <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="h-7 w-7 p-0 hidden md:flex hover:bg-white/10 rounded-full text-sidebar-foreground"
+        >
               {isCollapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronLeft className="h-4 w-4" />
+                              <ChevronRight className="h-3 w-3" />
+            ) : (
+              <ChevronLeft className="h-3 w-3" />
               )}
             </Button>
           </div>
+          
+          {/* User Info */}
+          <div className="flex items-center space-x-2">
+            <div className="w-7 h-7 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+              <span className="text-[8px] font-semibold text-white">{user?.email?.split('@')[0]?.[0]?.toUpperCase() || 'U'}</span>
+            </div>
+            {!isCollapsed && (
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold text-xs text-white">{user?.email?.split('@')[0] || 'User'}</span>
+                <ChevronDown className="h-3 w-3 text-white/60" />
+              </div>
+            )}
+          </div>
         </div>
-
-        {/* User Info - This section is removed and merged into the header */}
 
         {/* Main Navigation */}
         {/* Scroll Up Button */}
         {showScrollUp && (
           <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-10">
-            <Button size="sm" variant="secondary" onClick={scrollToTop} className="h-6 w-6 p-0 rounded-full shadow-lg">
-              <ChevronUp className="h-3 w-3" />
+            <Button size="sm" variant="secondary" onClick={scrollToTop} className="h-5 w-5 p-0 rounded-full shadow-lg">
+              <ChevronUp className="h-2 w-2" />
             </Button>
           </div>
         )}
-        <div ref={navRef} className="flex-1 min-h-0 overflow-auto p-2 space-y-2 relative">
+        <div ref={navRef} className="flex-1 min-h-0 overflow-auto p-2 space-y-2 relative scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/20 hover:scrollbar-thumb-white/40">
           <div className={cn("space-y-2", !isCollapsed && "px-2")}>
             {!isCollapsed && (
-              <p className="text-sm font-medium text-muted-foreground mb-3 px-2">
+              <p className="text-[10px] font-medium text-white/60 mb-3 px-2">
                 Main Menu
               </p>
             )}
@@ -186,7 +196,7 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
 
           <div className={cn("space-y-2", !isCollapsed && "px-2")}>
             {!isCollapsed && (
-              <p className="text-sm font-medium text-muted-foreground mb-3 px-2">
+              <p className="text-[10px] font-medium text-white/60 mb-3 px-2">
                 Management
               </p>
             )}
@@ -202,25 +212,25 @@ export function OwnerSidebar({ activeSection, onSectionChange }: OwnerSidebarPro
         {/* Scroll Down Button */}
         {showScrollDown && (
           <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-10">
-            <Button size="sm" variant="secondary" onClick={scrollToBottom} className="h-6 w-6 p-0 rounded-full shadow-lg">
-              <ChevronDown className="h-3 w-3" />
+            <Button size="sm" variant="secondary" onClick={scrollToBottom} className="h-5 w-5 p-0 rounded-full shadow-lg">
+              <ChevronDown className="h-2 w-2" />
             </Button>
           </div>
         )}
 
         {/* Sign Out Button */}
         <div className="p-2 border-t mt-auto">
-          <Button
-            variant="ghost"
-            className={cn(
-              "w-full justify-start h-12 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-300 rounded-lg",
-              isCollapsed ? "px-3" : "px-4"
-            )}
-            onClick={signOut}
-          >
-            <LogOut className={cn("h-5 w-5", isCollapsed ? "mx-auto" : "mr-3")} />
-            {!isCollapsed && <span className="font-medium text-sm">Sign Out</span>}
-          </Button>
+                  <Button
+          variant="ghost"
+          className={cn(
+            "w-full justify-start h-12 text-white/70 hover:text-red-300 hover:bg-red-500/20 transition-all duration-300 rounded-lg",
+            isCollapsed ? "px-3" : "px-4"
+          )}
+          onClick={signOut}
+        >
+          <LogOut className={cn("h-4 w-4", isCollapsed ? "mx-auto" : "mr-3")} />
+          {!isCollapsed && <span className="font-medium text-xs">Sign Out</span>}
+        </Button>
         </div>
       </div>
     </>
