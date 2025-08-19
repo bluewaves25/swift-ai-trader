@@ -8,7 +8,7 @@ import asyncio
 import time
 import numpy as np
 from typing import Dict, Any, List, Optional, Tuple
-from engine_agents.shared_utils import get_shared_logger, get_shared_redis
+from ....shared_utils import get_shared_logger, get_shared_redis
 
 # Import consolidated trading functionality
 from ..memory.trading_context import TradingContext

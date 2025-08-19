@@ -10,7 +10,7 @@ import asyncio
 from typing import Dict, Any, List, Optional, Tuple
 from .dynamic_risk_limits import DynamicRiskLimits
 from .circuit_breaker import CircuitBreaker
-from .performance_monitor import PerformanceMonitor
+# PerformanceMonitor removed - now handled by Core Agent
 
 class RiskValidator:
     """
@@ -29,7 +29,7 @@ class RiskValidator:
             recovery_timeout=30,
             name="risk_validator"
         )
-        self.performance_monitor = PerformanceMonitor(config)
+        # self.performance_monitor = PerformanceMonitor(config)  # Removed - handled by Core Agent
         
         # Risk validation state
         self.validation_stats = {
@@ -71,13 +71,13 @@ class RiskValidator:
             
             # Record performance metrics
             duration_ms = (time.time() - start_time) * 1000
-            await self.performance_monitor.record_operation(
-                operation_type='risk_validation',
-                duration_ms=duration_ms,
-                success=True,
-                component='risk_validator',
-                metadata={'strategy_type': strategy_type, 'symbol': trade_request.get('symbol', 'unknown')}
-            )
+            # await self.performance_monitor.record_operation(  # Removed - handled by Core Agent
+            #     operation_type='risk_validation',
+            #     duration_ms=duration_ms,
+            #     success=True,
+            #     component='risk_validator',
+            #     metadata={'strategy_type': strategy_type, 'symbol': trade_request.get('symbol', 'unknown')}
+            # )
             
             # Update validation statistics
             self._update_validation_stats(result, duration_ms)
@@ -87,13 +87,13 @@ class RiskValidator:
         except Exception as e:
             # Record failure
             duration_ms = (time.time() - start_time) * 1000
-            await self.performance_monitor.record_operation(
-                operation_type='risk_validation',
-                duration_ms=duration_ms,
-                success=False,
-                component='risk_validator',
-                metadata={'strategy_type': strategy_type, 'error': str(e)}
-            )
+            # await self.performance_monitor.record_operation(  # Removed - handled by Core Agent
+            #     operation_type='risk_validation',
+            #     duration_ms=duration_ms,
+            #     success=False,
+            #     component='risk_validator',
+            #     metadata={'strategy_type': strategy_type, 'error': str(e)}
+            # )
             
             # Return error result
             return {
@@ -351,9 +351,7 @@ class RiskValidator:
                 "approval_rate": self.validation_stats['risks_approved'] / max(total_validations, 1),
                 "block_rate": self.validation_stats['risks_blocked'] / max(total_validations, 1),
                 "circuit_breaker_state": self.circuit_breaker.get_state().value,
-                "performance_metrics": self.performance_monitor.get_performance_summary(
-                    component='risk_validator', time_window=3600
-                )
+                "performance_metrics": {}  # Removed - handled by Core Agent
             }
             
         except Exception as e:
@@ -380,7 +378,7 @@ class RiskValidator:
                     "stats": self.get_validation_stats()
                 },
                 "circuit_breaker": self.circuit_breaker.get_stats(),
-                "performance_monitor": self.performance_monitor.get_monitor_stats(),
+                "performance_monitor": {},  # Removed - handled by Core Agent
                 "timestamp": time.time()
             }
             

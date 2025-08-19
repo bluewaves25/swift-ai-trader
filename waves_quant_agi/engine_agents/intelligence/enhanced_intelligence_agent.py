@@ -18,13 +18,13 @@ class EnhancedIntelligenceAgent(BaseAgent):
         """Initialize intelligence specific components."""
         # Initialize intelligence components
         self.pattern_recognizer = None
-        self.signal_generator = None
+        self.pattern_analyzer = None
         self.market_intelligence = None
         
         # Pattern recognition state
         self.intelligence_state = {
             "detected_patterns": [],
-            "active_signals": [],
+            "pattern_insights": [],
             "pattern_confidence": {},
             "last_pattern_scan": time.time(),
             "pattern_history": []
@@ -34,9 +34,9 @@ class EnhancedIntelligenceAgent(BaseAgent):
         self.stats = {
             "total_pattern_scans": 0,
             "patterns_detected": 0,
-            "signals_generated": 0,
+            "patterns_analyzed": 0,
             "high_confidence_patterns": 0,
-            "false_positives": 0,
+            "insights_extracted": 0,
             "start_time": time.time()
         }
         
@@ -324,6 +324,45 @@ class EnhancedIntelligenceAgent(BaseAgent):
             self.logger.error(f"Error analyzing patterns for insights: {e}")
             return 0
     
+    async def _extract_pattern_insights(self, pattern: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract market insights from a pattern (not signals)."""
+        try:
+            if not self.pattern_analyzer:
+                return {}
+            
+            # Extract insights from pattern
+            insights = await self.pattern_analyzer.extract_insights(pattern)
+            
+            return insights
+            
+        except Exception as e:
+            self.logger.error(f"Error extracting pattern insights: {e}")
+            return {}
+    
+    async def _store_pattern_insights(self, pattern: Dict[str, Any], insights: Dict[str, Any]):
+        """Store pattern insights for strategy engine consumption."""
+        try:
+            # Store insights in Redis for strategy engine
+            insight_data = {
+                "pattern_id": pattern.get("id", "unknown"),
+                "pattern_type": pattern.get("type", "unknown"),
+                "insights": insights,
+                "timestamp": time.time(),
+                "source_agent": self.agent_name
+            }
+            
+            await self.redis_conn.set(
+                f"intelligence:pattern_insights:{pattern.get('id', 'unknown')}",
+                json.dumps(insight_data),
+                ex=3600  # 1 hour expiry
+            )
+            
+            # Publish pattern insight
+            await self._publish_pattern_insight(insight_data)
+            
+        except Exception as e:
+            self.logger.error(f"Error storing pattern insights: {e}")
+    
     # ============= MARKET INTELLIGENCE LOOP =============
     
     async def _market_intelligence_loop(self):
@@ -410,9 +449,9 @@ class EnhancedIntelligenceAgent(BaseAgent):
         try:
             volatility_level = insight.get("volatility_level", "normal")
             
-            # Update signal generation based on volatility
-            if self.signal_generator:
-                await self.signal_generator.adjust_for_volatility(volatility_level)
+            # Update pattern recognition sensitivity based on volatility
+            if self.pattern_recognizer:
+                await self.pattern_recognizer.adjust_for_volatility(volatility_level)
                 
         except Exception as e:
             self.logger.error(f"Error processing volatility insight: {e}")
@@ -426,9 +465,9 @@ class EnhancedIntelligenceAgent(BaseAgent):
             if self.pattern_recognizer:
                 await self.pattern_recognizer.cleanup()
             
-            # Cleanup signal generator
-            if self.signal_generator:
-                await self.signal_generator.cleanup()
+            # Cleanup pattern analyzer
+            if self.pattern_analyzer:
+                await self.pattern_analyzer.cleanup()
             
             # Cleanup market intelligence
             if self.market_intelligence:
@@ -456,20 +495,20 @@ class EnhancedIntelligenceAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error publishing pattern alert: {e}")
     
-    async def _publish_signal_alert(self, signal: Dict[str, Any]):
-        """Publish signal alert."""
+    async def _publish_pattern_insight(self, insight: Dict[str, Any]):
+        """Publish pattern insight."""
         try:
-            signal_alert = {
-                "alert_type": "signal_generated",
-                "signal_data": signal,
+            insight_alert = {
+                "alert_type": "pattern_insight",
+                "insight_data": insight,
                 "timestamp": time.time(),
                 "agent": self.agent_name
             }
             
-            await self.redis_conn.publish_async("intelligence:signal_alerts", json.dumps(signal_alert))
+            await self.redis_conn.publish_async("intelligence:pattern_insights", json.dumps(insight_alert))
             
         except Exception as e:
-            self.logger.error(f"Error publishing signal alert: {e}")
+            self.logger.error(f"Error publishing pattern insight: {e}")
     
     async def _publish_intelligence_insight(self, insight: Dict[str, Any]):
         """Publish intelligence insight."""
@@ -500,9 +539,9 @@ class EnhancedIntelligenceAgent(BaseAgent):
         """Get currently detected patterns."""
         return self.intelligence_state.get("detected_patterns", [])
     
-    async def get_active_signals(self) -> List[Dict[str, Any]]:
-        """Get currently active signals."""
-        return self.intelligence_state.get("active_signals", [])
+    async def get_pattern_insights(self) -> List[Dict[str, Any]]:
+        """Get currently extracted pattern insights."""
+        return self.intelligence_state.get("pattern_insights", [])
     
     async def get_pattern_confidence(self) -> Dict[str, Any]:
         """Get pattern confidence levels."""

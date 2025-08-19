@@ -22,6 +22,7 @@ class EnhancedRiskManagementAgent(BaseAgent):
         self.portfolio_monitor = None
         self.circuit_breaker = None
         self.performance_tracker = None
+        self.position_manager = None
         
         # Risk management state
         self.risk_state = {
@@ -165,6 +166,10 @@ class EnhancedRiskManagementAgent(BaseAgent):
             # Initialize portfolio performance tracker (risk-focused only, not system performance)
             from .core.portfolio_performance_tracker import PortfolioPerformanceTracker
             self.performance_tracker = PortfolioPerformanceTracker(self.config)
+            
+            # Initialize position manager
+            from .core.position_manager import PositionManager
+            self.position_manager = PositionManager(connection_manager, self.config)
             
             self.logger.info("✅ Risk management components initialized")
             

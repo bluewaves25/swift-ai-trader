@@ -7,7 +7,7 @@ Validates external strategies for integration into the strategy engine.
 import asyncio
 import time
 from typing import Dict, Any, List, Optional
-from engine_agents.shared_utils import get_shared_logger, get_shared_redis
+from ....shared_utils import get_shared_logger, get_shared_redis
 
 class ExternalStrategyValidator:
     """Validates external strategies for integration."""

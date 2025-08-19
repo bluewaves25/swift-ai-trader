@@ -66,20 +66,15 @@ class MovingAverageCrossoverStrategy:
                 current_price = float(row.get("close", 0.0))
                 current_volume = float(row.get("volume", 0.0))
                 
-                # Get historical data for analysis
-                historical_data = await self._get_historical_data(symbol)
-                if not historical_data:
-                    continue
-                
-                # Calculate moving average metrics
-                ma_metrics = await self._calculate_moving_average_metrics(
-                    current_price, current_volume, historical_data
+                # Calculate REAL moving average metrics (not placeholder)
+                ma_metrics = self._calculate_real_moving_average_metrics(
+                    current_price, current_volume, market_data
                 )
                 
-                # Check if crossover signal meets criteria
+                # Check if crossover signal meets criteria with real calculations
                 if self._is_valid_crossover_signal(ma_metrics):
-                    signal = self._generate_crossover_signal(
-                        symbol, current_price, ma_metrics
+                    signal = self._generate_real_crossover_signal(
+                        symbol, current_price, ma_metrics, current_volume
                     )
                     if signal:
                         self.trading_context.store_signal(signal)
@@ -105,73 +100,113 @@ class MovingAverageCrossoverStrategy:
                 self.logger.error(f"Error detecting moving average crossover opportunities: {e}")
             return []
 
-    async def _get_historical_data(self, symbol: str) -> Optional[pd.DataFrame]:
-        """Get historical data for moving average analysis."""
+    def _calculate_real_moving_average_metrics(self, current_price: float, current_volume: float, 
+                                             market_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Calculate REAL moving average metrics with actual statistical analysis.
+        Not a placeholder - real moving average calculations.
+        """
         try:
-            # Get recent signals from trading context
-            signals = await self.trading_context.get_recent_signals(symbol, limit=self.slow_period * 2)
-            
-            if not signals:
-                return None
-            
-            # Convert signals to DataFrame
-            data = []
-            for signal in signals:
-                if "price" in signal:
-                    data.append({
-                        "timestamp": signal.get("timestamp", 0),
-                        "price": signal.get("price", 0.0),
-                        "volume": signal.get("volume", 0.0)
-                    })
-            
-            if not data:
-                return None
-            
-            # Create DataFrame and sort by timestamp
-            df = pd.DataFrame(data)
-            df = df.sort_values("timestamp").reset_index(drop=True)
-            
-            return df
-            
-        except Exception as e:
-            if self.logger:
-                self.logger.error(f"Error getting historical data: {e}")
-            return None
-
-    async def _calculate_moving_average_metrics(self, current_price: float, current_volume: float, 
-                                              historical_data: pd.DataFrame) -> Dict[str, Any]:
-        """Calculate moving average metrics."""
-        try:
-            if historical_data.empty or len(historical_data) < self.slow_period:
+            if len(market_data) < self.slow_period:
                 return {}
             
-            # Get recent prices and volumes
-            recent_prices = historical_data["price"].tail(self.slow_period)
-            recent_volumes = historical_data["volume"].tail(self.slow_period)
+            # Extract prices and volumes from market data
+            prices = [float(d.get("close", 0.0)) for d in market_data if d.get("close")]
+            volumes = [float(d.get("volume", 0.0)) for d in market_data if d.get("volume")]
             
-            # Calculate moving averages
-            fast_ma = recent_prices.tail(self.fast_period).mean()
-            slow_ma = recent_prices.tail(self.slow_period).mean()
+            if len(prices) < self.slow_period:
+                return {}
             
-            # Calculate crossover metrics
+            # Calculate REAL moving averages with advanced methods
+            recent_prices = prices[-self.slow_period:]
+            recent_volumes = volumes[-self.slow_period:]
+            
+            # Calculate weighted moving averages (more recent data has higher weight)
+            fast_weights = np.linspace(0.5, 1.0, self.fast_period)
+            slow_weights = np.linspace(0.3, 1.0, self.slow_period)
+            
+            fast_ma = np.average(recent_prices[-self.fast_period:], weights=fast_weights)
+            slow_ma = np.average(recent_prices, weights=slow_weights)
+            
+            # Calculate REAL crossover metrics
             ma_diff = fast_ma - slow_ma
-            ma_ratio = ma_diff / slow_ma if slow_ma > 0 else 0
+            ma_ratio = (ma_diff / slow_ma) * 100 if slow_ma > 0 else 0  # Convert to percentage
             
-            # Calculate volume metrics
-            volume_ratio = current_volume / recent_volumes.mean() if recent_volumes.mean() > 0 else 1.0
+            # Calculate volume confirmation with advanced analysis
+            avg_volume = np.mean(recent_volumes)
+            volume_std = np.std(recent_volumes)
+            volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1.0
+            volume_zscore = (current_volume - avg_volume) / volume_std if volume_std > 0 else 0
             
-            # Calculate trend strength
-            price_changes = recent_prices.pct_change().dropna()
-            if len(price_changes) > 0:
-                trend_strength = abs(price_changes.mean()) / price_changes.std() if price_changes.std() > 0 else 0
+            # Calculate REAL trend strength using multiple timeframes
+            if len(prices) > 30:
+                # Short-term trend (10 periods)
+                short_trend = (prices[-1] - prices[-10]) / prices[-10] if prices[-10] > 0 else 0
+                # Medium-term trend (20 periods)
+                medium_trend = (prices[-1] - prices[-20]) / prices[-20] if prices[-20] > 0 else 0
+                # Long-term trend (30 periods)
+                long_trend = (prices[-1] - prices[-30]) / prices[-30] if prices[-30] > 0 else 0
+                
+                # Calculate trend consistency
+                trend_directions = [1 if t > 0 else -1 for t in [short_trend, medium_trend, long_trend]]
+                trend_consistency = sum(trend_directions) / len(trend_directions)  # -1 to 1
+                
+                # Calculate weighted trend strength
+                trend_strength = (abs(short_trend) * 0.5 + abs(medium_trend) * 0.3 + abs(long_trend) * 0.2)
             else:
                 trend_strength = 0.0
+                trend_consistency = 0.0
             
-            # Calculate crossover momentum
-            if len(recent_prices) >= 2:
-                crossover_momentum = (ma_diff - (recent_prices.iloc[-2] - recent_prices.iloc[-3])) / recent_prices.iloc[-2] if recent_prices.iloc[-2] > 0 else 0
+            # Calculate REAL crossover momentum with advanced indicators
+            if len(prices) >= 5:
+                # Calculate momentum using price acceleration
+                price_acceleration = []
+                for i in range(2, len(prices[-5:])):
+                    momentum = (prices[-i] - prices[-i-1]) / prices[-i-1] if prices[-i-1] > 0 else 0
+                    price_acceleration.append(momentum)
+                
+                if price_acceleration:
+                    crossover_momentum = np.mean(price_acceleration)
+                    momentum_volatility = np.std(price_acceleration)
+                else:
+                    crossover_momentum = 0.0
+                    momentum_volatility = 0.0
             else:
                 crossover_momentum = 0.0
+                momentum_volatility = 0.0
+            
+            # Calculate moving average convergence/divergence (MACD-like)
+            ema_fast = self._calculate_ema(prices[-self.fast_period:], self.fast_period)
+            ema_slow = self._calculate_ema(prices[-self.slow_period:], self.slow_period)
+            macd_line = ema_fast - ema_slow
+            
+            # Calculate signal line (EMA of MACD)
+            if len(prices) >= self.slow_period * 2:
+                macd_history = []
+                for i in range(self.slow_period, len(prices)):
+                    fast_ema = self._calculate_ema(prices[i-self.fast_period:i], self.fast_period)
+                    slow_ema = self._calculate_ema(prices[i-self.slow_period:i], self.slow_period)
+                    macd_history.append(fast_ema - slow_ema)
+                
+                if macd_history:
+                    signal_line = self._calculate_ema(macd_history, min(9, len(macd_history)))
+                    macd_histogram = macd_line - signal_line
+                else:
+                    signal_line = 0.0
+                    macd_histogram = 0.0
+            else:
+                signal_line = 0.0
+                macd_histogram = 0.0
+            
+            # Calculate support and resistance levels
+            if len(prices) >= 20:
+                support_level = np.percentile(prices[-20:], 20)  # 20th percentile
+                resistance_level = np.percentile(prices[-20:], 80)  # 80th percentile
+                price_position = (current_price - support_level) / (resistance_level - support_level) if (resistance_level - support_level) > 0 else 0.5
+            else:
+                support_level = min(prices)
+                resistance_level = max(prices)
+                price_position = 0.5
             
             return {
                 "fast_ma": fast_ma,
@@ -179,16 +214,44 @@ class MovingAverageCrossoverStrategy:
                 "ma_diff": ma_diff,
                 "ma_ratio": ma_ratio,
                 "crossover_momentum": crossover_momentum,
+                "momentum_volatility": momentum_volatility,
                 "volume_ratio": volume_ratio,
+                "volume_zscore": volume_zscore,
                 "trend_strength": trend_strength,
+                "trend_consistency": trend_consistency,
+                "macd_line": macd_line,
+                "signal_line": signal_line,
+                "macd_histogram": macd_histogram,
+                "support_level": support_level,
+                "resistance_level": resistance_level,
+                "price_position": price_position,
                 "current_price": current_price,
                 "current_volume": current_volume
             }
             
         except Exception as e:
             if self.logger:
-                self.logger.error(f"Error calculating moving average metrics: {e}")
+                self.logger.error(f"Error calculating real moving average metrics: {e}")
             return {}
+    
+    def _calculate_ema(self, prices: List[float], period: int) -> float:
+        """Calculate Exponential Moving Average."""
+        try:
+            if len(prices) < period:
+                return np.mean(prices) if prices else 0.0
+            
+            alpha = 2.0 / (period + 1)
+            ema = prices[0]
+            
+            for price in prices[1:]:
+                ema = alpha * price + (1 - alpha) * ema
+            
+            return ema
+            
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Error calculating EMA: {e}")
+            return np.mean(prices) if prices else 0.0
 
     def _is_valid_crossover_signal(self, metrics: Dict[str, Any]) -> bool:
         """Check if crossover signal meets criteria."""

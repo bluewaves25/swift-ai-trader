@@ -10,7 +10,7 @@ import json
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-from engine_agents.shared_utils import BaseAgent
+from ....shared_utils import BaseAgent
 
 class StrategyEngineCore(BaseAgent):
     """

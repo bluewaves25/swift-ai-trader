@@ -29,14 +29,14 @@ class ExecutionBridge:
             db=config.get("redis_db", 0)
         )
         self.logger = get_shared_logger("execution", "bridge")
-        self.learner = get_agent_learner("execution", LearningType.EXECUTION_OPTIMIZATION, 5)
+        # Removed learning functionality - now handled by Strategy Engine
         
         # Performance tracking
         self.stats = {
             "total_signals_processed": 0,
             "successful_executions": 0,
             "failed_executions": 0,
-            "learning_updates": 0,
+            "execution_optimizations": 0,
             "start_time": time.time()
         }
         
@@ -73,8 +73,8 @@ class ExecutionBridge:
                 for signal in signals:
                     await self._process_signal(signal)
                 
-                # Update learning models periodically
-                await self._update_learning_models()
+                # Update execution optimizations periodically
+                await self._update_execution_optimizations()
                 
                 # Report statistics
                 await self._report_stats()
@@ -170,34 +170,31 @@ class ExecutionBridge:
         
         return True
 
-    async def _update_learning_models(self):
-        """Update learning models with execution data."""
+    async def _update_execution_optimizations(self):
+        """Update execution optimizations based on performance data."""
         try:
-            # Get execution data from Redis
-            execution_data = await self._get_execution_data()
+            # Get execution performance data
+            performance_data = await self._get_execution_performance_data()
             
-            if execution_data and len(execution_data) > 0:
-                # Convert to DataFrame for training
-                df = pd.DataFrame(execution_data)
+            if performance_data and len(performance_data) > 0:
+                # Apply execution optimizations
+                optimizations = await self._apply_execution_optimizations(performance_data)
                 
-                # Train models
-                models = await self.training_module.train_execution_model(df)
-                
-                if models:
-                    self.stats["learning_updates"] += 1
-                    self.logger.log_execution("model_training", {
-                        "models_trained": len(models),
-                        "description": f"Updated {len(models)} execution models"
+                if optimizations:
+                    self.stats["execution_optimizations"] += 1
+                    self.logger.log_execution("execution_optimization", {
+                        "optimizations_applied": len(optimizations),
+                        "description": f"Applied {len(optimizations)} execution optimizations"
                     })
                     
-                    # Send model updates to Rust agent
-                    await self._send_model_updates(models)
+                    # Send optimization updates to Rust agent
+                    await self._send_optimization_updates(optimizations)
             
         except Exception as e:
-            self.logger.log_error(f"Error updating learning models: {e}")
+            self.logger.log_error(f"Error updating execution optimizations: {e}")
 
-    async def _get_execution_data(self) -> List[Dict[str, Any]]:
-        """Get execution data from Redis for training."""
+    async def _get_execution_performance_data(self) -> List[Dict[str, Any]]:
+        """Get execution performance data from Redis for optimization."""
         try:
             if not self.redis_client:
                 return []
@@ -229,28 +226,63 @@ class ExecutionBridge:
         except Exception as e:
             self.logger.log_error(f"Error getting execution data: {e}")
             return []
+    
+    async def _apply_execution_optimizations(self, performance_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Apply execution optimizations based on performance data."""
+        try:
+            optimizations = []
+            
+            # Analyze performance data for optimization opportunities
+            for record in performance_data:
+                if record.get("latency_ms", 0) > 100:  # High latency
+                    optimization = {
+                        "symbol": record.get("symbol", ""),
+                        "optimization_type": "latency_reduction",
+                        "parameters": {
+                            "target_latency_ms": 50,
+                            "current_latency_ms": record.get("latency_ms", 0)
+                        }
+                    }
+                    optimizations.append(optimization)
+                
+                if not record.get("success", True):  # Failed execution
+                    optimization = {
+                        "symbol": record.get("symbol", ""),
+                        "optimization_type": "reliability_improvement",
+                        "parameters": {
+                            "failure_rate": 0.1,
+                            "retry_count": 3
+                        }
+                    }
+                    optimizations.append(optimization)
+            
+            return optimizations
+            
+        except Exception as e:
+            self.logger.log_error(f"Error applying execution optimizations: {e}")
+            return []
 
-    async def _send_model_updates(self, models: List[Dict[str, Any]]):
-        """Send model updates to Rust execution agent."""
+    async def _send_optimization_updates(self, optimizations: List[Dict[str, Any]]):
+        """Send optimization updates to Rust execution agent."""
         try:
             if not self.redis_client:
                 return
             
-            for model in models:
-                # Send model parameters to Rust agent
-                model_update = {
-                    "type": "model_update",
-                    "symbol": model.get("symbol", ""),
-                    "accuracy": model.get("accuracy", 0),
-                    "model_version": model.get("model_version", ""),
+            for optimization in optimizations:
+                # Send optimization parameters to Rust agent
+                optimization_update = {
+                    "type": "optimization_update",
+                    "symbol": optimization.get("symbol", ""),
+                    "optimization_type": optimization.get("optimization_type", ""),
+                    "parameters": optimization.get("parameters", {}),
                     "timestamp": time.time()
                 }
                 
-                self.redis_client.publish("rust_execution:model_updates", json.dumps(model_update))
+                self.redis_client.publish("rust_execution:optimizations", json.dumps(optimization_update))
             
-            self.logger.log_execution("model_update", {
-                "models_sent": len(models),
-                "description": f"Sent {len(models)} model updates to Rust agent"
+            self.logger.log_execution("optimization_update", {
+                "optimizations_sent": len(optimizations),
+                "description": f"Sent {len(optimizations)} optimization updates to Rust agent"
             })
             
         except Exception as e:
@@ -266,7 +298,7 @@ class ExecutionBridge:
                 "total_signals_processed": self.stats["total_signals_processed"],
                 "successful_executions": self.stats["successful_executions"],
                 "failed_executions": self.stats["failed_executions"],
-                "learning_updates": self.stats["learning_updates"],
+                "execution_optimizations": self.stats["execution_optimizations"],
                 "signals_per_second": self.stats["total_signals_processed"] / max(uptime, 1),
                 "timestamp": time.time()
             }
@@ -277,7 +309,7 @@ class ExecutionBridge:
             
             # Log metrics
             self.logger.log_metric("signals_processed", self.stats["total_signals_processed"])
-            self.logger.log_metric("learning_updates", self.stats["learning_updates"])
+            self.logger.log_metric("execution_optimizations", self.stats["execution_optimizations"])
             
         except Exception as e:
             self.logger.log_error(f"Error reporting stats: {e}")

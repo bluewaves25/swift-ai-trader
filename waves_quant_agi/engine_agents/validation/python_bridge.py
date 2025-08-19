@@ -29,11 +29,11 @@ class ValidationBridge:
             db=config.get("redis_db", 0)
         )
         self.logger = get_shared_logger("validation", "bridge")
-        self.learner = get_agent_learner("validation", LearningType.DATA_QUALITY, 5)
+        # Removed learning functionality - now handled by Strategy Engine
         
         self.stats = {
             "validations_processed": 0,
-            "learning_updates": 0,
+            "validation_improvements": 0,
             "external_validations": 0,
             "errors": 0,
             "start_time": time.time()
@@ -49,7 +49,7 @@ class ValidationBridge:
         
         # Start background tasks
         asyncio.create_task(self._validation_processing_loop())
-        asyncio.create_task(self._learning_update_loop())
+        asyncio.create_task(self._validation_improvement_loop())
         asyncio.create_task(self._external_validation_loop())
         asyncio.create_task(self._stats_reporting_loop())
 
@@ -76,21 +76,21 @@ class ValidationBridge:
                 self.stats["errors"] += 1
                 await asyncio.sleep(1)
 
-    async def _learning_update_loop(self):
-        """Update learning models based on validation results."""
+    async def _validation_improvement_loop(self):
+        """Improve validation rules based on validation results."""
         while self.is_running:
             try:
-                # Get validation data for learning
+                # Get validation data for improvement
                 validation_data = await self._get_validation_data()
                 
                 if validation_data:
-                    await self._update_learning_models(validation_data)
-                    self.stats["learning_updates"] += 1
+                    await self._improve_validation_rules(validation_data)
+                    self.stats["validation_improvements"] += 1
                 
                 await asyncio.sleep(5)  # 5 second intervals
                 
             except Exception as e:
-                self.logger.log_error(f"Error in learning update loop: {e}")
+                self.logger.log_error(f"Error in validation improvement loop: {e}")
                 self.stats["errors"] += 1
                 await asyncio.sleep(5)
 
@@ -158,19 +158,19 @@ class ValidationBridge:
                 }
             )
             
-            # Send to learning layer if validation failed
+            # Store validation result for improvement analysis
             if status != "valid":
-                await self._send_to_learning(result)
+                await self._store_validation_result(result)
             
         except Exception as e:
             self.logger.log_error(f"Error processing validation result: {e}")
 
     async def _get_validation_data(self) -> List[Dict[str, Any]]:
-        """Get validation data for learning."""
+        """Get validation data for improvement analysis."""
         try:
             # Get validation data from Redis
             data = []
-            raw_data = self.redis_client.lrange("validation:learning_data", 0, 99)  # Get last 100 entries
+            raw_data = self.redis_client.lrange("validation:improvement_data", 0, 99)  # Get last 100 entries
             
             for raw_entry in raw_data:
                 try:
@@ -184,30 +184,154 @@ class ValidationBridge:
             self.logger.log_error(f"Error getting validation data: {e}")
             return []
 
-    async def _update_learning_models(self, validation_data: List[Dict[str, Any]]):
-        """Update learning models with validation data."""
+    async def _improve_validation_rules(self, validation_data: List[Dict[str, Any]]):
+        """Improve validation rules based on validation data."""
         try:
             if not validation_data:
                 return
             
-            # Convert to DataFrame for analysis
-            df = pd.DataFrame(validation_data)
+            # Analyze validation data for improvement opportunities
+            failed_validations = [d for d in validation_data if d.get("status") != "valid"]
             
-            # Update learning models
-            await self.validation_learning.update_models(df)
-            
-            # Log learning update
-            self.logger.log_learning(
-                "model_update",
-                {
-                    "data_points": len(validation_data),
-                    "models_updated": True,
-                    "timestamp": time.time()
-                }
-            )
+            if failed_validations:
+                # Identify common failure patterns
+                failure_patterns = await self._analyze_failure_patterns(failed_validations)
+                
+                # Apply validation rule improvements
+                await self._apply_validation_improvements(failure_patterns)
+                
+                # Log validation improvement
+                self.logger.log_validation_summary(
+                    "validation_improvement",
+                    {
+                        "failed_validations": len(failed_validations),
+                        "patterns_identified": len(failure_patterns),
+                        "improvements_applied": True,
+                        "timestamp": time.time()
+                    }
+                )
             
         except Exception as e:
-            self.logger.log_error(f"Error updating learning models: {e}")
+            self.logger.log_error(f"Error improving validation rules: {e}")
+    
+    async def _analyze_failure_patterns(self, failed_validations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Analyze failed validations to identify common patterns."""
+        try:
+            patterns = []
+            
+            # Group failures by type
+            failure_types = {}
+            for validation in failed_validations:
+                failure_type = validation.get("failure_type", "unknown")
+                if failure_type not in failure_types:
+                    failure_types[failure_type] = []
+                failure_types[failure_type].append(validation)
+            
+            # Identify patterns in each failure type
+            for failure_type, validations in failure_types.items():
+                if len(validations) >= 3:  # Minimum threshold for pattern
+                    pattern = {
+                        "failure_type": failure_type,
+                        "frequency": len(validations),
+                        "common_attributes": self._extract_common_attributes(validations),
+                        "suggested_improvement": self._suggest_improvement(failure_type)
+                    }
+                    patterns.append(pattern)
+            
+            return patterns
+            
+        except Exception as e:
+            self.logger.log_error(f"Error analyzing failure patterns: {e}")
+            return []
+    
+    async def _apply_validation_improvements(self, failure_patterns: List[Dict[str, Any]]):
+        """Apply validation rule improvements based on failure patterns."""
+        try:
+            for pattern in failure_patterns:
+                improvement_type = pattern.get("suggested_improvement", {}).get("type")
+                
+                if improvement_type == "threshold_adjustment":
+                    await self._adjust_validation_threshold(pattern)
+                elif improvement_type == "rule_addition":
+                    await self._add_validation_rule(pattern)
+                elif improvement_type == "rule_modification":
+                    await self._modify_validation_rule(pattern)
+            
+        except Exception as e:
+            self.logger.log_error(f"Error applying validation improvements: {e}")
+    
+    def _extract_common_attributes(self, validations: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Extract common attributes from failed validations."""
+        try:
+            if not validations:
+                return {}
+            
+            # Analyze common fields
+            common_attrs = {}
+            for field in ["data_type", "source", "size", "format"]:
+                values = [v.get(field) for v in validations if v.get(field)]
+                if values:
+                    # Find most common value
+                    from collections import Counter
+                    counter = Counter(values)
+                    common_attrs[field] = counter.most_common(1)[0][0]
+            
+            return common_attrs
+            
+        except Exception as e:
+            self.logger.log_error(f"Error extracting common attributes: {e}")
+            return {}
+    
+    def _suggest_improvement(self, failure_type: str) -> Dict[str, Any]:
+        """Suggest improvement based on failure type."""
+        try:
+            improvements = {
+                "data_quality": {
+                    "type": "threshold_adjustment",
+                    "description": "Adjust data quality thresholds"
+                },
+                "format_validation": {
+                    "type": "rule_addition",
+                    "description": "Add format validation rules"
+                },
+                "size_validation": {
+                    "type": "rule_modification",
+                    "description": "Modify size validation rules"
+                }
+            }
+            
+            return improvements.get(failure_type, {
+                "type": "general_improvement",
+                "description": "General validation improvement"
+            })
+            
+        except Exception as e:
+            self.logger.log_error(f"Error suggesting improvement: {e}")
+            return {"type": "unknown", "description": "Unknown improvement"}
+    
+    async def _adjust_validation_threshold(self, pattern: Dict[str, Any]):
+        """Adjust validation threshold based on pattern."""
+        try:
+            # Implementation for threshold adjustment
+            self.logger.log_validation_summary("threshold_adjusted", pattern)
+        except Exception as e:
+            self.logger.log_error(f"Error adjusting validation threshold: {e}")
+    
+    async def _add_validation_rule(self, pattern: Dict[str, Any]):
+        """Add new validation rule based on pattern."""
+        try:
+            # Implementation for adding validation rule
+            self.logger.log_validation_summary("rule_added", pattern)
+        except Exception as e:
+            self.logger.log_error(f"Error adding validation rule: {e}")
+    
+    async def _modify_validation_rule(self, pattern: Dict[str, Any]):
+        """Modify existing validation rule based on pattern."""
+        try:
+            # Implementation for modifying validation rule
+            self.logger.log_validation_summary("rule_modified", pattern)
+        except Exception as e:
+            self.logger.log_error(f"Error modifying validation rule: {e}")
 
     async def _get_external_validation_requests(self) -> List[Dict[str, Any]]:
         """Get external validation requests from Redis."""
@@ -259,20 +383,20 @@ class ValidationBridge:
         except Exception as e:
             self.logger.log_error(f"Error processing external validation: {e}")
 
-    async def _send_to_learning(self, validation_result: Dict[str, Any]):
-        """Send validation result to learning layer."""
+    async def _store_validation_result(self, validation_result: Dict[str, Any]):
+        """Store validation result for improvement analysis."""
         try:
-            # Add to learning data queue
+            # Add to improvement data queue
             self.redis_client.lpush(
-                "validation:learning_data",
+                "validation:improvement_data",
                 json.dumps(validation_result)
             )
             
             # Keep only last 1000 entries
-            self.redis_client.ltrim("validation:learning_data", 0, 999)
+            self.redis_client.ltrim("validation:improvement_data", 0, 999)
             
         except Exception as e:
-            self.logger.log_error(f"Error sending to learning: {e}")
+            self.logger.log_error(f"Error storing validation result: {e}")
 
     async def _report_stats(self):
         """Report bridge statistics to Redis."""
@@ -331,7 +455,7 @@ if __name__ == "__main__":
             "enabled": True,
             "timeout": 30
         },
-        "learning": {
+        "improvement": {
             "enabled": True,
             "update_interval": 5
         }

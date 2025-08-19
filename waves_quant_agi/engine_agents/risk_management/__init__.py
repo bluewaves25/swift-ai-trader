@@ -8,10 +8,10 @@ from .enhanced_risk_management_agent import EnhancedRiskManagementAgent
 from .core.connection_manager import ConnectionManager
 from .core.dynamic_risk_limits import DynamicRiskLimits
 from .core.circuit_breaker import CircuitBreaker, CircuitBreakerManager, CircuitState
-from .core.load_balancer import LoadBalancer, Worker, RiskRequest, RequestPriority
-from .core.performance_monitor import PerformanceMonitor, PerformanceMetric, PerformanceAlert, MetricType
-from .core.streamlined_risk_manager import StreamlinedRiskManager, AdaptiveTimer
-from .core.trailing_stop_manager import TrailingStopManager
+# LoadBalancer removed - unused
+# PerformanceMonitor removed - now handled by Core Agent
+# StreamlinedRiskManager removed - unused
+# TrailingStopManager removed - duplicate
 from .core.portfolio_performance_tracker import PortfolioPerformanceTracker
 
 # Core components
@@ -19,7 +19,7 @@ from .core.risk_validator import RiskValidator
 from .core.portfolio_monitor import PortfolioMonitor
 
 # Configuration
-from .config.risk_management_config import DEFAULT_CONFIG, get_config
+# Config removed - now handled by Core Agent
 
 __all__ = [
     # Legacy agent
@@ -31,17 +31,10 @@ __all__ = [
     'CircuitBreaker',
     'CircuitBreakerManager',
     'CircuitState',
-    'LoadBalancer',
-    'Worker',
-    'RiskRequest',
-    'RequestPriority',
-    'PerformanceMonitor',
-    'PerformanceMetric',
-    'PerformanceAlert',
-    'MetricType',
-    'StreamlinedRiskManager',
-    'AdaptiveTimer',
-    'TrailingStopManager',
+    # LoadBalancer removed - unused
+    # PerformanceMonitor removed - now handled by Core Agent
+    # StreamlinedRiskManager removed - unused
+    # TrailingStopManager removed - duplicate
     'PortfolioPerformanceTracker',
     
     # Core components
@@ -49,8 +42,7 @@ __all__ = [
     'PortfolioMonitor',
     
     # Configuration
-    'DEFAULT_CONFIG',
-    'get_config'
+    # Config removed - now handled by Core Agent
 ]
 
 __version__ = "3.0.0"

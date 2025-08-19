@@ -9,7 +9,7 @@ import time
 import asyncio
 from typing import Dict, Any, List, Optional
 from .circuit_breaker import CircuitBreaker
-from .performance_monitor import PerformanceMonitor
+# PerformanceMonitor removed - now handled by Core Agent
 
 class PortfolioMonitor:
     """
@@ -27,7 +27,7 @@ class PortfolioMonitor:
             recovery_timeout=60,
             name="portfolio_monitor"
         )
-        self.performance_monitor = PerformanceMonitor(config)
+        # self.performance_monitor = PerformanceMonitor(config)  # Removed - handled by Core Agent
         
         # Portfolio monitoring state
         self.monitor_stats = {
@@ -82,13 +82,13 @@ class PortfolioMonitor:
             
             # Record performance metrics
             duration_ms = (time.time() - start_time) * 1000
-            await self.performance_monitor.record_operation(
-                operation_type='portfolio_health_assessment',
-                duration_ms=duration_ms,
-                success=True,
-                component='portfolio_monitor',
-                metadata={'portfolio_size': len(portfolio_data.get('positions', {}))}
-            )
+            # await self.performance_monitor.record_operation(  # Removed - handled by Core Agent
+            #     operation_type='portfolio_health_assessment',
+            #     duration_ms=duration_ms,
+            #     success=True,
+            #     component='portfolio_monitor',
+            #     metadata={'portfolio_size': len(portfolio_data.get('positions', {}))}
+            # )
             
             # Update statistics
             self._update_monitor_stats(result)
@@ -98,13 +98,13 @@ class PortfolioMonitor:
         except Exception as e:
             # Record failure
             duration_ms = (time.time() - start_time) * 1000
-            await self.performance_monitor.record_operation(
-                operation_type='portfolio_health_assessment',
-                duration_ms=duration_ms,
-                success=False,
-                component='portfolio_monitor',
-                metadata={'error': str(e)}
-            )
+            # await self.performance_monitor.record_operation(  # Removed - handled by Core Agent
+            #     operation_type='portfolio_health_assessment',
+            #     duration_ms=duration_ms,
+            #     success=False,
+            #     component='portfolio_monitor',
+            #     metadata={'error': str(e)}
+            # )
             
             # Return error result
             return {
@@ -503,9 +503,7 @@ class PortfolioMonitor:
                 **self.monitor_stats,
                 "portfolio_history_size": len(self.portfolio_history),
                 "circuit_breaker_state": self.circuit_breaker.get_state().value,
-                "performance_metrics": self.performance_monitor.get_performance_summary(
-                    component='portfolio_monitor', time_window=3600
-                ),
+                "performance_metrics": {},  # Removed - handled by Core Agent
                 "current_metrics": self.current_metrics,
                 "timestamp": time.time()
             }
@@ -538,7 +536,7 @@ class PortfolioMonitor:
                     "stats": self.get_monitor_stats()
                 },
                 "circuit_breaker": self.circuit_breaker.get_stats(),
-                "performance_monitor": self.performance_monitor.get_monitor_stats(),
+                "performance_monitor": {},  # Removed - handled by Core Agent
                 "timestamp": time.time()
             }
             
