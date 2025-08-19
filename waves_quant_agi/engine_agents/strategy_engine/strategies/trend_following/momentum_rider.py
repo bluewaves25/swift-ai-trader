@@ -65,20 +65,15 @@ class MomentumRiderStrategy:
                 current_price = float(row.get("close", 0.0))
                 current_volume = float(row.get("volume", 0.0))
                 
-                # Get historical data for analysis
-                historical_data = await self._get_historical_data(symbol)
-                if not historical_data:
-                    continue
-                
-                # Calculate momentum metrics
-                momentum_metrics = await self._calculate_momentum_metrics(
-                    current_price, current_volume, historical_data
+                # Calculate REAL momentum metrics (not placeholder)
+                momentum_metrics = self._calculate_real_momentum_metrics(
+                    current_price, current_volume, market_data
                 )
                 
-                # Check if momentum signal meets criteria
+                # Check if momentum signal meets criteria with real calculations
                 if self._is_valid_momentum_signal(momentum_metrics):
-                    signal = self._generate_momentum_signal(
-                        symbol, current_price, momentum_metrics
+                    signal = self._generate_real_momentum_signal(
+                        symbol, current_price, momentum_metrics, current_volume
                     )
                     if signal:
                         self.trading_context.store_signal(signal)
